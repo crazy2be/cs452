@@ -9,9 +9,9 @@ ARCH_CFLAGS = -mcpu=arm920t -msoft-float
 # -fpic: emit position-independent code
 # -Wall: report all warnings
 
-LDFLAGS = -init main -Map iotest.map -N  -T src/orex.ld -L/u/wbcowan/gnuarm-4.0.2/lib/gcc/arm-elf/4.0.2 -L../io/lib
+LDFLAGS = -init main -Map iotest.map -N  -T orex.ld -L/u/wbcowan/gnuarm-4.0.2/lib/gcc/arm-elf/4.0.2 -L../io/lib
 
-COMMON_OBJECTS=priority.o
+COMMON_OBJECTS=priority.o test.o bwio.o
 
 BUILD_DIR=build
 SRC_DIR=src
@@ -46,8 +46,8 @@ test_runner: $(OBJECTS) $(TEST_OBJECTS)
 test: test_runner
 	./$<
 
-install: a0.elf
-	cp $< /u/cs452/tftp/ARM/pgraboud/a0.elf
+install: kernel.elf
+	cp $< /u/cs452/tftp/ARM/pgraboud/k.elf
 
 $(ARM_OBJECTS): | $(BUILD_DIR)
 
