@@ -1,8 +1,6 @@
-CC = gcc
-AS = as
-LD = ld
+LD = arm-none-eabi-ld
 
-CFLAGS  = -g -fPIC -Wall -Iinclude
+CFLAGS  = -g -fPIC -Wall -Iinclude -std=c99
 ARCH_CFLAGS = -mcpu=arm920t -msoft-float
 # -g: include hooks for gdb
 # -mcpu=arm920t: generate code for the 920t architecture
@@ -10,37 +8,65 @@ ARCH_CFLAGS = -mcpu=arm920t -msoft-float
 # -Wall: report all warnings
 
 ASFLAGS = -mcpu=arm920t -mapcs-32
+MAP = kernel.map
 
-LDFLAGS = -init main -Map iotest.map -N  -T orex.ld -L/u/wbcowan/gnuarm-4.0.2/lib/gcc/arm-elf/4.0.2 -L../io/lib
 
-COMMON_OBJECTS=priority.o test.o bwio.o
+# flags conditional on whether we're building for the real hardware or not
+ifeq ($(ENV), qemu)
+  CC = arm-none-eabi-gcc
+  AS = arm-none-eabi-as
+  LD = $(CC)
+  # -Wl options are passed through to the linker
+  LDFLAGS += -Wl,-T,src/qemu.ld,-Map,$(MAP) -N -static-libgcc --specs=nosys.specs
+else
+  CC = gcc
+  AS = as
+  LD = ld
+  LDFLAGS = -init main -Map $(MAP) -T orex.ld -N -L/u/wbcowan/gnuarm-4.0.2/lib/gcc/arm-elf/4.0.2
+endif
 
 BUILD_DIR=build
 SRC_DIR=src
-ARM_OBJECTS=$(addprefix $(BUILD_DIR)/, $(COMMON_OBJECTS))
+
+SOURCES=$(shell find $(SRC_DIR) -name '*.c')
+COMMON_OBJECTS=$(addsuffix .o, $(basename $(subst $(SRC_DIR),$(BUILD_DIR),$(SOURCES))))
+
+ASM_SOURCES=$(shell find $(SRC_DIR) -name '*.s')
+ASM_OBJECTS=$(addsuffix .o, $(basename $(subst $(SRC_DIR),$(BUILD_DIR),$(ASM_SOURCES))))
+
+DIRS=$(sort $(dir $(COMMON_OBJECTS) $(ASM_OBJECTS)))
+$(info $(DIRS))
+
+ARM_OBJECTS=$(COMMON_OBJECTS)
 ARM_ASSEMBLY=${ARM_OBJECTS:.o=.s}
 ARM_DEPENDS=${ARM_OBJECTS:.o=.d}
 
+KERNEL_ELF = $(BUILD_DIR)/kernel.elf
+KERNEL_BIN = $(BUILD_DIR)/kernel.bin
+
 # declarations for testing
-TEST_DIR=test
-TEST_BUILD_DIR=build/test
-OBJECTS=$(addprefix $(TEST_BUILD_DIR)/, $(COMMON_OBJECTS))
-DEPENDS=${OBJECTS:.o=.d}
-TEST_OBJECTS=$(addprefix $(TEST_BUILD_DIR)/, priority_test.o)
-TEST_DEPENDS=${TEST_OBJECTS:.o=.d}
+# TEST_DIR=test
+# TEST_BUILD_DIR=build/test
+# OBJECTS=$(addprefix $(TEST_BUILD_DIR)/, $(COMMON_OBJECTS))
+# DEPENDS=${OBJECTS:.o=.d}
+# TEST_OBJECTS=$(addprefix $(TEST_BUILD_DIR)/, priority_test.o)
+# TEST_DEPENDS=${TEST_OBJECTS:.o=.d}
 
 # default task
-kernel.elf: $(ARM_OBJECTS) $(BUILD_DIR)/context_switch.o
+$(KERNEL_BIN): $(KERNEL_ELF)
+	arm-none-eabi-objcopy -O binary $< $@
+
+$(KERNEL_ELF): $(ARM_OBJECTS) $(ASM_OBJECTS)
 	$(LD) $(LDFLAGS) -o $@ $^ -lgcc
 
 # actual build script for arm parts
 # build script for parts that are written by hand in assembly
-$(BUILD_DIR)/context_switch.o : $(SRC_DIR)/context_switch.s
+$(ASM_OBJECTS): $(BUILD_DIR)/%.o : $(SRC_DIR)/%.s
 	$(AS) $(ASFLAGS) -o $@ $<
 
 # compile c to assembly, and leave assembly around for inspection
 $(ARM_ASSEMBLY): $(BUILD_DIR)/%.s : $(SRC_DIR)/%.c
-	$(CC) $(CFLAGS) $(ARCH_CFLAGS) -S -MMD -MT ${@:.s=.d} -o $@ $<
+	$(CC) $(CFLAGS) $(ARCH_CFLAGS) -S -MD -MT ${@:.s=.d} -o $@ $<
 
 # assemble each .s file to a separate object file
 $(ARM_OBJECTS): $(BUILD_DIR)/%.o : $(BUILD_DIR)/%.s
@@ -48,32 +74,38 @@ $(ARM_OBJECTS): $(BUILD_DIR)/%.o : $(BUILD_DIR)/%.s
 
 # build script for testing
 # main source objects, compiled for the local architecture - for testing only
-$(OBJECTS): $(TEST_BUILD_DIR)/%.o : $(SRC_DIR)/%.c
-	$(CC) $(CFLAGS) -c -MMD -MT ${@:.o=.d} -o $@ $<
+# $(OBJECTS): $(TEST_BUILD_DIR)/%.o : $(SRC_DIR)/%.c
+# 	$(CC) $(CFLAGS) -c -MMD -MT ${@:.o=.d} -o $@ $<
 
-$(TEST_OBJECTS): $(TEST_BUILD_DIR)/%.o : $(TEST_DIR)/%.c
-	$(CC) $(CFLAGS) -I src -c -MMD -MT ${@:.o=.d} -o $@ $<
+# $(TEST_OBJECTS): $(TEST_BUILD_DIR)/%.o : $(TEST_DIR)/%.c
+# 	$(CC) $(CFLAGS) -I src -c -MMD -MT ${@:.o=.d} -o $@ $<
 
-test_runner: $(OBJECTS) $(TEST_OBJECTS)
-	$(CC) $(CFLAGS) -o $@ $^
+# test_runner: $(OBJECTS) $(TEST_OBJECTS)
+# 	$(CC) $(CFLAGS) -o $@ $^
 
-test: test_runner
-	./$<
+# test: test_runner
+# 	./$<
 
-install: kernel.elf
-	cp $< /u/cs452/tftp/ARM/pgraboud/k.elf
+# install: kernel.elf
+# 	cp $< /u/cs452/tftp/ARM/pgraboud/k.elf
 
-$(ARM_OBJECTS) $(ARM_ASSEMBLY): | $(BUILD_DIR)
+$(ARM_OBJECTS) $(ARM_ASSEMBLY): | $(DIRS)
 
-$(OBJECTS) $(TEST_OBJECTS): | $(TEST_BUILD_DIR)
+# $(OBJECTS) $(TEST_OBJECTS): | $(TEST_BUILD_DIR)
 
-$(BUILD_DIR) $(TEST_BUILD_DIR):
+$(DIRS):
 	@mkdir -p $@
 
 clean:
 	rm -rf $(BUILD_DIR)
 
-.PHONY: $(BUILD_DIR) $(TEST_BUILD_DIR) clean
+qemu-run: $(KERNEL_BIN)
+	qemu-system-arm -M versatilepb -m 32M -nographic -S -s -kernel $(KERNEL_BIN)
+
+qemu-debug: $(KERNEL_ELF)
+	arm-none-eabi-gdb -ex "target remote localhost:1234" $(KERNEL_ELF)
+
+.PHONY: $(BUILD_DIR) $(TEST_BUILD_DIR) clean qemu-run qemu-debug
 
 -include $(ARM_DEPENDS)
 -include $(DEPENDS)

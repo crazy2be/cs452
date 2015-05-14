@@ -1,5 +1,6 @@
 #pragma once
 
+/*
 // create: make a new task with the given priority, and start it by
 // running the code pointed to by the *code pointer.
 // The code pointer is assumed to point to a method taking no parameters
@@ -43,3 +44,4 @@ inline void Pass(void) {
 inline void Exit(void) {
     exit();
 }
+*/
