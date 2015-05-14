@@ -23,7 +23,7 @@ else
   CC = gcc
   AS = as
   LD = ld
-  LDFLAGS = -init main -Map $(MAP) -T orex.ld -N -L/u/wbcowan/gnuarm-4.0.2/lib/gcc/arm-elf/4.0.2
+  LDFLAGS = -init main -Map $(MAP) -T src/ts7200.ld -N -L/u/wbcowan/gnuarm-4.0.2/lib/gcc/arm-elf/4.0.2
 endif
 
 BUILD_DIR=build
