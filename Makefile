@@ -101,7 +101,12 @@ clean:
 	rm -rf $(BUILD_DIR)
 
 qemu-run: $(KERNEL_BIN)
-	qemu-system-arm -M versatilepb -m 32M -nographic -S -s -kernel $(KERNEL_BIN)
+	echo "Press Ctrl+A x to quit"
+	qemu-system-arm -M versatilepb -m 32M -nographic -kernel $(KERNEL_BIN)
+
+qemu-start: $(KERNEL_BIN)
+	echo "Starting in suspended mode for debugging... Press Ctrl+A x to quit."
+	qemu-system-arm -M versatilepb -m 32M -nographic -s -S -kernel $(KERNEL_BIN)
 
 qemu-debug: $(KERNEL_ELF)
 	arm-none-eabi-gdb -ex "target remote localhost:1234" $(KERNEL_ELF)
