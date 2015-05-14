@@ -18,6 +18,7 @@ ifeq ($(ENV), qemu)
   LD = $(CC)
   # -Wl options are passed through to the linker
   LDFLAGS += -Wl,-T,src/qemu.ld,-Map,$(MAP) -N -static-libgcc --specs=nosys.specs
+  CFLAGS += -DQEMU
 else
   CC = gcc
   AS = as
