@@ -8,20 +8,12 @@
 
 /* void context_switch(void); */
 
-/* void test(void) { */
-/* } */
-
-// From https://balau82.wordpress.com/2010/02/28/hello-world-for-bare-metal-arm-using-qemu/
-volatile unsigned int * const UART0DR = (unsigned int *)0x101f1000;
-void print_uart0(const char *s) {
-    while(*s != '\0') { /* Loop until end of string */
-        *UART0DR = (unsigned int)(*s); /* Transmit char */
-        s++; /* Next char */
-    }
+void test(void) {
+	io_puts(COM2, "Inside test function\n\r");
+	io_flush(COM2);
 }
 
 int main (int argc, char *argv[]) {
-	print_uart0("Hello world!\n");
 	uart_configure(COM1, 2400, OFF);
 	uart_configure(COM2, 115200, OFF);
 
@@ -53,19 +45,5 @@ int main (int argc, char *argv[]) {
 	printf("e2:%x ", uart_err(COM2));
 	io_flush(COM2);
 
-    /* int test2 = 7; */
-    /* void (*fp)(void) = &test; */
-    /* bwsetfifo(COM2, 1); */
-    /* bwsetspeed(COM2, 115200); */
-    /* bwprintf(COM2, "Hello world from main\n\r"); */
-
-    /* // set up pretend link register in other stack */
-    /* new_context.stack_pointer = 0x80000; */
-    /* *(int*) new_context.stack_pointer = (unsigned) &test; */
-    /* context_switch(); */
-
-    /* bwprintf(COM2, "Hello world from main again here\n\r"); */
-
-    /* /1* fp(); *1/ */
-    /* return test2; */
+    test();
 }
