@@ -1,8 +1,6 @@
 ENTRY(_Reset)
 SECTIONS
 {
- . = 0x0;
- .exception_vector . : { build/exception_vector.o }
  . = 0x10000;
  .startup . : { build/qemu.o }
  .text : { *(.text) }
