@@ -7,7 +7,6 @@
 @ exposed externally
 pass:
     swi 0
-    b enter_kernel
     bx r14
 
 init_task:
