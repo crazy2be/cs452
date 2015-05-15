@@ -1,6 +1,7 @@
-LD = arm-none-eabi-ld
+BUILD_DIR=build
+SRC_DIR=src
 
-CFLAGS  = -g -fPIC -Wall -Iinclude -std=c99
+CFLAGS  = -g -fPIC -Wall -Werror -Iinclude -std=c99
 ARCH_CFLAGS = -mcpu=arm920t -msoft-float
 # -g: include hooks for gdb
 # -mcpu=arm920t: generate code for the 920t architecture
@@ -8,8 +9,8 @@ ARCH_CFLAGS = -mcpu=arm920t -msoft-float
 # -Wall: report all warnings
 
 ASFLAGS = -mcpu=arm920t -mapcs-32
-MAP = kernel.map
 
+MAP = ${BUILD_DIR}/kernel.map
 
 # flags conditional on whether we're building for the real hardware or not
 ifeq ($(ENV), qemu)
@@ -17,17 +18,16 @@ ifeq ($(ENV), qemu)
   AS = arm-none-eabi-as
   LD = $(CC)
   # -Wl options are passed through to the linker
-  LDFLAGS += -Wl,-T,src/qemu.ld,-Map,$(MAP) -N -static-libgcc --specs=nosys.specs
+  LINKER_SCRIPT = src/qemu.ld
+  LDFLAGS = -Wl,-T,$(LINKER_SCRIPT),-Map,$(MAP) -N -static-libgcc --specs=nosys.specs
   CFLAGS += -DQEMU
 else
   CC = gcc
   AS = as
   LD = ld
-  LDFLAGS = -init main -Map $(MAP) -T src/ts7200.ld -N -L/u/wbcowan/gnuarm-4.0.2/lib/gcc/arm-elf/4.0.2
+  LINKER_SCRIPT = src/ts7200.h
+  LDFLAGS = -init main -Map $(MAP) -T $(LINKER_SCRIPT) -N -L/u/wbcowan/gnuarm-4.0.2/lib/gcc/arm-elf/4.0.2
 endif
-
-BUILD_DIR=build
-SRC_DIR=src
 
 SOURCES=$(shell find $(SRC_DIR) -name '*.c')
 COMMON_OBJECTS=$(addsuffix .o, $(basename $(subst $(SRC_DIR),$(BUILD_DIR),$(SOURCES))))
@@ -59,6 +59,8 @@ $(KERNEL_BIN): $(KERNEL_ELF)
 
 $(KERNEL_ELF): $(ARM_OBJECTS) $(ASM_OBJECTS)
 	$(LD) $(LDFLAGS) -o $@ $^ -lgcc
+
+$(KERNEL_ELF): $(LINKER_SCRIPT)
 
 # actual build script for arm parts
 # build script for parts that are written by hand in assembly

@@ -14,11 +14,13 @@ int tid();
 // if the parent task has been, or is being destroyed, the value is
 // implementation defined
 int parent_tid();
+*/
 
 // pass: yield control flow to the kernel, and have the calling task
 // be immediately queued for execution again
 void pass(void);
 
+/*
 // exit: stop execution of the calling task, and destroy it and all its
 // resources.
 void exit(void);
