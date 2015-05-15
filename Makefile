@@ -22,6 +22,7 @@ ifeq ($(ENV), qemu)
   LDFLAGS = -Wl,-T,$(LINKER_SCRIPT),-Map,$(MAP) -N -static-libgcc --specs=nosys.specs
   CFLAGS += -DQEMU
 else
+  export PATH := /u/wbcowan/gnuarm-4.0.2/libexec/gcc/arm-elf/4.0.2:/u/wbcowan/gnuarm-4.0.2/arm-elf/bin:$(PATH)
   CC = gcc
   AS = as
   LD = ld
@@ -112,6 +113,10 @@ qemu-start: $(KERNEL_BIN)
 
 qemu-debug: $(KERNEL_ELF)
 	arm-none-eabi-gdb -ex "target remote localhost:1234" $(KERNEL_ELF)
+
+jsync:
+	rsync -avz . uw:cs452-kernel/
+	ssh uw "bash -c 'cd cs452-kernel && make clean && echo '\''testing'\'' && (cat src/context_switch.s | sed '\''s/push/stmfd sp\!, /g'\'' | sed '\''s/pop/ldmfd sp\!, /g'\'' > src/context_switch.s) && make ENV=ts7200'"
 
 .PHONY: $(BUILD_DIR) $(TEST_BUILD_DIR) clean qemu-run qemu-debug
 
