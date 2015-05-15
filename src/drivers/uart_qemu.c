@@ -20,7 +20,7 @@ extern void assert(int, const char*);
 	#define RXFF_MASK	0x40	// Receive buffer full
 	#define TXFE_MASK	0x80	// Transmit buffer empty
 
-static int* reg(int channel, int off) {
+static volatile int* reg(int channel, int off) {
 	switch (channel) {
 		// Intentionally reversed- in ts7200, COM2 is stdout, and COM1 is
 		// the train controller, but in QEMU, UART0 is stdout.

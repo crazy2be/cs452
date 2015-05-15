@@ -4,7 +4,7 @@ void queue_init(struct priority_queue *q) {
     q->size = 0;
 }
 
-int queue_push(struct priority_queue *q, int val, int priority) {
+int queue_push(struct priority_queue *q, struct task_descriptor *task, int priority) {
     unsigned i, parent;
 
     if (q->size >= PRIORITY_QUEUE_SIZE) {
@@ -22,21 +22,22 @@ int queue_push(struct priority_queue *q, int val, int priority) {
     }
 
     q->buf[i].priority = priority;
-    q->buf[i].val = val;
+    q->buf[i].task = task;
     q->size++;
 
     return 0;
 }
 
-int queue_pop(struct priority_queue *q, int *val) {
+struct task_descriptor* queue_pop(struct priority_queue *q) {
     unsigned i, child;
     struct priority_queue_element e;
+    struct task_descriptor *task;
     if (q->size == 0) {
-        return 1;
+        return 0;
     }
 
-    // return the value
-    *val = q->buf[0].val;
+    // get the value
+    task = q->buf[0].task;
 
     // peel off the last value, and insert it at the top of the heap,
     // maintaining heap order
@@ -57,5 +58,5 @@ int queue_pop(struct priority_queue *q, int *val) {
 
     q->buf[i] = e;
 
-    return 0;
+    return task;
 }

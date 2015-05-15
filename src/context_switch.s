@@ -1,7 +1,7 @@
 .text
 .globl enter_kernel
 .globl exit_kernel
-.globl init_task
+.globl init_task_stack
 .globl pass
 
 @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
@@ -33,7 +33,10 @@ pass:
     swi 0
     bx r14
 
-init_task:
+@ write starter values onto the stack of a task, when that task is first created
+@ this allows us to simplify our context switching code, since we can now handwavely
+@ state that every task is already running, and has a valid stack to resume to
+init_task_stack:
     @ use of r3 as temp storage
     mov r3, #0
     mov r2, r0
