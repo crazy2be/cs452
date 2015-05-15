@@ -1,6 +1,7 @@
-#include "bwio.h"
+#include "util.h"
 #include "task_descriptor.h"
 #include "io.h"
+
 #include "drivers/timer.h"
 #include "context_switch.h"
 #include <kernel.h>
@@ -47,6 +48,8 @@ int main (int argc, char *argv[]) {
 	io_puts(COM2, "IO...\n\r");
 	io_flush(COM2);
 
+	printf("e1:%x ", uart_err(COM1));
+	printf("e2:%x ", uart_err(COM2));
 	io_flush(COM2);
 
     test();
