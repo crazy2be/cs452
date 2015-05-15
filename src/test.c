@@ -15,11 +15,12 @@ void test(void) {
 }
 
 void test2(void) {
-	io_puts(COM2, "Inside test function\n\r");
+	io_puts(COM2, "Inside test function 2\n\r");
 	io_flush(COM2);
     pass();
 }
 
+extern int enter_kernel_addr;
 int main (int argc, char *argv[]) {
 	uart_configure(COM1, 2400, OFF);
 	uart_configure(COM2, 115200, OFF);
@@ -51,6 +52,10 @@ int main (int argc, char *argv[]) {
 	printf("e1:%x ", uart_err(COM1));
 	printf("e2:%x ", uart_err(COM2));
 	io_flush(COM2);
+
+	// MAGIC 0x4000 is stolen from
+	// http://www.ryanday.net/2010/09/08/arm-programming-part-1/
+	*(volatile int*)(0x8) = enter_kernel_addr + 0x4000; //TODO
 
     test();
 
