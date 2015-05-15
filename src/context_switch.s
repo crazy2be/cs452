@@ -85,8 +85,8 @@ enter_kernel:
     push {r0}
 
     @ then load cpsr into r0, and mask in the right bits to go to system mode
-    and r0, r0, #0xffffffe0
-    orr r0, r0, #0x10
+    mrs r0, cpsr
+    orr r0, r0, #0x1f
     msr cpsr, r0
 
     @ then, save program state on the user stack
@@ -114,8 +114,6 @@ enter_kernel:
 
     @ first, save the user stack pointer
     mov r1, sp
-    @ load the cpsr
-    mrs r2, cpsr
 
     and r0, r0, #0xffffffe0
     orr r0, r0, #0x13
@@ -124,7 +122,12 @@ enter_kernel:
     @ we are now back in supervisor mode, with the kernel stack
 
     pop {r0}
+    @ load the spsr (user's original cpsr)
+    mrs r2, spsr
     stmfd r1!, {r0, r2}
+
+    @ store the program counter on the stack, in spot reserved for it
+    str lr, [r1, #64]
 
     @ restore the kernel stack
     @ this must correspond to what is being saved in exit_kernel
