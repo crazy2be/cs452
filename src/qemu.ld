@@ -3,9 +3,8 @@ https://balau82.wordpress.com/2010/02/28/hello-world-for-bare-metal-arm-using-qe
 ENTRY(_Reset)
 SECTIONS
 {
- . = 0x0;
- .exception_vector . : { build/exception_vector.o }
  . = 0x10000;
+ .exception_vector . : { build/exception_vector.o }
  .startup . : { build/qemu.o }
  .text : { *(.text) }
  .data : { *(.data) }
