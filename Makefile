@@ -58,12 +58,9 @@ $(KERNEL_BIN): $(KERNEL_ELF)
 	arm-none-eabi-objcopy -O binary $< $@
 
 $(KERNEL_ELF): $(ARM_OBJECTS) $(ASM_OBJECTS)
-	$(LD) $(LDFLAGS) -o $@ $^ -lgcc
+	$(LD) $(LDFLAGS) -o $@ $(ARM_OBJECTS) $(ASM_OBJECTS) -lgcc
 
-# Uncommenting this line seems to break the build; it causes IO to no longer
-# work - I have no idea why this is the case
-# $(info $(LINKER_SCRIPT) $(KERNEL_ELF) $(KERNEL_BIN))
-# $(KERNEL_ELF): $(LINKER_SCRIPT)
+$(KERNEL_ELF): $(LINKER_SCRIPT)
 
 # actual build script for arm parts
 # build script for parts that are written by hand in assembly
