@@ -1,7 +1,7 @@
 BUILD_DIR=build
 SRC_DIR=src
 
-CFLAGS  = -g -fPIC -Wall -Werror -Iinclude -std=c99
+CFLAGS  = -g -fPIC -Wall -Werror -Iinclude -std=c99 -O2
 ARCH_CFLAGS = -mcpu=arm920t -msoft-float
 # -g: include hooks for gdb
 # -mcpu=arm920t: generate code for the 920t architecture
