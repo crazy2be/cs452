@@ -45,7 +45,6 @@ init_task:
 exit_kernel:
     @ first, save the kernel's state
     @ save r0-r12, then save load register as the program counter
-    @ TODO: we don't need to save r0-r3 here
     @ TODO: surely there is a more efficient way to do this?
     push {r14} @ save LR as PC for when switching context back
     @push {r14} @ save LR as LR (this value is probably thrown away)
@@ -95,7 +94,6 @@ enter_kernel:
     @ leave a spot for the program counter
     sub sp, sp, #4
 
-    @ TODO: double check that the lr is getting stored correctly
     push {r14}
     @ as usual, don't save the stack pointer
     push {r12}
