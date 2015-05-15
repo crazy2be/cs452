@@ -47,7 +47,7 @@ exit_kernel:
     @ save r0-r12, then save load register as the program counter
     @ TODO: we don't need to save r0-r3 here
     @ TODO: surely there is a more efficient way to do this?
-    push {r14} @ save LR as PC for when switching context back TODO: is this even used?
+    push {r14} @ save LR as PC for when switching context back
     @push {r14} @ save LR as LR (this value is probably thrown away)
     @ don't save the stack pointer
     push {r12}
@@ -95,6 +95,7 @@ enter_kernel:
     @ leave a spot for the program counter
     sub sp, sp, #4
 
+    @ TODO: double check that the lr is getting stored correctly
     push {r14}
     @ as usual, don't save the stack pointer
     push {r12}
@@ -124,7 +125,8 @@ enter_kernel:
     pop {r0}
     @ load the spsr (user's original cpsr)
     mrs r2, spsr
-    stmfd r1!, {r0, r2}
+    stmfd r1!, {r0}
+    stmfd r1!, {r2}
 
     @ store the program counter on the stack, in spot reserved for it
     str lr, [r1, #64]
