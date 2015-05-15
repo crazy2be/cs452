@@ -4,6 +4,30 @@
 .globl init_task
 .globl pass
 
+@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
+@ Some general notes on restoring registers:
+@ Generally, the restore order is sp, psr, r0-r12, r14-r15.
+@ This is therefore the order that the registers are stored on the stack,
+@ with psr at the lowest addr, and pc at the highest addr.
+@ Note that the save order is the reverse of the restore order.
+
+@ we need to restore the sp as the very first thing, in order to
+@ be able to find anything else
+
+@ the stack pointer value for the kernel is persisted in its register,
+@ so we don't need to worry about restoring that
+
+@ generally, we want to restore the pc last, and the psr first
+
+@ state save of user task should be 16 registers
+
+@ state save of kernel should be 11 registers (cpsr, r4-r12, r14)
+@ we can save less since we don't care about r0-r3, and r13
+@ is preserved for us
+
+@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
 @ exposed externally
 pass:
     swi 0
@@ -12,15 +36,14 @@ pass:
 init_task:
     @ use of r3 as temp storage
     mov r3, #0
+    mov r2, r0
 
     @push onto stack in reverse order
     str r1, [r0, #-4]! @ r15 - program counter, set to address of code to start at
     @ in the actual context switch, these two are saved after returning to supervisor mode
     str r3, [r0, #-4]! @ r14 - TODO: we should initialize lr so that we jump to exit() at the end
     @ don't save stack pointer
-    @ save frame pointer with same value as stack pointer will be at the end of this function
-    sub r2, r0, #56 @ reduce by 56 bytes to match stack value at the end (14 more registers * 4 bytes each)
-    str r2, [r0, #-4]! @ r12 - frame pointer, set to the same as stack pointer
+    str r2, [r0, #-4]! @ r12 - frame pointer, set to the same as original stack pointer
 
     str r3, [r0, #-4]! @ r11
     str r3, [r0, #-4]! @ r10
@@ -35,20 +58,27 @@ init_task:
     str r3, [r0, #-4]! @ r1
     str r3, [r0, #-4]! @ r0
 
-    @psr is the first thing loaded from the stack, so it's the last thing popped on
-    str r3, [r0, #-4]! @ psr TODO actually have a sane value for this
+    @ psr is the first thing loaded from the stack, so it's the last thing popped on
+    @ use current psr value, but mask out the appropriate bits to be in user mode
+    @ there are probably other bits we need to flip (Z, C, etc.)
+    mrs r3, cpsr
+    and r3, r3, #0xfffffff0
+    str r3, [r0, #-4]! @ psr
 
     bx r14 @ return
 
 @ method to context switch out of the kernel
 @ first argument is the stack pointer of the task we're switching to
 exit_kernel:
-    @ first, save the kernel's state
-    @ save r0-r12, then save load register as the program counter
+    @ first, save the kernel's state.
+    @ this needs to match exactly with how it's loaded back in enter_kernel.
+
     @ TODO: surely there is a more efficient way to do this?
-    push {r14} @ save LR as PC for when switching context back
-    @push {r14} @ save LR as LR (this value is probably thrown away)
-    @ don't save the stack pointer
+
+    @ don't save the pc this would just get thrown away.
+    push {r14} @ save LR so we know where to return when context switching back to the kernel
+    @ don't save the stack pointer.
+    @ save the rest of the registers, excluding r0-r3
     push {r12}
     push {r11}
     push {r10}
@@ -59,22 +89,17 @@ exit_kernel:
     push {r5}
     push {r4}
 
-    @ save the psr
+    @ save the supervisor psr
     mrs r4, cpsr
-    @push {r4} TODO enable this
+    push {r4}
 
-    @ TODO: should just load the PSR from the stack, not do masking
-    @ mask in the right bits to go to user mode
-    and r4, r4, #0xffffffe0
-    orr r4, r4, #0x10
+    @ restore user psr
+    ldr r4, [r0], #4
     msr cpsr, r4
 
     @ move user stack pointer into position
-    @ this has to be done after we enter user mode
+    @ this has to be done after we enter sys mode
     mov sp, r0
-
-    @ load psr; currently we do nothing with this
-    pop {r4}
 
     @ restore all the variables
     pop {r0-r12,r14-r15}
@@ -129,8 +154,13 @@ enter_kernel:
     @ store the program counter on the stack, in spot reserved for it
     str lr, [r1, #64]
 
-    @ restore the kernel stack
+    @ restore the kernel registers
     @ this must correspond to what is being saved in exit_kernel
+    @ load the kernel's original psr
+    @ TODO: is this even necessary?
+    pop {r0}
+    msr cpsr, r0
+    @ now, restore the rest of the registers
     pop {r4-r12,lr}
 
     @ return the user stack pointer
