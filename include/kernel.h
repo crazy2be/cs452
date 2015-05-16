@@ -28,7 +28,6 @@ int parent_tid();
 
 inline void pass(void) __attribute__((always_inline));
 inline void pass(void) {
-/* inline void pass(void) __attribute__((always_inline, naked)) { */
     __asm__ __volatile__ ("swi " STR(SYSCALL_PASS));
 }
 
