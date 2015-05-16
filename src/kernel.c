@@ -111,7 +111,9 @@ int main(int argc, char *argv[]) {
     tasks.active_tasks = 10; // hack for testing
     while (tasks.active_tasks > 0) {
         tasks.active_tasks--;
-        current_task->context.stack_pointer = exit_kernel(current_task->context.stack_pointer);
+        struct syscall_context sc;
+        sc = exit_kernel(current_task->context.stack_pointer);
+        current_task->context.stack_pointer = sc.stack_pointer;
     }
 
 	io_puts(COM2, "No more tasks; done task scheduling\n\r");

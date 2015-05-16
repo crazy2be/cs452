@@ -69,7 +69,7 @@ $(ASM_OBJECTS): $(BUILD_DIR)/%.o : $(SRC_DIR)/%.s
 
 # compile c to assembly, and leave assembly around for inspection
 $(ARM_ASSEMBLY): $(BUILD_DIR)/%.s : $(SRC_DIR)/%.c
-	$(CC) $(CFLAGS) $(ARCH_CFLAGS) -S -MD -MT ${@:.s=.d} -o $@ $<
+	$(CC) $(CFLAGS) $(ARCH_CFLAGS) -S -MD -MT $@ -o $@ $<
 
 # assemble each .s file to a separate object file
 $(ARM_OBJECTS): $(BUILD_DIR)/%.o : $(BUILD_DIR)/%.s

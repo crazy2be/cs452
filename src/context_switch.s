@@ -28,11 +28,6 @@
 
 @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 
-@ exposed externally
-pass:
-    swi 0
-    bx r14
-
 @ write starter values onto the stack of a task, when that task is first created
 @ this allows us to simplify our context switching code, since we can now handwavely
 @ state that every task is already running, and has a valid stack to resume to
@@ -73,6 +68,12 @@ init_task_stack:
 @ method to context switch out of the kernel
 @ first argument is the stack pointer of the task we're switching to
 exit_kernel:
+    @ expected arguments:
+    @ r0 is a copy of the kernel's stack pointer, which we ignore
+    @ TODO: it would be nice if we could convince C not to generate that instruction
+    @ C thinks that we need this to be able to return the struct rv
+    @ r1 is the user task's stack pointer, which we do actually use
+
     @ first, save the kernel's state.
     @ this needs to match exactly with how it's loaded back in enter_kernel.
 
@@ -97,12 +98,12 @@ exit_kernel:
     push {r4}
 
     @ restore user psr
-    ldr r4, [r0], #4
+    ldr r4, [r1], #4
     msr cpsr, r4
 
     @ move user stack pointer into position
     @ this has to be done after we enter sys mode
-    mov sp, r0
+    mov sp, r1
 
     @ restore all the variables
     pop {r0-r12,r14-r15}
@@ -163,11 +164,20 @@ enter_kernel:
     @ TODO: is this even necessary?
     pop {r0}
     msr cpsr, r0
+
+    @ get the syscall number
+    ldr r0, [lr, #-4]
+    @ the least-significant byte of the swi instruction is the syscall number
+    and r0, r0, #0xff
+
     @ now, restore the rest of the registers
     pop {r4-r12,lr}
+
 
     @ return the user stack pointer
     @ strangely, because we are returning to the point saved by the lr,
     @ this actually returns from the exit_kernel function
-    mov r0, r1
+
+    @ this is apparently how c returns a struct value
+	stmia	sp, {r0, r1}
     bx lr
