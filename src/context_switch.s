@@ -155,7 +155,7 @@ enter_kernel:
     stmfd r1!, {r2}
 
     @ store the program counter on the stack, in spot reserved for it
-    str lr, [r1, #64]
+    str lr, [r1, #60]
 
     @ restore the kernel registers
     @ this must correspond to what is being saved in exit_kernel
