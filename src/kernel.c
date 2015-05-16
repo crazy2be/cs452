@@ -70,13 +70,15 @@ struct task_collection {
     int active_tasks;
 };
 
-struct task_descriptor *create_task(struct task_collection *tasks, void *entrypoint, int priority, int parent_tid) {
+static struct task_collection tasks;
+
+struct task_descriptor *create_task(void *entrypoint, int priority, int parent_tid) {
     void *sp = (void*) 0x200000;
-    struct task_descriptor *task = &tasks->task_buf[tasks->next_tid];
+    struct task_descriptor *task = &tasks.task_buf[tasks.next_tid];
 
-    tasks->active_tasks++;
+    tasks.active_tasks++;
 
-    task->tid = tasks->next_tid++;
+    task->tid = tasks.next_tid++;
     task->parent_tid = parent_tid;
     task->priority = priority;
     task->state = READY;
@@ -92,7 +94,6 @@ struct task_descriptor *create_task(struct task_collection *tasks, void *entrypo
 int main(int argc, char *argv[]) {
     // to avoid using globals, we allocate everything on the kernel's stack
 
-    struct task_collection tasks;
     tasks.next_tid = 0;
     tasks.active_tasks = 0;
     struct task_descriptor * current_task;
@@ -101,7 +102,7 @@ int main(int argc, char *argv[]) {
 
     // set up the first task
 
-    current_task = create_task(&tasks, &test2, 0, 0);
+    current_task = create_task(&test2, 0, 0);
     (void) current_task;
 
 	io_puts(COM2, "Starting task scheduling\n\r");
