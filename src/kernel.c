@@ -8,9 +8,11 @@
 #define MAX_TID 255
 
 void test2(void) {
-	io_puts(COM2, "Inside test function 2\n\r");
-	io_flush(COM2);
-    pass();
+    for (;;) {
+        io_puts(COM2, "Inside test function 2\n\r");
+        io_flush(COM2);
+        pass();
+    }
 }
 
 static void setup(void) {
@@ -92,8 +94,6 @@ struct task_descriptor *create_task(void *entrypoint, int priority, int parent_t
 }
 
 int main(int argc, char *argv[]) {
-    // to avoid using globals, we allocate everything on the kernel's stack
-
     tasks.next_tid = 0;
     tasks.active_tasks = 0;
     struct task_descriptor * current_task;
@@ -108,6 +108,7 @@ int main(int argc, char *argv[]) {
 	io_puts(COM2, "Starting task scheduling\n\r");
 	io_flush(COM2);
 
+    tasks.active_tasks = 10; // hack for testing
     while (tasks.active_tasks > 0) {
         tasks.active_tasks--;
         current_task->context.stack_pointer = exit_kernel(current_task->context.stack_pointer);
