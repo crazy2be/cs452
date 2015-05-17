@@ -6,13 +6,21 @@
 #include "context_switch.h"
 
 #define MAX_TID 255
+#define USER_STACK_SIZE 0x1000 // 4K stack
+
+void test3(void) {
+    io_puts(COM2, "Inside test function 3\n\r");
+    io_flush(COM2);
+    exitk();
+}
 
 void test2(void) {
     int i;
     int t;
-    for (i = 0; i < 10; i++) {
-        io_puts(COM2, "Inside test function 2 ");
-        t = parent_tid();
+    for (i = 1; i <= 10; i++) {
+        io_puts(COM2, "Inside test function 2\n\r");
+        t  = create(0, &test3);
+        io_puts(COM2, "Spawned task: ");
         io_putll(COM2, t);
         io_puts(COM2, "\n\r");
         io_flush(COM2);
@@ -20,6 +28,17 @@ void test2(void) {
     }
     exitk();
 }
+
+struct task_collection {
+    // for now, a TID is just an index into this array
+    // eventually, this will no longer scale
+    struct task_descriptor task_buf[MAX_TID + 1];
+    // next tid to allocate
+    int next_tid;
+    void *memory_alloc;
+};
+
+static struct task_collection tasks;
 
 static void setup(void) {
 	uart_configure(COM1, 2400, OFF);
@@ -67,20 +86,14 @@ static void setup(void) {
 		exception_vector_table_dst[i] = exception_vector_table_src[i]
 			+ exception_vector_branch_adjustment;
 	}
+
+    tasks.next_tid = 0;
+    tasks.memory_alloc = (void*) 0x200000;
 }
 
-struct task_collection {
-    // for now, a TID is just an index into this array
-    // eventually, this will no longer scale
-    struct task_descriptor task_buf[MAX_TID + 1];
-    // next tid to allocate
-    int next_tid;
-};
-
-static struct task_collection tasks;
-
 struct task_descriptor *create_task(void *entrypoint, int priority, int parent_tid) {
-    void *sp = (void*) 0x200000;
+    void *sp = tasks.memory_alloc;
+    tasks.memory_alloc += USER_STACK_SIZE;
     struct task_descriptor *task = &tasks.task_buf[tasks.next_tid];
 
     task->tid = tasks.next_tid++;
@@ -103,12 +116,11 @@ struct task_descriptor *create_task(void *entrypoint, int priority, int parent_t
     return task;
 }
 
-inline struct user_context* get_task_context(struct task_descriptor* task) {
+struct user_context* get_task_context(struct task_descriptor* task) {
     return (struct user_context*) task->context.stack_pointer;
 }
 
 int main(int argc, char *argv[]) {
-    tasks.next_tid = 0;
     struct task_descriptor * current_task;
     struct task_queue queue;
     queue.first = queue.last = 0;
@@ -117,7 +129,7 @@ int main(int argc, char *argv[]) {
 
     // set up the first task
 
-    current_task = create_task(&test2, 0, 0);
+    current_task = create_task(&test2, 1, 0);
     (void) current_task;
 
 	io_puts(COM2, "Starting task scheduling\n\r");
@@ -126,6 +138,7 @@ int main(int argc, char *argv[]) {
     do {
         struct syscall_context sc;
         struct user_context *uc;
+        struct task_descriptor *new_task;
         sc = exit_kernel(current_task->context.stack_pointer);
         current_task->context.stack_pointer = sc.stack_pointer;
 
@@ -143,6 +156,14 @@ int main(int argc, char *argv[]) {
         case SYSCALL_PARENT_TID:
             uc = get_task_context(current_task);
             uc->r0 = current_task->parent_tid;
+            task_queue_push(&queue, current_task);
+            break;
+        case SYSCALL_CREATE:
+            uc = get_task_context(current_task);
+            new_task = create_task((void*) uc->r0, (int) uc->r1, current_task->tid);
+            task_queue_push(&queue, new_task);
+            // TODO: do error handling
+            uc->r0 = new_task->tid;
             task_queue_push(&queue, current_task);
             break;
         default:

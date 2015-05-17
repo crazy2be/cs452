@@ -20,10 +20,11 @@ inline int create(int priority, void *code) __attribute__((always_inline));
 inline int create(int priority, void *code) {
     register int tid __asm__("r0");
     __asm__ __volatile__ (
-        "mov r0, %0"
-        "mov r1, %1"
+        "mov r0, %1\n"
+        "mov r1, %2\n"
         SYSCALL(SYSCALL_CREATE)
         : "=r" (tid)
+        : "r" (code), "r" (priority)
     );
     return tid;
 }
