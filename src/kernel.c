@@ -9,9 +9,11 @@
 
 void test2(void) {
     int i;
+    int t;
     for (i = 0; i < 10; i++) {
         io_puts(COM2, "Inside test function 2 ");
-        io_putll(COM2, i);
+        t = parent_tid();
+        io_putll(COM2, t);
         io_puts(COM2, "\n\r");
         io_flush(COM2);
         pass();
@@ -101,6 +103,10 @@ struct task_descriptor *create_task(void *entrypoint, int priority, int parent_t
     return task;
 }
 
+inline struct user_context* get_task_context(struct task_descriptor* task) {
+    return (struct user_context*) task->context.stack_pointer;
+}
+
 int main(int argc, char *argv[]) {
     tasks.next_tid = 0;
     struct task_descriptor * current_task;
@@ -119,11 +125,29 @@ int main(int argc, char *argv[]) {
 
     do {
         struct syscall_context sc;
+        struct user_context *uc;
         sc = exit_kernel(current_task->context.stack_pointer);
         current_task->context.stack_pointer = sc.stack_pointer;
 
-        if (sc.syscall_num != SYSCALL_EXIT) {
+        switch (sc.syscall_num) {
+        case SYSCALL_PASS:
             task_queue_push(&queue, current_task);
+            break;
+        case SYSCALL_EXIT:
+            break;
+        case SYSCALL_TID:
+            uc = get_task_context(current_task);
+            uc->r0 = current_task->tid;
+            task_queue_push(&queue, current_task);
+            break;
+        case SYSCALL_PARENT_TID:
+            uc = get_task_context(current_task);
+            uc->r0 = current_task->parent_tid;
+            task_queue_push(&queue, current_task);
+            break;
+        default:
+            assert(0, "UNKNOWN SYSCALL NUMBER");
+            break;
         }
 
         current_task = task_queue_pop(&queue);
