@@ -11,7 +11,6 @@
 void test3(void) {
     io_puts(COM2, "Inside test function 3\n\r");
     io_flush(COM2);
-    exitk();
 }
 
 void test2(void) {
@@ -26,7 +25,6 @@ void test2(void) {
         io_flush(COM2);
         pass();
     }
-    exitk();
 }
 
 struct task_collection {
@@ -91,6 +89,10 @@ static void setup(void) {
     tasks.memory_alloc = (void*) 0x200000;
 }
 
+void exit_after_return(void) {
+    exitk();
+}
+
 struct task_descriptor *create_task(void *entrypoint, int priority, int parent_tid) {
     void *sp = tasks.memory_alloc;
     tasks.memory_alloc += USER_STACK_SIZE;
@@ -104,7 +106,7 @@ struct task_descriptor *create_task(void *entrypoint, int priority, int parent_t
 
     struct user_context *uc = ((struct user_context*) sp) - 1;
     uc->pc = (unsigned) entrypoint;
-    uc->lr = 0; // TODO: we should initialize lr to jump to exit when done
+    uc->lr = (unsigned) &exit_after_return;
     // leave most everything else uninitialized
     uc->r12 = (unsigned) sp;
     unsigned cpsr;
