@@ -87,9 +87,16 @@ struct task_descriptor *create_task(void *entrypoint, int priority, int parent_t
     task->state = READY;
     /* task->memory_segment = sp; */
 
-    sp = init_task_stack(sp, entrypoint);
+    struct user_context *uc = ((struct user_context*) sp) - 1;
+    uc->pc = (unsigned) entrypoint;
+    uc->lr = 0; // TODO: we should initialize lr to jump to exit when done
+    // leave most everything else uninitialized
+    uc->r12 = (unsigned) sp;
+    unsigned cpsr;
+    __asm__ ("mrs %0, cpsr" : "=r" (cpsr));
+    uc->cpsr = cpsr & 0xfffffff0;
 
-    task->context.stack_pointer = sp;
+    task->context.stack_pointer = (void*) uc;
 
     return task;
 }

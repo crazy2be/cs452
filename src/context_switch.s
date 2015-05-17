@@ -1,7 +1,6 @@
 .text
 .globl enter_kernel
 .globl exit_kernel
-.globl init_task_stack
 .globl pass
 
 @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
@@ -27,43 +26,6 @@
 @ is preserved for us
 
 @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-
-@ write starter values onto the stack of a task, when that task is first created
-@ this allows us to simplify our context switching code, since we can now handwavely
-@ state that every task is already running, and has a valid stack to resume to
-init_task_stack:
-    @ use of r3 as temp storage
-    mov r3, #0
-    mov r2, r0
-
-    @push onto stack in reverse order
-    str r1, [r0, #-4]! @ r15 - program counter, set to address of code to start at
-    @ in the actual context switch, these two are saved after returning to supervisor mode
-    str r3, [r0, #-4]! @ r14 - TODO: we should initialize lr so that we jump to exit() at the end
-    @ don't save stack pointer
-    str r2, [r0, #-4]! @ r12 - frame pointer, set to the same as original stack pointer
-
-    str r3, [r0, #-4]! @ r11
-    str r3, [r0, #-4]! @ r10
-    str r3, [r0, #-4]! @ r9
-    str r3, [r0, #-4]! @ r8
-    str r3, [r0, #-4]! @ r7
-    str r3, [r0, #-4]! @ r6
-    str r3, [r0, #-4]! @ r5
-    str r3, [r0, #-4]! @ r4
-    str r3, [r0, #-4]! @ r3
-    str r3, [r0, #-4]! @ r2
-    str r3, [r0, #-4]! @ r1
-    str r3, [r0, #-4]! @ r0
-
-    @ psr is the first thing loaded from the stack, so it's the last thing popped on
-    @ use current psr value, but mask out the appropriate bits to be in user mode
-    @ there are probably other bits we need to flip (Z, C, etc.)
-    mrs r3, cpsr
-    and r3, r3, #0xfffffff0
-    str r3, [r0, #-4]! @ psr
-
-    bx r14 @ return
 
 @ method to context switch out of the kernel
 @ first argument is the stack pointer of the task we're switching to
