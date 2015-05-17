@@ -69,9 +69,7 @@ init_task_stack:
 @ first argument is the stack pointer of the task we're switching to
 exit_kernel:
     @ expected arguments:
-    @ r0 is a copy of the kernel's stack pointer, which we ignore
-    @ TODO: it would be nice if we could convince C not to generate that instruction
-    @ C thinks that we need this to be able to return the struct rv
+    @ r0 is where C expects us to write the struct return value
     @ r1 is the user task's stack pointer, which we do actually use
 
     @ first, save the kernel's state.
@@ -92,6 +90,7 @@ exit_kernel:
     push {r6}
     push {r5}
     push {r4}
+    push {r0}
 
     @ save the supervisor psr
     mrs r4, cpsr
@@ -171,13 +170,15 @@ enter_kernel:
     and r0, r0, #0xff
 
     @ now, restore the rest of the registers
-    pop {r4-r12,lr}
+    @ note: what was r0 in the original context is now r3
+    pop {r3-r12,lr}
 
 
     @ return the user stack pointer
     @ strangely, because we are returning to the point saved by the lr,
     @ this actually returns from the exit_kernel function
 
+    @ r3 is the value of r0 originally passed into exit_kernel
     @ this is apparently how c returns a struct value
-	stmia	sp, {r0, r1}
+	stmia r3, {r0, r1}
     bx lr
