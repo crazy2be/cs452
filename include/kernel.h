@@ -31,11 +31,14 @@ inline void pass(void) {
     __asm__ __volatile__ ("swi " STR(SYSCALL_PASS));
 }
 
-/*
 // exit: stop execution of the calling task, and destroy it and all its
 // resources.
-void exit(void);
+inline void exitk(void) __attribute__((always_inline));
+inline void exitk(void) {
+    __asm__ __volatile__ ("swi " STR(SYSCALL_EXIT));
+}
 
+/*
 // aliases for the above functions,
 // using the naming convention specified by the course
 inline int Create(int priority, void *code) {
@@ -55,6 +58,6 @@ inline void Pass(void) {
 }
 
 inline void Exit(void) {
-    exit();
+    exitk();
 }
 */

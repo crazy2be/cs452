@@ -8,11 +8,15 @@
 #define MAX_TID 255
 
 void test2(void) {
-    for (;;) {
-        io_puts(COM2, "Inside test function 2\n\r");
+    int i;
+    for (i = 0; i < 10; i++) {
+        io_puts(COM2, "Inside test function 2 ");
+        io_putll(COM2, i);
+        io_puts(COM2, "\n\r");
         io_flush(COM2);
         pass();
     }
+    exitk();
 }
 
 static void setup(void) {
@@ -69,7 +73,6 @@ struct task_collection {
     struct task_descriptor task_buf[MAX_TID + 1];
     // next tid to allocate
     int next_tid;
-    int active_tasks;
 };
 
 static struct task_collection tasks;
@@ -77,8 +80,6 @@ static struct task_collection tasks;
 struct task_descriptor *create_task(void *entrypoint, int priority, int parent_tid) {
     void *sp = (void*) 0x200000;
     struct task_descriptor *task = &tasks.task_buf[tasks.next_tid];
-
-    tasks.active_tasks++;
 
     task->tid = tasks.next_tid++;
     task->parent_tid = parent_tid;
@@ -95,8 +96,9 @@ struct task_descriptor *create_task(void *entrypoint, int priority, int parent_t
 
 int main(int argc, char *argv[]) {
     tasks.next_tid = 0;
-    tasks.active_tasks = 0;
     struct task_descriptor * current_task;
+    struct task_queue queue;
+    queue.first = queue.last = 0;
 
     setup();
 
@@ -108,13 +110,17 @@ int main(int argc, char *argv[]) {
 	io_puts(COM2, "Starting task scheduling\n\r");
 	io_flush(COM2);
 
-    tasks.active_tasks = 10; // hack for testing
-    while (tasks.active_tasks > 0) {
-        tasks.active_tasks--;
+    do {
         struct syscall_context sc;
         sc = exit_kernel(current_task->context.stack_pointer);
         current_task->context.stack_pointer = sc.stack_pointer;
-    }
+
+        if (sc.syscall_num != SYSCALL_EXIT) {
+            task_queue_push(&queue, current_task);
+        }
+
+        current_task = task_queue_pop(&queue);
+    } while (current_task);
 
 	io_puts(COM2, "No more tasks; done task scheduling\n\r");
 	io_flush(COM2);

@@ -16,4 +16,13 @@ struct task_descriptor {
     /* void *memory_segment; */
 
     struct task_context context;
+
+    struct task_descriptor *next, *prev;
 };
+
+struct task_queue {
+    struct task_descriptor *first, *last;
+};
+
+struct task_descriptor *task_queue_pop(struct task_queue *q);
+void task_queue_push(struct task_queue *q, struct task_descriptor *d);
