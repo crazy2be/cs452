@@ -118,10 +118,6 @@ struct task_descriptor *create_task(void *entrypoint, int priority, int parent_t
     return task;
 }
 
-struct user_context* get_task_context(struct task_descriptor* task) {
-    return (struct user_context*) task->context.stack_pointer;
-}
-
 int main(int argc, char *argv[]) {
     struct task_descriptor * current_task;
     struct task_queue queue;
@@ -139,10 +135,11 @@ int main(int argc, char *argv[]) {
 
     do {
         struct syscall_context sc;
-        struct user_context *uc;
         struct task_descriptor *new_task;
         sc = exit_kernel(current_task->context.stack_pointer);
         current_task->context.stack_pointer = sc.stack_pointer;
+
+        struct user_context *uc = (struct user_context*) sc.stack_pointer;
 
         switch (sc.syscall_num) {
         case SYSCALL_PASS:
@@ -151,17 +148,14 @@ int main(int argc, char *argv[]) {
         case SYSCALL_EXIT:
             break;
         case SYSCALL_TID:
-            uc = get_task_context(current_task);
             uc->r0 = current_task->tid;
             task_queue_push(&queue, current_task);
             break;
         case SYSCALL_PARENT_TID:
-            uc = get_task_context(current_task);
             uc->r0 = current_task->parent_tid;
             task_queue_push(&queue, current_task);
             break;
         case SYSCALL_CREATE:
-            uc = get_task_context(current_task);
             new_task = create_task((void*) uc->r0, (int) uc->r1, current_task->tid);
             task_queue_push(&queue, new_task);
             // TODO: do error handling
