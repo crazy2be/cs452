@@ -10,6 +10,8 @@
 @ This is therefore the order that the registers are stored on the stack,
 @ with psr at the lowest addr, and pc at the highest addr.
 @ Note that the save order is the reverse of the restore order.
+@ Further, remember that stmfd sp!, {r0, r1} <=> stmfd sp!, {r1}; stmfd sp!b{r0}
+@ whereas ldmfd sp!, {r0, r1} <=> ldmfd sp!, {r0}; ldmfd sp!, {r1}
 
 @ we need to restore the sp as the very first thing, in order to
 @ be able to find anything else
@@ -30,40 +32,36 @@
 @ method to context switch out of the kernel
 @ first argument is the stack pointer of the task we're switching to
 exit_kernel:
+    @@@@@ SUPERVISOR MODE @@@@@
+
     @ expected arguments:
     @ r0 is where C expects us to write the struct return value
-    @ r1 is the user task's stack pointer, which we do actually use
+    @ r1 is the user task's stack pointer
+
+    @ save the supervisor psr
+    mrs r2, cpsr
+
+    @ shuffle the struct return pointer around so it can be saved in order with the stmfd
+    mov r3, r0
 
     @ first, save the kernel's state.
     @ this needs to match exactly with how it's loaded back in enter_kernel.
 
-    @ TODO: surely there is a more efficient way to do this?
+    @ save LR since the LR gets overwritten when a user task switches into the kernel
+    @ save r4-r12, since these registers are expected to be untouched by this call
+    @ save r3, since this is the address that C expects us to write the return struct into
+    @ save r2 (value of cpsr) to be able to restore the kernel psr (TODO: necessary?)
+    stmfd sp!, {r2-r3, r4-r12, r14}
 
-    @ don't save the pc this would just get thrown away.
-    stmfd sp!, {r14} @ save LR so we know where to return when context switching back to the kernel
-    @ don't save the stack pointer.
-    @ save the rest of the registers, excluding r0-r3
-    stmfd sp!, {r12}
-    stmfd sp!, {r11}
-    stmfd sp!, {r10}
-    stmfd sp!, {r9}
-    stmfd sp!, {r8}
-    stmfd sp!, {r7}
-    stmfd sp!, {r6}
-    stmfd sp!, {r5}
-    stmfd sp!, {r4}
-    stmfd sp!, {r0}
-
-    @ save the supervisor psr
-    mrs r4, cpsr
-    stmfd sp!, {r4}
-
-    @ restore user psr
+    @ restore user psr by popping it off the user task stack
     @ TODO: Are we supposed to use movs pc, lr or similar here? See
     @ http://infocenter.arm.com/help/index.jsp?topic=/com.arm.doc.dui0204j/Cihcdbca.html
     @ (he keeps talking about this in class and on the newsgroup).
-    ldr r4, [r1], #4
+    ldmfd r1!, {r4}
     msr cpsr, r4
+
+    @@@@ USER MODE @@@@
+    @ TODO: this probably isn't going to work when we have interrupts
 
     @ move user stack pointer into position
     @ this has to be done after we enter sys mode
@@ -73,6 +71,22 @@ exit_kernel:
     ldmfd sp!, {r0-r12,r14-r15}
 
 enter_kernel:
+    @ We have to do a little bit of dancing back and forth to save all
+    @ the registers.
+    @ We need to r0-r12,r14,r14_svc, and spsr
+    @ We also need to return r13
+
+    @ First, we have to switch to system mode, so we can even access the user
+    @ stack pointer.
+    @ This requires the use of a register, so we need to save a register to
+    @ the kernel stack, then retrieve it later. We use r0 for this purpose.
+    @ In system mode, we save r1-r12,r14 to the user stack.
+    @ We then switch back to supervisor mode to save spsr and r14_svc (the saved
+    @ value of pc) to the user stack.
+    @ Finally, sp is returned into the kernel.
+
+    @@@@@ SUPERVISOR MODE @@@@@
+
     @ push a register onto the kernel stack to make room
     stmfd sp!, {r0}
 
@@ -81,43 +95,38 @@ enter_kernel:
     orr r0, r0, #0x1f
     msr cpsr, r0
 
+    @@@@@ SYSTEM MODE @@@@@
+
     @ then, save program state on the user stack
     @ this format must match exactly with how the user state is being saved
     @ in init_task and how it is loaded in exit_kernel
     @ leave a spot for the program counter
     sub sp, sp, #4
 
-    stmfd sp!, {r14}
-    @ as usual, don't save the stack pointer
-    stmfd sp!, {r12}
-    stmfd sp!, {r11}
-    stmfd sp!, {r10}
-    stmfd sp!, {r9}
-    stmfd sp!, {r8}
-    stmfd sp!, {r7}
-    stmfd sp!, {r6}
-    stmfd sp!, {r5}
-    stmfd sp!, {r4}
-    stmfd sp!, {r3}
-    stmfd sp!, {r2}
-    stmfd sp!, {r1}
+    @ save all registers except the stack pointer
+    stmfd sp!, {r1-r12, r14}
 
     @ r0 is on the supervisor stack, so switch back to that
 
     @ first, save the user stack pointer
     mov r1, sp
 
-    and r0, r0, #0xffffffe0
-    orr r0, r0, #0x13
+    and r0, r0, #0xfffffff3
     msr cpsr, r0
 
-    @ we are now back in supervisor mode, with the kernel stack
+    @@@@@ SUPERVISOR MODE @@@@@
 
-    ldmfd sp!, {r0}
+    @ we are now back in supervisor mode, with the kernel stack
+    @ r1 is now the user stack pointer
+
+    @ we still need to save the user cpsr, user's initial r0, and program counter
+
+    @ put user's initial r0 into r2
+    ldmfd sp!, {r2}
     @ load the spsr (user's original cpsr)
-    mrs r2, spsr
-    stmfd r1!, {r0}
-    stmfd r1!, {r2}
+    mrs r0, spsr
+    @ push both of these onto the end of the stack
+    stmfd r1!, {r0, r2}
 
     @ store the program counter on the stack, in spot reserved for it
     str lr, [r1, #60]
