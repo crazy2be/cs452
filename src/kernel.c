@@ -78,8 +78,6 @@ static void setup(void) {
 	volatile int* exception_vector_table_src = &exception_vector_table_src_begin;
 	volatile int* exception_vector_table_dst = (volatile int*)0x0;
 	// Note this is automatically divided by 4 because pointers.
-    io_putll(COM2, (unsigned) exception_vector_table_src[2]);
-    io_putll(COM2, (unsigned) &enter_kernel);
 	unsigned exception_vector_branch_adjustment =
 		exception_vector_table_src - exception_vector_table_dst;
 	for (int i = 0; i < 8; i++) {
