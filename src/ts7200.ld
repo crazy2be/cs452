@@ -1,40 +1,13 @@
 ENTRY (main)
-
-MEMORY
-{
-ram : ORIGIN = 0x00218000, LENGTH = 32M
-rom : ORIGIN = 0x60000000, LENGTH = 8M
-}
-
 SECTIONS
 {
-data : /* Initialized data. */
-{
-_DataStart = . ;
-*(.data)
-_DataEnd = . ;
-} >ram
-
-bss : /* Uninitialized data. */
-{
-_BssStart = . ;
-*(.bss)
-_BssEnd = . ;
-} >ram
-
-text : /* The actual instructions. */
-{
-*(.text)
-*(.got)
-*(.got.plt)
-*(.rodata)
-*(.rodata.str1.4)
-*(.glue_7)
-*(.glue_7t)
-} >ram
-
-. = ALIGN(8);
-. = . + 0x1000; /* 4kB of stack memory */
-stack_top = .;
-
+ . = 0x00218000;
+ .exception_vector . : { build/exception_vector.o }
+ .startup . : { build/qemu.o }
+ .text : { __text_start__ = . ; *(.text) __text_end__ = . ; }
+ .data : { __data_start__ = . ; *(.data) __data_end__ = . ; }
+ .bss : { __bss_start__ = . ; *(.bss) __bss_end__ = . ; }
+ . = ALIGN(8);
+ . = . + 0x1000; /* 4kB of stack memory */
+ stack_top = . ;
 }
