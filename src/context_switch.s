@@ -59,6 +59,9 @@ exit_kernel:
     stmfd sp!, {r4}
 
     @ restore user psr
+    @ TODO: Are we supposed to use movs pc, lr or similar here? See
+    @ http://infocenter.arm.com/help/index.jsp?topic=/com.arm.doc.dui0204j/Cihcdbca.html
+    @ (he keeps talking about this in class and on the newsgroup).
     ldr r4, [r1], #4
     msr cpsr, r4
 
