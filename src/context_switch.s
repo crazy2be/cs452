@@ -32,34 +32,25 @@
 exit_kernel:
     @ expected arguments:
     @ r0 is where C expects us to write the struct return value
-    @ r1 is the user task's stack pointer, which we do actually use
+    @ r1 is the user task's stack pointer
+
+    @ save the supervisor psr
+    mrs r2, cpsr
+
+    @ shuffle the struct return pointer around so it can be saved in order with the stmfd
+    mov r3, r0
 
     @ first, save the kernel's state.
     @ this needs to match exactly with how it's loaded back in enter_kernel.
 
-    @ TODO: surely there is a more efficient way to do this?
+    @ save LR since the LR gets overwritten when a user task switches into the kernel
+    @ save r4-r12, since these registers are expected to be untouched by this call
+    @ save r3, since this is the address that C expects us to write the return struct into
+    @ save r2 (value of cpsr) to be able to restore the kernel psr (TODO: necessary?)
+    stmfd sp!, {r2-r3, r4-r12, r14}
 
-    @ don't save the pc this would just get thrown away.
-    stmfd sp!, {r14} @ save LR so we know where to return when context switching back to the kernel
-    @ don't save the stack pointer.
-    @ save the rest of the registers, excluding r0-r3
-    stmfd sp!, {r12}
-    stmfd sp!, {r11}
-    stmfd sp!, {r10}
-    stmfd sp!, {r9}
-    stmfd sp!, {r8}
-    stmfd sp!, {r7}
-    stmfd sp!, {r6}
-    stmfd sp!, {r5}
-    stmfd sp!, {r4}
-    stmfd sp!, {r0}
-
-    @ save the supervisor psr
-    mrs r4, cpsr
-    stmfd sp!, {r4}
-
-    @ restore user psr
-    ldr r4, [r1], #4
+    @ restore user psr by popping it off the user task stack
+    ldmfd r1!, {r4}
     msr cpsr, r4
 
     @ move user stack pointer into position
@@ -84,20 +75,8 @@ enter_kernel:
     @ leave a spot for the program counter
     sub sp, sp, #4
 
-    stmfd sp!, {r14}
-    @ as usual, don't save the stack pointer
-    stmfd sp!, {r12}
-    stmfd sp!, {r11}
-    stmfd sp!, {r10}
-    stmfd sp!, {r9}
-    stmfd sp!, {r8}
-    stmfd sp!, {r7}
-    stmfd sp!, {r6}
-    stmfd sp!, {r5}
-    stmfd sp!, {r4}
-    stmfd sp!, {r3}
-    stmfd sp!, {r2}
-    stmfd sp!, {r1}
+    @ save all registers except the stack pointer
+    stmfd sp!, {r1-r12, r14}
 
     @ r0 is on the supervisor stack, so switch back to that
 
