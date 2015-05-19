@@ -15,10 +15,9 @@ void test3(void) {
 
 void test2(void) {
     int i;
-    int t;
     for (i = 1; i <= 10; i++) {
         io_puts(COM2, "Inside test function 2\n\r");
-        t  = create(0, &test3);
+        int t = create(0, &test3);
         io_puts(COM2, "Spawned task: ");
         io_putll(COM2, t);
         io_puts(COM2, "\n\r");
@@ -74,16 +73,23 @@ static void setup(void) {
 	// memory, where ARM expects to find it. Assumes all instructions in the
 	// exception vector are branch instructions.
 	// http://www.ryanday.net/2010/09/08/arm-programming-part-1/
+#ifdef QEMU
 	extern volatile int exception_vector_table_src_begin;
 	volatile int* exception_vector_table_src = &exception_vector_table_src_begin;
 	volatile int* exception_vector_table_dst = (volatile int*)0x0;
 	// Note this is automatically divided by 4 because pointers.
+    io_putll(COM2, (unsigned) exception_vector_table_src[2]);
+    io_putll(COM2, (unsigned) &enter_kernel);
 	unsigned exception_vector_branch_adjustment =
 		exception_vector_table_src - exception_vector_table_dst;
 	for (int i = 0; i < 8; i++) {
 		exception_vector_table_dst[i] = exception_vector_table_src[i]
 			+ exception_vector_branch_adjustment;
 	}
+#else
+    volatile unsigned *entrypoint = (unsigned*) 0x28;
+    *entrypoint = (unsigned) &enter_kernel;
+#endif
 
     tasks.next_tid = 0;
     tasks.memory_alloc = (void*) 0x200000;
@@ -136,9 +142,9 @@ int main(int argc, char *argv[]) {
     do {
         struct syscall_context sc;
         struct task_descriptor *new_task;
+
         sc = exit_kernel(current_task->context.stack_pointer);
         current_task->context.stack_pointer = sc.stack_pointer;
-
         struct user_context *uc = (struct user_context*) sc.stack_pointer;
 
         switch (sc.syscall_num) {

@@ -89,8 +89,8 @@ $(ARM_OBJECTS): $(BUILD_DIR)/%.o : $(BUILD_DIR)/%.s
 # test: test_runner
 # 	./$<
 
-# install: kernel.elf
-# 	cp $< /u/cs452/tftp/ARM/pgraboud/k.elf
+install: $(KERNEL_ELF)
+	cp $< /u/cs452/tftp/ARM/pgraboud/k.elf
 
 $(ARM_OBJECTS) $(ARM_ASSEMBLY): | $(DIRS)
 
