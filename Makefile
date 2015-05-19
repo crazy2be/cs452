@@ -25,7 +25,7 @@ else
   CC = gcc
   AS = as
   LD = ld
-  LINKER_SCRIPT = src/ts7200.h
+  LINKER_SCRIPT = src/ts7200.ld
   LDFLAGS = -init main -Map $(MAP) -T $(LINKER_SCRIPT) -N -L/u/wbcowan/gnuarm-4.0.2/lib/gcc/arm-elf/4.0.2
 endif
 

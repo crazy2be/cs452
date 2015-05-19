@@ -40,23 +40,23 @@ exit_kernel:
     @ TODO: surely there is a more efficient way to do this?
 
     @ don't save the pc this would just get thrown away.
-    push {r14} @ save LR so we know where to return when context switching back to the kernel
+    stmfd sp, {r14} @ save LR so we know where to return when context switching back to the kernel
     @ don't save the stack pointer.
     @ save the rest of the registers, excluding r0-r3
-    push {r12}
-    push {r11}
-    push {r10}
-    push {r9}
-    push {r8}
-    push {r7}
-    push {r6}
-    push {r5}
-    push {r4}
-    push {r0}
+    stmfd sp, {r12}
+    stmfd sp, {r11}
+    stmfd sp, {r10}
+    stmfd sp, {r9}
+    stmfd sp, {r8}
+    stmfd sp, {r7}
+    stmfd sp, {r6}
+    stmfd sp, {r5}
+    stmfd sp, {r4}
+    stmfd sp, {r0}
 
     @ save the supervisor psr
     mrs r4, cpsr
-    push {r4}
+    stmfd sp, {r4}
 
     @ restore user psr
     ldr r4, [r1], #4
@@ -67,11 +67,11 @@ exit_kernel:
     mov sp, r1
 
     @ restore all the variables
-    pop {r0-r12,r14-r15}
+    ldmfd sp, {r0-r12,r14-r15}
 
 enter_kernel:
     @ push a register onto the kernel stack to make room
-    push {r0}
+    stmfd sp, {r0}
 
     @ then load cpsr into r0, and mask in the right bits to go to system mode
     mrs r0, cpsr
@@ -84,20 +84,20 @@ enter_kernel:
     @ leave a spot for the program counter
     sub sp, sp, #4
 
-    push {r14}
+    stmfd sp, {r14}
     @ as usual, don't save the stack pointer
-    push {r12}
-    push {r11}
-    push {r10}
-    push {r9}
-    push {r8}
-    push {r7}
-    push {r6}
-    push {r5}
-    push {r4}
-    push {r3}
-    push {r2}
-    push {r1}
+    stmfd sp, {r12}
+    stmfd sp, {r11}
+    stmfd sp, {r10}
+    stmfd sp, {r9}
+    stmfd sp, {r8}
+    stmfd sp, {r7}
+    stmfd sp, {r6}
+    stmfd sp, {r5}
+    stmfd sp, {r4}
+    stmfd sp, {r3}
+    stmfd sp, {r2}
+    stmfd sp, {r1}
 
     @ r0 is on the supervisor stack, so switch back to that
 
@@ -110,7 +110,7 @@ enter_kernel:
 
     @ we are now back in supervisor mode, with the kernel stack
 
-    pop {r0}
+    ldmfd sp, {r0}
     @ load the spsr (user's original cpsr)
     mrs r2, spsr
     stmfd r1!, {r0}
@@ -123,7 +123,7 @@ enter_kernel:
     @ this must correspond to what is being saved in exit_kernel
     @ load the kernel's original psr
     @ TODO: is this even necessary?
-    pop {r0}
+    ldmfd sp, {r0}
     msr cpsr, r0
 
     @ get the syscall number
@@ -133,7 +133,7 @@ enter_kernel:
 
     @ now, restore the rest of the registers
     @ note: what was r0 in the original context is now r3
-    pop {r3-r12,lr}
+    ldmfd sp, {r3-r12,lr}
 
 
     @ return the user stack pointer

@@ -28,7 +28,13 @@ text : /* The actual instructions. */
 *(.got)
 *(.got.plt)
 *(.rodata)
+*(.rodata.str1.4)
 *(.glue_7)
 *(.glue_7t)
 } >ram
+
+. = ALIGN(8);
+. = . + 0x1000; /* 4kB of stack memory */
+stack_top = .;
+
 }
