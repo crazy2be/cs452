@@ -39,13 +39,16 @@ CFLAGS += -DQEMU
 $(KERNEL_BIN): $(KERNEL_ELF)
 	arm-none-eabi-objcopy -O binary $< $@
 else
+export PATH := /u/wbcowan/gnuarm-4.0.2/libexec/gcc/arm-elf/4.0.2:/u/wbcowan/gnuarm-4.0.2/arm-elf/bin:$(PATH)
 CC = gcc
 AS = as
 LD = ld
 LINKER_SCRIPT = src/ts7200.ld
 LDFLAGS = -init main -Map $(MAP) -T $(LINKER_SCRIPT) -N -L/u/wbcowan/gnuarm-4.0.2/lib/gcc/arm-elf/4.0.2
+ELF_DESTINATION = /u/cs452/tftp/ARM/$(USER)/k.elf
 install: $(KERNEL_ELF)
-	cp $< /u/cs452/tftp/ARM/$(USER)/k.elf
+	cp $< $(ELF_DESTINATION)
+	chmod a+r $(ELF_DESTINATION)
 endif
 
 SOURCES=$(shell find $(SRC_DIR) -name '*.c')
@@ -103,6 +106,10 @@ qemu-start: $(KERNEL_BIN)
 
 qemu-debug: $(KERNEL_ELF)
 	arm-none-eabi-gdb -ex "target remote localhost:1234" $(KERNEL_ELF)
+
+sync:
+	rsync -avzd . uw:cs452-kernel/
+	ssh uw "bash -c 'cd cs452-kernel && make clean && make ENV=ts7200 install'"
 
 .PHONY: $(BUILD_DIR) $(TEST_BUILD_DIR) clean qemu-run qemu-debug
 
