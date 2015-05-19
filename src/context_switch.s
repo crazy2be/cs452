@@ -54,6 +54,9 @@ exit_kernel:
     stmfd sp!, {r2-r3, r4-r12, r14}
 
     @ restore user psr by popping it off the user task stack
+    @ TODO: Are we supposed to use movs pc, lr or similar here? See
+    @ http://infocenter.arm.com/help/index.jsp?topic=/com.arm.doc.dui0204j/Cihcdbca.html
+    @ (he keeps talking about this in class and on the newsgroup).
     ldmfd r1!, {r4}
     msr cpsr, r4
 
