@@ -91,9 +91,16 @@ int main(int argc, char *argv[]) {
 // 	extern char *__bss_start__, *__bss_end__;
 // 	for (int i = 0; i < __bss_end__ - __bss_start__; i++) {
 // 		*(__bss_start__ + i) = 0;
-// 		if (i % 1000 == 0) {
-// 			while (!uart_canwrite(COM2)) {} uart_write(COM2, '.');
+// // 		if (i % 1000 == 0) {
+// // 			io_putll(COM2, i); io_putc(COM2, '\r'); io_putc(COM2, '\n');
+// // 			io_flush(COM2);
+// // 		}
+// 		if (i > 1046500) {
+// 			io_putll(COM2, i); io_putc(COM2, '\r'); io_putc(COM2, '\n');
+// 			io_flush(COM2);
 // 		}
+// 			// The last address successfully written by this code is
+// 			// 1046536 or 0xFF808. After that, it hangs.
 // 	}
 	//memset(__bss_start__, 0, __bss_end__ - __bss_start__);
 	while (!uart_canwrite(COM2)) {} uart_write(COM2, '.');
