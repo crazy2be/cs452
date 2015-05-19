@@ -22,6 +22,8 @@ ifeq ($(ENV), qemu)
   LDFLAGS = -Wl,-T,$(LINKER_SCRIPT),-Map,$(MAP) -N -static-libgcc --specs=nosys.specs
   CFLAGS += -DQEMU
 else
+  # Set up our PATH to use cowan's super ghetto 10-year-old cross-complier.
+  export PATH := /u/wbcowan/gnuarm-4.0.2/libexec/gcc/arm-elf/4.0.2:/u/wbcowan/gnuarm-4.0.2/arm-elf/bin:$(PATH)
   CC = gcc
   AS = as
   LD = ld
@@ -90,7 +92,8 @@ $(ARM_OBJECTS): $(BUILD_DIR)/%.o : $(BUILD_DIR)/%.s
 # 	./$<
 
 install: $(KERNEL_ELF)
-	cp $< /u/cs452/tftp/ARM/pgraboud/k.elf
+	cp $< /u/cs452/tftp/ARM/$(USER)/k.elf
+	chmod a+r /u/cs452/tftp/ARM/$(USER)/k.elf
 
 $(ARM_OBJECTS) $(ARM_ASSEMBLY): | $(DIRS)
 
@@ -112,6 +115,10 @@ qemu-start: $(KERNEL_BIN)
 
 qemu-debug: $(KERNEL_ELF)
 	arm-none-eabi-gdb -ex "target remote localhost:1234" $(KERNEL_ELF)
+
+sync:
+	rsync -avzd . uw:cs452-kernel/
+	ssh uw "bash -c 'cd cs452-kernel && make clean && make ENV=ts7200 install'"
 
 .PHONY: $(BUILD_DIR) $(TEST_BUILD_DIR) clean qemu-run qemu-debug
 
