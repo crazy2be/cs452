@@ -20,6 +20,9 @@
 // or -2 if no more tasks can be created
 int create(int priority, void *code) __attribute__((naked));
 
+#define CREATE_INVALID_PRIORITY -1
+#define CREATE_INSUFFICIENT_RESOURCES -2
+
 // my_tid: returns the task id of the calling task
 int tid(void) __attribute__((naked));
 

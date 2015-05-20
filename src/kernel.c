@@ -45,6 +45,41 @@ struct task_descriptor *create_task(void *entrypoint, int priority, int parent_t
     return task;
 }
 
+static inline struct user_context* get_task_context(struct task_descriptor* task) {
+    return (struct user_context*) task->context.stack_pointer;
+}
+
+// implementation of syscalls
+void create_handler(struct task_descriptor *current_task, struct priority_task_queue *queue) {
+    struct user_context *uc = get_task_context(current_task);
+    int priority = (int) uc->r0;
+    void *code = (void*) uc->r1;
+    int result;
+
+    if (priority < PRIORITY_MAX || priority > PRIORITY_MIN) {
+        result = CREATE_INVALID_PRIORITY;
+    } else if (tasks.next_tid > MAX_TID) {
+        result = CREATE_INSUFFICIENT_RESOURCES;
+    } else {
+        struct task_descriptor *new_task = create_task(code, priority, current_task->tid);
+        priority_task_queue_push(queue, new_task);
+        result = new_task->tid;
+    }
+
+    uc->r0 = result;
+}
+
+void tid_handler(struct task_descriptor *current_task) {
+    struct user_context *uc = get_task_context(current_task);
+    uc->r0 = current_task->tid;
+}
+
+void parent_tid_handler(struct task_descriptor *current_task) {
+    struct user_context *uc = get_task_context(current_task);
+    uc->r0 = current_task->parent_tid;
+}
+
+
 int main(int argc, char *argv[]) {
 	uart_configure(COM1, 2400, OFF);
 	uart_configure(COM2, 115200, OFF);
@@ -106,31 +141,27 @@ int main(int argc, char *argv[]) {
 
     do {
         struct syscall_context sc;
-        struct task_descriptor *new_task;
 
         sc = exit_kernel(current_task->context.stack_pointer);
         current_task->context.stack_pointer = sc.stack_pointer;
-        struct user_context *uc = (struct user_context*) sc.stack_pointer;
 
         switch (sc.syscall_num) {
         case SYSCALL_PASS:
             priority_task_queue_push(&queue, current_task);
             break;
         case SYSCALL_EXIT:
+            // drop the current task off the queue
             break;
         case SYSCALL_TID:
-            uc->r0 = current_task->tid;
+            tid_handler(current_task);
             priority_task_queue_push(&queue, current_task);
             break;
         case SYSCALL_PARENT_TID:
-            uc->r0 = current_task->parent_tid;
+            parent_tid_handler(current_task);
             priority_task_queue_push(&queue, current_task);
             break;
         case SYSCALL_CREATE:
-            new_task = create_task((void*) uc->r1, (int) uc->r0, current_task->tid);
-            priority_task_queue_push(&queue, new_task);
-            // TODO: do error handling
-            uc->r0 = new_task->tid;
+            create_handler(current_task, &queue);
             priority_task_queue_push(&queue, current_task);
             break;
         default:
