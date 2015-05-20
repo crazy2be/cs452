@@ -60,7 +60,7 @@ exit_kernel:
     ldmfd r1!, {r4}
     msr cpsr, r4
 
-    @@@@ USER MODE @@@@
+    @@@@@ USER MODE @@@@@
     @ TODO: this probably isn't going to work when we have interrupts
 
     @ move user stack pointer into position

@@ -160,7 +160,7 @@ int main(int argc, char *argv[]) {
             task_queue_push(&queue, current_task);
             break;
         case SYSCALL_CREATE:
-            new_task = create_task((void*) uc->r0, (int) uc->r1, current_task->tid);
+            new_task = create_task((void*) uc->r1, (int) uc->r0, current_task->tid);
             task_queue_push(&queue, new_task);
             // TODO: do error handling
             uc->r0 = new_task->tid;
