@@ -53,22 +53,49 @@ exit_kernel:
     @ save r2 (value of cpsr) to be able to restore the kernel psr (TODO: necessary?)
     stmfd sp!, {r2-r3, r4-r12, r14}
 
+    @ Now, restore the user state
+    @ Restore the SP and LR while in system mode
+    @ Then return to supervisor mode and restore r0-r12
+    @ Then restore PC and PSR atomically
+
+    mrs r3, cpsr
+    orr r3, r3, #0x1f
+    msr cpsr, r3
+
+    @@@@@ SYSTEM MODE @@@@@
+
+    @ TODO: probably should reorder the way we store registers on the stack for efficiency
+    @ let's just get it working first
+
+    @ restore the user stack pointer and link register
+
+    @ we want the value of the stack pointer after all the values have been popped
+    @ of, so we add 64 = 16 registers * 4 bytes
+    add sp, r1, #64
+
+    ldr lr, [r1, #56]
+
+    @ switch back to supervisor mode
+    and r3, r3, #0x13
+    msr cpsr, r3
+
+    @@@@@ SUPERVISOR MODE @@@@@
+
     @ restore user psr by popping it off the user task stack
-    @ TODO: Are we supposed to use movs pc, lr or similar here? See
-    @ http://infocenter.arm.com/help/index.jsp?topic=/com.arm.doc.dui0204j/Cihcdbca.html
-    @ (he keeps talking about this in class and on the newsgroup).
+    @ then move it to spsr, since `movs pc, lr` expects it to there
     ldmfd r1!, {r4}
-    msr cpsr, r4
+    msr spsr, r4
 
-    @@@@@ USER MODE @@@@@
-    @ TODO: this probably isn't going to work when we have interrupts
-
-    @ move user stack pointer into position
-    @ this has to be done after we enter sys mode
-    mov sp, r1
+    ldr lr, [r1, #56]
 
     @ restore all the variables
-    ldmfd sp!, {r0-r12,r14-r15}
+    ldmfd r1!, {r0-r12}
+
+    @ restore pc and cpsr atomically
+    @ pc <- lr; cpsr <- spsr
+    movs pc, lr
+
+    @@@@@ USER MODE @@@@@
 
 enter_kernel:
     @ We have to do a little bit of dancing back and forth to save all
