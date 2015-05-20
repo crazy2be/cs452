@@ -6,20 +6,17 @@
 @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 
 @ Some general notes on restoring registers:
-@ Generally, the restore order is sp, psr, r0-r12, r14-r15.
+
+@ The restore order for user context is lr, pc, psr, r0-r12
 @ This is therefore the order that the registers are stored on the stack,
-@ with psr at the lowest addr, and pc at the highest addr.
+@ with lr at the lowest addr, and r12 at the highest addr.
 @ Note that the save order is the reverse of the restore order.
+
 @ Further, remember that stmfd sp!, {r0, r1} <=> stmfd sp!, {r1}; stmfd sp!b{r0}
 @ whereas ldmfd sp!, {r0, r1} <=> ldmfd sp!, {r0}; ldmfd sp!, {r1}
 
-@ we need to restore the sp as the very first thing, in order to
-@ be able to find anything else
-
-@ the stack pointer value for the kernel is persisted in its register,
+@ The stack pointer value for the kernel is persisted in its register,
 @ so we don't need to worry about restoring that
-
-@ generally, we want to restore the pc last, and the psr first
 
 @ state save of user task should be 16 registers
 
@@ -73,7 +70,7 @@ exit_kernel:
     @ of, so we add 64 = 16 registers * 4 bytes
     add sp, r1, #64
 
-    ldr lr, [r1, #56]
+    ldmfd r1!, {lr}
 
     @ switch back to supervisor mode
     and r3, r3, #0x13
@@ -83,10 +80,8 @@ exit_kernel:
 
     @ restore user psr by popping it off the user task stack
     @ then move it to spsr, since `movs pc, lr` expects it to there
-    ldmfd r1!, {r4}
+    ldmfd r1!, {r4, lr}
     msr spsr, r4
-
-    ldr lr, [r1, #56]
 
     @ restore all the variables
     ldmfd r1!, {r0-r12}
@@ -127,36 +122,36 @@ enter_kernel:
     @ then, save program state on the user stack
     @ this format must match exactly with how the user state is being saved
     @ in init_task and how it is loaded in exit_kernel
-    @ leave a spot for the program counter
-    sub sp, sp, #4
 
     @ save all registers except the stack pointer
-    stmfd sp!, {r1-r12, r14}
+    stmfd sp!, {r1-r12}
+
+    @ save the user stack pointer and lr
+    mov r1, sp
+    mov r2, lr
 
     @ r0 is on the supervisor stack, so switch back to that
-
-    @ first, save the user stack pointer
-    mov r1, sp
 
     and r0, r0, #0xfffffff3
     msr cpsr, r0
 
     @@@@@ SUPERVISOR MODE @@@@@
 
-    @ we are now back in supervisor mode, with the kernel stack
-    @ r1 is now the user stack pointer
-
-    @ we still need to save the user cpsr, user's initial r0, and program counter
+    @ store user's r0, pc, spsr, and lr on the stack
+    @ note that we've shuffled these around into weird registers so that
+    @ stmfd saves them in the correct order
+    @ they are r5, r4, r3, and r2, respectively
 
     @ put user's initial r0 into r2
-    ldmfd sp!, {r2}
-    @ load the spsr (user's original cpsr)
-    mrs r0, spsr
-    @ push both of these onto the end of the stack
-    stmfd r1!, {r0, r2}
+    ldmfd sp!, {r5}
 
-    @ store the program counter on the stack, in spot reserved for it
-    str lr, [r1, #60]
+    @ load the spsr (user's original cpsr)
+    mrs r3, spsr
+
+    @ move lr into r4 purely to have the correct save order
+    mov r4, lr
+
+    stmfd r1!, {r2-r5}
 
     @ restore the kernel registers
     @ this must correspond to what is being saved in exit_kernel

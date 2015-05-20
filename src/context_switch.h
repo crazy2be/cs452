@@ -3,7 +3,9 @@
 // convenience struct for manipulating saved copy of user context
 // from c code, given a pointer to that user's stack
 struct user_context {
+    unsigned lr;
     unsigned cpsr;
+    unsigned pc;
     unsigned r0;
     unsigned r1;
     unsigned r2;
@@ -17,8 +19,6 @@ struct user_context {
     unsigned r10;
     unsigned r11;
     unsigned r12;
-    unsigned lr;
-    unsigned pc;
 };
 
 struct syscall_context {
