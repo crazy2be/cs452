@@ -19,6 +19,7 @@ struct task_collection {
 };
 
 static struct task_collection tasks;
+static struct priority_task_queue queue;
 
 struct task_descriptor *create_task(void *entrypoint, int priority, int parent_tid) {
     void *sp = tasks.memory_alloc;
@@ -50,7 +51,7 @@ static inline struct user_context* get_task_context(struct task_descriptor* task
 }
 
 // implementation of syscalls
-void create_handler(struct task_descriptor *current_task, struct priority_task_queue *queue) {
+void create_handler(struct task_descriptor *current_task) {
     struct user_context *uc = get_task_context(current_task);
     int priority = (int) uc->r0;
     void *code = (void*) uc->r1;
@@ -62,7 +63,7 @@ void create_handler(struct task_descriptor *current_task, struct priority_task_q
         result = CREATE_INSUFFICIENT_RESOURCES;
     } else {
         struct task_descriptor *new_task = create_task(code, priority, current_task->tid);
-        priority_task_queue_push(queue, new_task);
+        priority_task_queue_push(&queue, new_task);
         result = new_task->tid;
     }
 
@@ -79,8 +80,7 @@ void parent_tid_handler(struct task_descriptor *current_task) {
     uc->r0 = current_task->parent_tid;
 }
 
-
-int main(int argc, char *argv[]) {
+void setup(void) {
 	uart_configure(COM1, 2400, OFF);
 	uart_configure(COM2, 115200, OFF);
 
@@ -124,20 +124,21 @@ int main(int argc, char *argv[]) {
 			+ exception_vector_branch_adjustment;
 	}
 
-    struct task_descriptor * current_task;
-    struct priority_task_queue queue;
     priority_task_queue_init(&queue);
 
     tasks.next_tid = 0;
     tasks.memory_alloc = (void*) 0x200000;
+}
+
+
+int main(int argc, char *argv[]) {
+    struct task_descriptor * current_task;
+
+    setup();
 
     // set up the first task
-
     current_task = create_task(&init_task, init_task_priority, 0);
     (void) current_task;
-
-	io_puts(COM2, "Starting task scheduling\n\r");
-	io_flush(COM2);
 
     do {
         struct syscall_context sc;
@@ -161,7 +162,7 @@ int main(int argc, char *argv[]) {
             priority_task_queue_push(&queue, current_task);
             break;
         case SYSCALL_CREATE:
-            create_handler(current_task, &queue);
+            create_handler(current_task);
             priority_task_queue_push(&queue, current_task);
             break;
         default:
@@ -171,9 +172,6 @@ int main(int argc, char *argv[]) {
 
         current_task = priority_task_queue_pop(&queue);
     } while (current_task);
-
-	io_puts(COM2, "No more tasks; done task scheduling\n\r");
-	io_flush(COM2);
 
     return 0;
 }

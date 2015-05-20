@@ -1,6 +1,5 @@
 Boot...IO...
-e1:0 e2:0 Starting task scheduling
-init task priority is 0
+e1:0 e2:0 init task priority is 0
 Child task 10
 Child task 9
 Child task 8
@@ -11,5 +10,3 @@ Child task 4
 Child task 3
 Child task 2
 Child task 1
-No more tasks; done task scheduling
-
