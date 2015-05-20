@@ -1,0 +1,17 @@
+#!/usr/bin/expect
+
+set bin [lindex $argv 0]
+set elf [lindex $argv 1]
+set log [lindex $argv 2]
+
+send_user "$bin\n"
+send_user "$elf\n"
+spawn qemu-system-arm -M versatilepb -m 32M -nographic -s -S -serial file:$log -kernel $bin
+set qemu_id $spawn_id
+send_user "$qemu_id\n"
+spawn arm-none-eabi-gdb -ex "target remote localhost:1234" -ex "b exited_main" -ex "c" -ex "set confirm off" -ex "q" $elf
+wait
+
+set spawn_id $qemu_id
+send "quit\n"
+wait

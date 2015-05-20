@@ -4,27 +4,10 @@
 #include "io.h"
 #include "drivers/timer.h"
 #include "context_switch.h"
+#include "init_task.h"
 
 #define MAX_TID 255
 #define USER_STACK_SIZE 0x1000 // 4K stack
-
-void test3(void) {
-    io_puts(COM2, "Inside test function 3\n\r");
-    io_flush(COM2);
-}
-
-void test2(void) {
-    int i;
-    for (i = 1; i <= 10; i++) {
-        io_puts(COM2, "Inside test function 2\n\r");
-        int t = create(5, &test3);
-        io_puts(COM2, "Spawned task: ");
-        io_putll(COM2, t);
-        io_puts(COM2, "\n\r");
-        io_flush(COM2);
-        pass();
-    }
-}
 
 struct task_collection {
     // for now, a TID is just an index into this array
@@ -115,7 +98,7 @@ int main(int argc, char *argv[]) {
 
     // set up the first task
 
-    current_task = create_task(&test2, 1, 0);
+    current_task = create_task(&init_task, init_task_priority, 0);
     (void) current_task;
 
 	io_puts(COM2, "Starting task scheduling\n\r");

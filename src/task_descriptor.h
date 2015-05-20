@@ -1,14 +1,12 @@
 #pragma once
 
+#include <constants.h>
+
 struct task_context {
     void *stack_pointer;
 };
 
 enum task_state { ACTIVE, READY, ZOMBIE };
-
-#define PRIORITY_MAX 0
-#define PRIORITY_MIN 31
-#define PRIORITY_COUNT (PRIORITY_MIN + 1)
 
 struct task_descriptor {
     int tid;

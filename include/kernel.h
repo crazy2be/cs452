@@ -1,5 +1,7 @@
 #pragma once
 
+#include <constants.h>
+
 #define SYSCALL_PASS 0
 #define SYSCALL_EXIT 1
 #define SYSCALL_CREATE 2
