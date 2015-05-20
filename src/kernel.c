@@ -102,11 +102,11 @@ void setup(void) {
 	io_init();
 	while (!uart_canwrite(COM2)) {} uart_write(COM2, '.');
 
-	io_puts(COM2, "IO...\n\r");
+	io_puts(COM2, "IO..." EOL);
 	io_flush(COM2);
 
-	printf("e1:%x ", uart_err(COM1));
-	printf("e2:%x ", uart_err(COM2));
+	printf("e1:%x" EOL, uart_err(COM1));
+	printf("e2:%x" EOL, uart_err(COM2));
 	io_flush(COM2);
 
 	// Copy exception vector from where it's linked/loaded to the start of

@@ -14,7 +14,7 @@
 
 
 void child(void) {
-    printf("Child task %d\n", tid());
+    printf("Child task %d" EOL, tid());
     io_flush(COM2);
 }
 
@@ -27,7 +27,7 @@ void init_task(void) {
     ASSERT(1);
     ASSERT(create(-1, child) == CREATE_INVALID_PRIORITY);
     ASSERT(create(32, child) == CREATE_INVALID_PRIORITY);
-    printf("init task priority is %d\n", init_task_priority);
+    printf("init task priority is %d" EOL, init_task_priority);
     io_flush(COM2);
     int i;
     for (i = 0; i < 10; i++) {

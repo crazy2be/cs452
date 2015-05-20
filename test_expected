@@ -1,5 +1,7 @@
 Boot...IO...
-e1:0 e2:0 init task priority is 0
+e1:0
+e2:0
+init task priority is 0
 Child task 10
 Child task 9
 Child task 8
