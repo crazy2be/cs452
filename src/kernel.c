@@ -17,7 +17,7 @@ void test2(void) {
     int i;
     for (i = 1; i <= 10; i++) {
         io_puts(COM2, "Inside test function 2\n\r");
-        int t = create(0, &test3);
+        int t = create(5, &test3);
         io_puts(COM2, "Spawned task: ");
         io_putll(COM2, t);
         io_puts(COM2, "\n\r");
@@ -37,10 +37,6 @@ struct task_collection {
 
 static struct task_collection tasks;
 
-void exit_after_return(void) {
-    exitk();
-}
-
 struct task_descriptor *create_task(void *entrypoint, int priority, int parent_tid) {
     void *sp = tasks.memory_alloc;
     tasks.memory_alloc += USER_STACK_SIZE;
@@ -49,12 +45,12 @@ struct task_descriptor *create_task(void *entrypoint, int priority, int parent_t
     task->tid = tasks.next_tid++;
     task->parent_tid = parent_tid;
     task->priority = priority;
-    task->state = READY;
+    /* task->state = READY; */
     /* task->memory_segment = sp; */
 
     struct user_context *uc = ((struct user_context*) sp) - 1;
     uc->pc = (unsigned) entrypoint;
-    uc->lr = (unsigned) &exit_after_return;
+    uc->lr = (unsigned) &exitk;
     // leave most everything else uninitialized
     uc->r12 = (unsigned) sp;
     unsigned cpsr;
@@ -111,8 +107,8 @@ int main(int argc, char *argv[]) {
 	}
 
     struct task_descriptor * current_task;
-    struct task_queue queue;
-    queue.first = queue.last = 0;
+    struct priority_task_queue queue;
+    priority_task_queue_init(&queue);
 
     tasks.next_tid = 0;
     tasks.memory_alloc = (void*) 0x200000;
@@ -135,31 +131,31 @@ int main(int argc, char *argv[]) {
 
         switch (sc.syscall_num) {
         case SYSCALL_PASS:
-            task_queue_push(&queue, current_task);
+            priority_task_queue_push(&queue, current_task);
             break;
         case SYSCALL_EXIT:
             break;
         case SYSCALL_TID:
             uc->r0 = current_task->tid;
-            task_queue_push(&queue, current_task);
+            priority_task_queue_push(&queue, current_task);
             break;
         case SYSCALL_PARENT_TID:
             uc->r0 = current_task->parent_tid;
-            task_queue_push(&queue, current_task);
+            priority_task_queue_push(&queue, current_task);
             break;
         case SYSCALL_CREATE:
             new_task = create_task((void*) uc->r1, (int) uc->r0, current_task->tid);
-            task_queue_push(&queue, new_task);
+            priority_task_queue_push(&queue, new_task);
             // TODO: do error handling
             uc->r0 = new_task->tid;
-            task_queue_push(&queue, current_task);
+            priority_task_queue_push(&queue, current_task);
             break;
         default:
             assert(0, "UNKNOWN SYSCALL NUMBER");
             break;
         }
 
-        current_task = task_queue_pop(&queue);
+        current_task = priority_task_queue_pop(&queue);
     } while (current_task);
 
 	io_puts(COM2, "No more tasks; done task scheduling\n\r");
