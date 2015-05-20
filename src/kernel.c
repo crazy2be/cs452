@@ -37,62 +37,6 @@ struct task_collection {
 
 static struct task_collection tasks;
 
-static void setup(void) {
-	uart_configure(COM1, 2400, OFF);
-	uart_configure(COM2, 115200, OFF);
-
-	uart_clrerr(COM1);
-	uart_clrerr(COM2);
-
-	timer_init();
-	io_init();
-
-	while (!uart_canwrite(COM2)) {}
-	uart_write(COM2, 'B');
-	while (!uart_canwrite(COM2)) {}
-	uart_write(COM2, 'o');
-	while (!uart_canwrite(COM2)) {}
-	uart_write(COM2, 'o');
-	while (!uart_canwrite(COM2)) {}
-	uart_write(COM2, 't');
-	while (!uart_canwrite(COM2)) {}
-	uart_write(COM2, '.');
-	while (!uart_canwrite(COM2)) {}
-	uart_write(COM2, '.');
-	while (!uart_canwrite(COM2)) {}
-	uart_write(COM2, '.');
-
-	io_puts(COM2, "IO...\n\r");
-	io_flush(COM2);
-
-	printf("e1:%x ", uart_err(COM1));
-	printf("e2:%x ", uart_err(COM2));
-	io_flush(COM2);
-
-	// Copy exception vector from where it's linked/loaded to the start of
-	// memory, where ARM expects to find it. Assumes all instructions in the
-	// exception vector are branch instructions.
-	// http://www.ryanday.net/2010/09/08/arm-programming-part-1/
-#ifdef QEMU
-	extern volatile int exception_vector_table_src_begin;
-	volatile int* exception_vector_table_src = &exception_vector_table_src_begin;
-	volatile int* exception_vector_table_dst = (volatile int*)0x0;
-	// Note this is automatically divided by 4 because pointers.
-	unsigned exception_vector_branch_adjustment =
-		exception_vector_table_src - exception_vector_table_dst;
-	for (int i = 0; i < 8; i++) {
-		exception_vector_table_dst[i] = exception_vector_table_src[i]
-			+ exception_vector_branch_adjustment;
-	}
-#else
-    volatile unsigned *entrypoint = (unsigned*) 0x28;
-    *entrypoint = (unsigned) &enter_kernel;
-#endif
-
-    tasks.next_tid = 0;
-    tasks.memory_alloc = (void*) 0x200000;
-}
-
 void exit_after_return(void) {
     exitk();
 }
@@ -123,11 +67,55 @@ struct task_descriptor *create_task(void *entrypoint, int priority, int parent_t
 }
 
 int main(int argc, char *argv[]) {
+	uart_configure(COM1, 2400, OFF);
+	uart_configure(COM2, 115200, OFF);
+
+	uart_clrerr(COM1);
+	uart_clrerr(COM2);
+
+	while (!uart_canwrite(COM2)) {} uart_write(COM2, 'B');
+	while (!uart_canwrite(COM2)) {} uart_write(COM2, 'o');
+	while (!uart_canwrite(COM2)) {} uart_write(COM2, 'o');
+	while (!uart_canwrite(COM2)) {} uart_write(COM2, 't');
+
+	// Zero BSS, because we should.
+	extern char __bss_start__, __bss_end__;
+	memset(&__bss_start__, 0, &__bss_end__ - &__bss_start__);
+	while (!uart_canwrite(COM2)) {} uart_write(COM2, '.');
+
+	timer_init();
+	while (!uart_canwrite(COM2)) {} uart_write(COM2, '.');
+	io_init();
+	while (!uart_canwrite(COM2)) {} uart_write(COM2, '.');
+
+	io_puts(COM2, "IO...\n\r");
+	io_flush(COM2);
+
+	printf("e1:%x ", uart_err(COM1));
+	printf("e2:%x ", uart_err(COM2));
+	io_flush(COM2);
+
+	// Copy exception vector from where it's linked/loaded to the start of
+	// memory, where ARM expects to find it. Assumes all instructions in the
+	// exception vector are branch instructions.
+	// http://www.ryanday.net/2010/09/08/arm-programming-part-1/
+	extern volatile int exception_vector_table_src_begin;
+	volatile int* exception_vector_table_src = &exception_vector_table_src_begin;
+	volatile int* exception_vector_table_dst = (volatile int*)0x0;
+	// Note this is automatically divided by 4 because pointers.
+	unsigned exception_vector_branch_adjustment =
+		exception_vector_table_src - exception_vector_table_dst;
+	for (int i = 0; i < 8; i++) {
+		exception_vector_table_dst[i] = exception_vector_table_src[i]
+			+ exception_vector_branch_adjustment;
+	}
+
     struct task_descriptor * current_task;
     struct task_queue queue;
     queue.first = queue.last = 0;
 
-    setup();
+    tasks.next_tid = 0;
+    tasks.memory_alloc = (void*) 0x200000;
 
     // set up the first task
 
