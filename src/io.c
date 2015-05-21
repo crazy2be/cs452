@@ -14,7 +14,6 @@ void io_init() {
 	rbuf_init(&rbuf[3]);
 	send_next_train_byte_at = timer_time() + TIME_SECOND;
 }
-
 void io_putc(int channel, char c) {
 	rbuf_put(&rbuf[channel], c);
 }
@@ -22,9 +21,6 @@ void io_putc(int channel, char c) {
 void io_puts(int channel, const char* s) {
 	while (*s) { io_putc(channel, *s); s++; }
 }
-
-// BUG: 0 is not printed
-// This routine might not work.
 void io_putll(int channel, long long n) {
 	io_putc(channel, 'n');
 	if (n < 0) {
