@@ -33,4 +33,5 @@ void pass(void) {
 
 void exitk(void) {
     __asm__ __volatile__ (SYSCALL(SYSCALL_EXIT));
+	for (;;) {} // Sooth the compiler. We should never get here.
 }

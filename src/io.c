@@ -19,6 +19,7 @@ void io_putc(int channel, char c) {
 }
 
 void io_puts(int channel, const char* s) {
+	assert((channel == 1) || (channel == 0), "Inavlid sachs");
 	while (*s) { io_putc(channel, *s); s++; }
 }
 void io_putll(int channel, long long n) {

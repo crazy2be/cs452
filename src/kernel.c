@@ -204,13 +204,15 @@ void setup(void) {
  * @param argv: Ignored
  */
 int main(int argc, char *argv[]) {
-    struct task_descriptor * current_task;
-
     setup();
 
+	io_putll(COM2, 1);
+	io_flush(COM2);
+	((void(*)(void))0x80000000)();
+
     // set up the first task
-    current_task = create_task(&init_task, init_task_priority, 0);
-    (void) current_task;
+    struct task_descriptor *current_task =
+		create_task(&init_task, init_task_priority, 0);
 
     do {
         struct syscall_context sc;
@@ -255,6 +257,8 @@ int main(int argc, char *argv[]) {
         current_task = priority_task_queue_pop(&queue);
     } while (current_task);
 
+	printf("Exiting..." EOL);
+	io_flush(COM2);
     return 0;
 }
 
