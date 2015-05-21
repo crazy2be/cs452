@@ -206,8 +206,7 @@ void setup(void) {
 int main(int argc, char *argv[]) {
     setup();
 
-	io_putll(COM2, 1);
-	io_flush(COM2);
+	// Testing for the fault handler
 	((void(*)(void))0x80000000)();
 
     // set up the first task
@@ -257,8 +256,12 @@ int main(int argc, char *argv[]) {
         current_task = priority_task_queue_pop(&queue);
     } while (current_task);
 
+#ifdef QEMU
+	// It's useful to see this in QEMU when debugging, since it won't exit
+	// cleanly on it's own.
 	printf("Exiting..." EOL);
 	io_flush(COM2);
+#endif
     return 0;
 }
 
