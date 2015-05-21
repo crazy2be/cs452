@@ -12,13 +12,9 @@ b .              @ Reserved
 b .              @ IRQ
 b .              @ FRQ
 
-.global fucked_handler
-.global fprintf
 .align 8
 press_key: @ Waits for the user to press a key
 	stmfd sp!, {lr}
-	ldr r1, =press_key_string
-	bl puts
 	loop1:
 		mov r0, #1 @ COM2
 		bl uart_canread
@@ -27,15 +23,6 @@ press_key: @ Waits for the user to press a key
 	mov r0, #1 @ COM2
 	bl uart_read
 	ldmfd sp!, {lr}
-press_key_string:
-@ TODO: Win 98 style BSOD!!!
-.ascii "\x1B[s"
-.ascii "\x1B[1;1H"
-.ascii "\x1B[44;1m" @ bold red
-.ascii "Press any key to continue...\r\n"
-.ascii "\x1B[0m" @ reset colors
-.ascii "\x1B[u"
-.ascii "\0"
 
 .align 8
 puts: @ Local utility "function". Put string to put in r1
@@ -51,11 +38,30 @@ undefined_instruction:
 prefetch_abort:
 data_abort:
 	stmfd sp!, {r4-r11, r14}
-	ldr r1, =fucked_up_string
+	ldr r1, =bsod_string
 	bl puts
 	bl press_key
 	ldmfd sp!, {r4-r11, r15} @ TODO: Should we exit here, instead?
-fucked_up_string:
+
+bsod_string:
 @ TODO: This error message should be more specific, I think ARM gives us a
 @ mechanism for finding the exact address(es) that were involved in the error.
-.ascii "Fuck. Fuck. Fuck. We should put more debug output here if you're hitting this...\r\n\0"
+.ascii "\x1B[s"
+.ascii "\x1B[1;1H"
+.ascii "\x1B[44;37m"
+.ascii "\x1B[2K"
+.ascii "                    "
+.ascii "\x1B[34;47;1m"
+.ascii " Trains "
+.ascii "\x1B[44;37;22m"
+.ascii "\r\n\x1B[2K"
+.ascii "\r\n\x1B[2K"
+.ascii "    An exception ?? has occured at ????:???????? in ????. It may be possible to continue normally.\r\n\x1B[2K"
+.ascii "\r\n\x1B[2K"
+.ascii "        * Press any key to attempt to continue\r\n\x1B[2K"
+.ascii "        * Press CTRL+ALT+DELETE to reset your trains. You will lose any unsaved trains.\r\n\x1B[2K"
+.ascii "\r\n\x1B[2K"
+.ascii "    Press any key to continue...\r\n\x1B[2K"
+.ascii "\x1B[0m" @ reset colors
+.ascii "\x1B[u"
+.ascii "\0"
