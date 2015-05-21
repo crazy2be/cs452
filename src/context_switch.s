@@ -84,7 +84,7 @@ exit_kernel:
     msr spsr, r4
 
     @ restore all the variables
-    ldmfd r1!, {r0-r12}
+    ldmfd r1, {r0-r12}
 
     @ restore pc and cpsr atomically
     @ pc <- lr; cpsr <- spsr
