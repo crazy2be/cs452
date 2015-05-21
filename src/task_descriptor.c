@@ -1,6 +1,6 @@
 #include "task_descriptor.h"
 #include "util.h"
-#include "highest_priority.h"
+#include "least_significant_set_bit.h"
 
 void task_queue_init(struct task_queue *q) {
     q->first = q->last = 0;
@@ -45,7 +45,7 @@ void priority_task_queue_init(struct priority_task_queue *q) {
 
 struct task_descriptor *priority_task_queue_pop(struct priority_task_queue *q) {
     if (q->priority_queue_mask) {
-        int priority = highest_priority(q->priority_queue_mask);
+        int priority = least_significant_set_bit(q->priority_queue_mask);
         struct task_queue *pri_queue = &q->queues[priority];
         struct task_descriptor *d = task_queue_pop(pri_queue);
         if (!pri_queue->first) {

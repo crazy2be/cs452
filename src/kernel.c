@@ -6,6 +6,8 @@
 #include "context_switch.h"
 #include "init_task.h"
 
+/** @file */
+
 #define MAX_TID 255
 #define USER_STACK_SIZE 0x1000 // 4K stack
 
@@ -21,6 +23,26 @@ struct task_collection {
 static struct task_collection tasks;
 static struct priority_task_queue queue;
 
+/**
+ * Internal kernel utility for creating a task, and allocating the necessary resources
+ *
+ * Allocates space on the task buffer as a side-effect, and increments the count
+ * of created tasks.
+ * It initializes the task descriptor for the newly created task.
+ *
+ * It also allocates memory for the tasks stack, and initializes it.
+ * After the stack has been initalized, in can be context switched to normally by
+ * using `exit_kernel()`, and will start executing at the entrypoint.
+ *
+ * Notedly, this does *not* schedule the newly created task for execution.
+ *
+ * @param entrypoint: A pointer to the code to start the task running at.
+ * As is the convention, this pointer is assumed to point to a `void(*f)(void)`
+ * function.
+ * @param priority: The priority to give to the newly created task.
+ * @param parent_tid: The TID of the task which created this task.
+ * @return A pointer to the task descriptor allocated for this task.
+ */
 struct task_descriptor *create_task(void *entrypoint, int priority, int parent_tid) {
     void *sp = tasks.memory_alloc;
     tasks.memory_alloc += USER_STACK_SIZE;
@@ -41,16 +63,33 @@ struct task_descriptor *create_task(void *entrypoint, int priority, int parent_t
     __asm__ ("mrs %0, cpsr" : "=r" (cpsr));
     uc->cpsr = cpsr & 0xfffffff0;
 
-    task->context.stack_pointer = (void*) uc;
+    task->context = uc;
 
     return task;
 }
 
 static inline struct user_context* get_task_context(struct task_descriptor* task) {
-    return (struct user_context*) task->context.stack_pointer;
+    return task->context;
 }
 
-// implementation of syscalls
+// Implementation of syscalls
+//
+// All that any of these functions should do is to retrieve arguments from
+// the context of the calling stack, return results to the context,
+// and perform validation.
+// There should be very little application logic in this code.
+
+/**
+ * Handler for the create syscall.
+ *
+ * It retrieves arguments from the context of the calling task, and
+ * validates them.
+ * If all checks pass, then it calls `create_task()`, and sets the TID on the context of
+ * the calling stack.
+ * Otherwise it returns an appropriate error code.
+ *
+ * @param current_task: The task descriptor of the task that made the syscall
+ */
 void create_handler(struct task_descriptor *current_task) {
     struct user_context *uc = get_task_context(current_task);
     int priority = (int) uc->r0;
@@ -70,20 +109,45 @@ void create_handler(struct task_descriptor *current_task) {
     uc->r0 = result;
 }
 
+/**
+ * Handler for the tid syscall
+ *
+ * Puts the TID of the calling task on it's context
+ */
 void tid_handler(struct task_descriptor *current_task) {
     struct user_context *uc = get_task_context(current_task);
     uc->r0 = current_task->tid;
 }
 
+/**
+ * Handler for the tid syscall
+ *
+ * Puts the parent TID of the calling task on it's context
+ */
 void parent_tid_handler(struct task_descriptor *current_task) {
     struct user_context *uc = get_task_context(current_task);
     uc->r0 = current_task->parent_tid;
 }
 
+/**
+ * Perform setup for the `tasks` buffer.
+ */
+void setup_tasks(void) {
+    tasks.next_tid = 0;
+    tasks.memory_alloc = (void*) 0x200000;
+}
+
+/**
+ * Performs miscellaeneous set up which is required before actually starting
+ * the kernel.
+ */
 void setup(void) {
+    // write to the control registers of the UARTs to properly configure them
+    // for transmission
 	uart_configure(COM1, 2400, OFF);
 	uart_configure(COM2, 115200, OFF);
 
+    // clear UART errors
 	uart_clrerr(COM1);
 	uart_clrerr(COM2);
 
@@ -126,11 +190,19 @@ void setup(void) {
 
     priority_task_queue_init(&queue);
 
-    tasks.next_tid = 0;
-    tasks.memory_alloc = (void*) 0x200000;
+    setup_tasks();
 }
 
 
+/**
+ * Main loop of the kernel.
+ *
+ * Initializes the kernel, starts the first user task, then schedules tasks
+ * and responds to syscalls until there is no work left to do.
+ *
+ * @param argc: Ignored
+ * @param argv: Ignored
+ */
 int main(int argc, char *argv[]) {
     struct task_descriptor * current_task;
 
@@ -143,11 +215,20 @@ int main(int argc, char *argv[]) {
     do {
         struct syscall_context sc;
 
-        sc = exit_kernel(current_task->context.stack_pointer);
-        current_task->context.stack_pointer = sc.stack_pointer;
+        // context switch to the next task to be run
+        sc = exit_kernel(current_task->context);
 
+        // after returning from that task, save it's place in the task's
+        // task descriptor
+        current_task->context = sc.context;
+
+        // respond to the syscall that it made
+        // after responding to the syscall, schedule it for execution
+        // on the appropriate queue (unless exit is called, in which
+        // case the task is not rescheduled).
         switch (sc.syscall_num) {
         case SYSCALL_PASS:
+            // no-op
             priority_task_queue_push(&queue, current_task);
             break;
         case SYSCALL_EXIT:
@@ -170,6 +251,7 @@ int main(int argc, char *argv[]) {
             break;
         }
 
+        // find the next task scheduled for execution, if any
         current_task = priority_task_queue_pop(&queue);
     } while (current_task);
 
