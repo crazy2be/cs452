@@ -1,3 +1,4 @@
+#include "io.h"
 #include "rbuf.h"
 
 #include "util.h"
@@ -7,6 +8,14 @@
 static struct RBuf rbuf[4];
 static long long send_next_train_byte_at = 0;
 
+static inline struct RBuf* output_buffer(int channel) {
+    return &rbuf[output_buffer_number(channel)];
+}
+
+static inline struct RBuf* input_buffer(int channel) {
+    return &rbuf[input_buffer_number(channel)];
+}
+
 void io_init() {
 	rbuf_init(&rbuf[0]);
 	rbuf_init(&rbuf[1]);
@@ -14,13 +23,15 @@ void io_init() {
 	rbuf_init(&rbuf[3]);
 	send_next_train_byte_at = timer_time() + TIME_SECOND;
 }
+
 void io_putc(int channel, char c) {
-	rbuf_put(&rbuf[channel], c);
+	rbuf_put(output_buffer(channel), c);
 }
 
 void io_puts(int channel, const char* s) {
 	while (*s) { io_putc(channel, *s); s++; }
 }
+
 void io_putll(int channel, long long n) {
 	io_putc(channel, 'n');
 	if (n < 0) {
@@ -41,22 +52,23 @@ void io_putll(int channel, long long n) {
 }
 
 void io_flush(int channel) {
-	while (rbuf[channel].l > 0) {
+    struct RBuf *buf = output_buffer(channel);
+	while (buf->l > 0) {
 		while (!uart_canwrite(channel)) {}
-		uart_write(channel, rbuf_take(&rbuf[channel]));
+		uart_write(channel, rbuf_take(buf));
 	}
 }
 
 int io_buf_is_empty(int channel) {
-	return rbuf[channel].l <= 0;
+	return output_buffer(channel)->l <= 0;
 }
 
 int io_hasc(int channel) {
-	return rbuf[channel + 2].l > 0;
+	return input_buffer(channel)->l > 0;
 }
 
 char io_getc(int channel) {
-	return rbuf_take(&rbuf[channel + 2]);
+	return rbuf_take(input_buffer(channel));
 }
 
 int io_buflen(int bufn) {

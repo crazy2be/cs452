@@ -35,13 +35,6 @@ static struct priority_task_queue queue;
  * using `exit_kernel()`, and will start executing at the entrypoint.
  *
  * Notedly, this does *not* schedule the newly created task for execution.
- *
- * @param entrypoint: A pointer to the code to start the task running at.
- * As is the convention, this pointer is assumed to point to a `void(*f)(void)`
- * function.
- * @param priority: The priority to give to the newly created task.
- * @param parent_tid: The TID of the task which created this task.
- * @return A pointer to the task descriptor allocated for this task.
  */
 struct task_descriptor *create_task(void *entrypoint, int priority, int parent_tid) {
     void *sp = tasks.memory_alloc;
@@ -79,17 +72,6 @@ static inline struct user_context* get_task_context(struct task_descriptor* task
 // and perform validation.
 // There should be very little application logic in this code.
 
-/**
- * Handler for the create syscall.
- *
- * It retrieves arguments from the context of the calling task, and
- * validates them.
- * If all checks pass, then it calls `create_task()`, and sets the TID on the context of
- * the calling stack.
- * Otherwise it returns an appropriate error code.
- *
- * @param current_task: The task descriptor of the task that made the syscall
- */
 void create_handler(struct task_descriptor *current_task) {
     struct user_context *uc = get_task_context(current_task);
     int priority = (int) uc->r0;
@@ -109,29 +91,16 @@ void create_handler(struct task_descriptor *current_task) {
     uc->r0 = result;
 }
 
-/**
- * Handler for the tid syscall
- *
- * Puts the TID of the calling task on it's context
- */
 void tid_handler(struct task_descriptor *current_task) {
     struct user_context *uc = get_task_context(current_task);
     uc->r0 = current_task->tid;
 }
 
-/**
- * Handler for the tid syscall
- *
- * Puts the parent TID of the calling task on it's context
- */
 void parent_tid_handler(struct task_descriptor *current_task) {
     struct user_context *uc = get_task_context(current_task);
     uc->r0 = current_task->parent_tid;
 }
 
-/**
- * Perform setup for the `tasks` buffer.
- */
 void setup_tasks(void) {
     tasks.next_tid = 0;
     tasks.memory_alloc = (void*) 0x200000;
@@ -200,8 +169,9 @@ void setup(void) {
  * Initializes the kernel, starts the first user task, then schedules tasks
  * and responds to syscalls until there is no work left to do.
  *
- * @param argc: Ignored
- * @param argv: Ignored
+ * This takes argv and argc, but doesn't actually use them.
+ * When I tried to make this a void function instead, it would no longer
+ * run on the TS7200. *shrug*
  */
 int main(int argc, char *argv[]) {
     struct task_descriptor * current_task;

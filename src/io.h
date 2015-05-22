@@ -9,7 +9,19 @@
  *
  * For the purposes of this file, a channel number and a UART number
  * are the same thing.
+ *
+ * Note: some functions refer to buffer numbers instead of channel numbers
+ * Use `output_buffer_number()` & `input_buffer_number()` to convert between
+ * the two.
  */
+
+// helpers to convert channel numbers -> buffer numbers
+static inline int output_buffer_number(int channel) {
+    return channel;
+}
+static inline int input_buffer_number(int channel) {
+    return channel + 2;
+}
 
 /**
  * Initializes statically allocated IO buffers.
@@ -21,18 +33,14 @@ void io_init();
 /**
  * Pushes the given character onto the output buffer for that channel.
  * The output buffer will be flushed to the UART in FIFO order.
- *
- * @param channel: The channel to output the character to
- * @param c: The character to output
+ * Currently, this just blows up, and corrupts the output buffer
+ * if the buffer is full.
  */
 void io_putc(int channel, char c);
 
 /**
  * Convenience function for adding an entire string to the output buffer.
  * Equivalent to calling io_putc for each character of the string.
- *
- * @param channel: The channel to output the character to
- * @param s: The string to output
  */
 void io_puts(int channel, const char* s);
 
@@ -43,9 +51,6 @@ void io_puts(int channel, const char* s);
  *
  * This function should either be fixed, and integrated with the functionality
  * defined in printf.c, or removed altogether.
- *
- * @param channel: The channel to output to
- * @param n: The number to output
  */
 void io_putll(int channel, long long n);
 
@@ -54,29 +59,16 @@ void io_putll(int channel, long long n);
  *
  * This blocks until the buffer is flushed,
  * and should be used for debugging only.
- *
- * @param channel: The channel whose buffer should be flushed.
  */
 void io_flush(int channel);
 
-/**
- * Equivalent to `io_buflen(channel) > 0`.
- *
- * @param channel: The channel whose output buffer should be checked.
- * @return Zero if the output buffer is empty, non-zero otherwise.
- */
 int io_buf_is_empty(int channel);
 
 /**
- * @param channel: The channel whose output buffer should be checked.
- * @return The number of bytes currently in the output buffer.
+ * Note: takes a buffer number, not a channel number
  */
 int io_buflen(int bufn);
 
-/**
- * @param channel: The channel whose input buffer should be checked.
- * @return Zero if there are no bytes in the input channel, non-zero otherwise.
- */
 int io_hasc(int channel);
 
 /**
@@ -86,8 +78,6 @@ int io_hasc(int channel);
  * If this is called on an empty input channel, the result is undefined, and
  * the input channel will be corrupted.
  *
- * @param channel: The channel whose buffer input should be taken from
- * @return The first byte in the input buffer.
  * Undefined if the input buffer is empty.
  */
 char io_getc(int channel);

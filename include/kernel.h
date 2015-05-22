@@ -16,10 +16,9 @@
 
 /**
  * Make a new task with the given priority and code.
- * @param priority: The priority to be given to the task.
- * The highest priority is zero, and decreases as the priority number increases.
- * @param code: The code to be run when the task starts.
- * Assumed to be a function pointer like: void (*f)(void).
+ * @param priority: The highest priority is zero, and decreases as the
+ * priority number increases.
+ * @param code: Assumed to be a function pointer like: void (*f)(void).
  * This argument is not typed as an actual function pointer because the spec says
  * to do it this way.
  * @return The TID of the newly created task, CREATE_INVALID_PRIORITY if the priority
