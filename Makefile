@@ -1,7 +1,7 @@
 MAKEFILE_NAME = ${firstword ${MAKEFILE_LIST}} # makefile name
 
 BUILD_DIR=build
-SRC_DIR=src
+SRC_DIRS=kernel user test
 
 CFLAGS  = -g -fPIC -Wall -Werror -Iinclude -std=c99 -O2
 ARCH_CFLAGS = -mcpu=arm920t -msoft-float
@@ -36,7 +36,7 @@ CC = arm-none-eabi-gcc
 AS = arm-none-eabi-as
 LD = $(CC)
 # -Wl options are passed through to the linker
-LINKER_SCRIPT = src/qemu.ld
+LINKER_SCRIPT = qemu.ld
 LDFLAGS = -Wl,-T,$(LINKER_SCRIPT),-Map,$(MAP) -N -static-libgcc --specs=nosys.specs
 CFLAGS += -DQEMU
 default: $(KERNEL_BIN)
@@ -45,26 +45,26 @@ export PATH := /u/wbcowan/gnuarm-4.0.2/libexec/gcc/arm-elf/4.0.2:/u/wbcowan/gnua
 CC = gcc
 AS = as
 LD = ld
-LINKER_SCRIPT = src/ts7200.ld
+LINKER_SCRIPT = ts7200.ld
 LDFLAGS = -init main -Map $(MAP) -T $(LINKER_SCRIPT) -N -L/u/wbcowan/gnuarm-4.0.2/lib/gcc/arm-elf/4.0.2
 default: install
 endif
 
 # variables describing objects from C code
-SOURCES=$(shell find $(SRC_DIR) -name '*.c')
-OBJECTS=$(addsuffix .o, $(basename $(subst $(SRC_DIR),$(BUILD_DIR),$(SOURCES))))
+SOURCES=$(shell find $(SRC_DIRS) -name '*.c')
+OBJECTS=$(addprefix $(BUILD_DIR)/, $(addsuffix .o, $(basename $(SOURCES))))
 GENERATED_ASSEMBLY=${OBJECTS:.o=.s}
 DEPENDS=${OBJECTS:.o=.d}
 
 # variables describing objects from handwritten assembly
-ASM_SOURCES=$(shell find $(SRC_DIR) -name '*.s')
-ASM_OBJECTS=$(addsuffix .o, $(basename $(subst $(SRC_DIR),$(BUILD_DIR),$(ASM_SOURCES))))
+ASM_SOURCES=$(shell find $(SRC_DIRS) -name '*.s')
+ASM_OBJECTS=$(addprefix $(BUILD_DIR)/, $(addsuffix .o, $(basename $(ASM_SOURCES))))
 
 DIRS=$(sort $(dir $(OBJECTS) $(ASM_OBJECTS)))
 
 # objects shared by both test and real kernels
-KERNEL_INIT = $(BUILD_DIR)/init_task.o
-TEST_INIT = $(BUILD_DIR)/init_task_test.o
+KERNEL_INIT = $(BUILD_DIR)/user/main.o
+TEST_INIT = $(BUILD_DIR)/test/main.o
 COMMON_OBJECTS = $(filter-out $(KERNEL_INIT) $(TEST_INIT), $(OBJECTS) $(ASM_OBJECTS))
 
 $(KERNEL_BIN) $(TEST_BIN): %.bin : %.elf
@@ -81,11 +81,11 @@ $(KERNEL_ELF) $(TEST_ELF): $(LINKER_SCRIPT)
 # actual build script for arm parts
 
 # assemble hand-written assembly
-$(ASM_OBJECTS): $(BUILD_DIR)/%.o : $(SRC_DIR)/%.s
+$(ASM_OBJECTS): $(BUILD_DIR)/%.o : %.s
 	$(AS) $(ASFLAGS) -o $@ $<
 
 # compile c to assembly, and leave assembly around for inspection
-$(GENERATED_ASSEMBLY): $(BUILD_DIR)/%.s : $(SRC_DIR)/%.c
+$(GENERATED_ASSEMBLY): $(BUILD_DIR)/%.s : %.c
 	$(CC) $(CFLAGS) $(ARCH_CFLAGS) -S -MD -MT $@ -o $@ $<
 
 # assemble the generated assembly

@@ -2,6 +2,10 @@
 
 #include <constants.h>
 
+#define COM1 0
+#define COM2 1
+#define COM_DEBUG 2 // Same as COM2 but syncronous in bwio.
+
 #define SYSCALL_PASS 0
 #define SYSCALL_EXIT 1
 #define SYSCALL_CREATE 2
@@ -56,6 +60,11 @@ void pass(void) __attribute__((naked));
  * resources.
  */
 void exitk(void) __attribute__((naked, noreturn));
+
+/**
+ * Main entrypoint into the kernel
+ */
+int boot(void (*init_task)(void), int init_task_priority);
 
 // aliases for the above functions,
 // using the naming convention specified by the course

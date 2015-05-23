@@ -1,8 +1,6 @@
 #pragma once
 
-#define COM1	0
-#define COM2	1
-#define COM_DEBUG	2 // Same as COM2 but syncronous in bwio.
+#include <kernel.h>
 
 #define ON	1
 #define	OFF	0

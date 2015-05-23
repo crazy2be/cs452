@@ -90,3 +90,8 @@ char io_getc(int channel);
  * called, nothing happens.
  */
 void io_service(void);
+
+int fprintf(int channel, const char *format, ...);
+#define bwprintf(channel, ...) do { \
+	fprintf(channel, __VA_ARGS__); io_flush(channel); } while (0)
+#define printf(...) fprintf(COM2, __VA_ARGS__)
