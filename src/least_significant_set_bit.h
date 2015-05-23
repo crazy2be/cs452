@@ -22,6 +22,7 @@
  */
 static inline unsigned least_significant_set_bit(unsigned n) {
     unsigned log = 0;
+    unsigned scratch;
 
 	n = n & -n; // MAGIC that makes only lowest bit set in result
 
@@ -35,43 +36,19 @@ static inline unsigned least_significant_set_bit(unsigned n) {
     // However, ARM instructions can only use a very limited range of constants
     // as immediate values, so we use iterative logical right shift as an alternative.
 
-    // At each step, we know the set bit is in the lowest 2i bits of n
-    // We logical right shift by i bits
-    // If the result is non-zero, we know that n >= 2^i,
-    // so we use the identity `log_2(n) = i + log_2(n / 2^i)`
-    // We add i to the log, then update n to the right-shifted value to repeat.
-    // After each step, we know that n < 2^i, and we repeat the algorithm
-    // to calculate the log iteratively.
-
-    if (n >> 16) {
-        log += 16;
-        n = n >> 16;
-    }
-    if (n >> 8) {
-        log += 8;
-        n = n >> 8;
-    }
-    if (n >> 4) {
-        log += 4;
-        n = n >> 4;
-    }
-
-    // This is a bit of a hack.
-    // At this point, the number is one of 0x8, 0x4, 0x2, 0x1
-    // for which we want to add 3, 2, 1 and 0 respectively
-    // We can cheat a bit, to skip the last round of iteration.
-    // It turns out that log_2 for these 4 cases is equal to n/2 - n/8.
-    log += n / 2 - n / 8;
-
-    // Original hand-optimized assembly code left here to document what it is that I
-    // expect the compiler should generate.
-    // I've ported the assembly back into C for portability / readability.
-    /*
     __asm__ (
+        // At each step, we know the set bit is in the lowest 2i bits of n
+        // We logical right shift by i bits
+        // If the result is non-zero, we know that n >= 2^i,
+        // so we use the identity `log_2(n) = i + log_2(n / 2^i)`
+        // We add i to the log, then update n to the right-shifted value to repeat.
+        // After each step, we know that n < 2^i, and we repeat the algorithm
+        // to calculate the log iteratively.
         "lsrs %1, %2, #16\n\t"
         "addne %0, %0, #16\n\t"
         "movne %2, %1\n\t"
 
+        // Repeat the algorithm for shifts of 8 and 4 bit
         "lsrs %1, %2, #8\n\t"
         "addne %0, %0, #8\n\t"
         "movne %2, %1\n\t"
@@ -80,12 +57,16 @@ static inline unsigned least_significant_set_bit(unsigned n) {
         "addne %0, %0, #4\n\t"
         "movne %2, %1\n\t"
 
+        // This is a bit of a hack.
+        // At this point, the number is one of 0x8, 0x4, 0x2, 0x1
+        // for which we want to add 3, 2, 1 and 0 respectively
+        // We can cheat a bit, to skip the last round of iteration.
+        // It turns out that log_2 for these 4 cases is equal to n/2 - n/8.
         "add %0, %0, %2, lsr #1\n\t"
         "sub %0, %0, %2, lsr #3"
 
         : "+r"(log), "=r"(scratch), "+r"(n)
     );
-    */
 
     return log;
 }
