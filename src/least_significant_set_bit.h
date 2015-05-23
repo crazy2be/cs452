@@ -55,10 +55,13 @@ static inline int least_significant_set_bit(int n) {
         // at this point, the number is one of 0x8, 0x4, 0x2, 0x1
         // for which we want to add 3, 2, 1 and 0 respectively
         // we can cheat a bit, to skip the last round of iteration
-        // for all but 0x8, n >> 1 is the right relation
-        "tst %2, #0x8\n\t"
-        "addne %0, %0, #3\n\t"
-        "addeq %0, %0, %2, lsr #1"
+        // for all but 0x8, n/2 is the right relation
+
+        // add n/2 to log
+        "add %0, %0, %2, lsr #1\n\t"
+        // subtract back n/8, which subtracts 1 for n=8, and leaves the other cases alone
+        // this compensates for the above addition adding to much for n=8
+        "sub %0, %0, %2, lsr #3"
 
         : "+r"(log), "=r"(scratch), "+r"(n)
     );
