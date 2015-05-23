@@ -8,7 +8,7 @@
 \section{Design Decisions}
 \subsection{Priority Queue}
 The priority queue used to implement the ready queue of the scheduler is
-arguably the most complex datastructure used in the kernel.
+arguably the most complex data structure used in the kernel.
 The data structure currently being used is a series of FIFO queues, one for
 each priority level.
 When a task is enqueued, it is added to the queue corresponding to its priority
@@ -19,7 +19,7 @@ Each individual queue is implemented as a doubly-linked list, where the
 \texttt{next} and \texttt{prev} pointers of each node are part of the task
 descriptor itself.
 Doing this is possible since a task is in at most one queue at any given time.
-Inlining these fields allows us to not need to seperately allocate memory for
+Inlining these fields allows us to not need to separately allocate memory for
 linked list nodes, which simplifies the design.
 For efficiency, we maintain a bit-vector which allows us to efficiently find
 the non-empty queue with the highest priority.
@@ -43,7 +43,7 @@ which is too slow for our purposes.
 
 Another implementation considered was a ringbuffer storing pointers to task descriptors.
 However, we then need to have multiple ringbuffers, one for each priority level.
-Each buffer needs to have sufficient space allocated to accomodate the maximum
+Each buffer needs to have sufficient space allocated to accommodate the maximum
 number of tasks.
 Therefore, this implementation consumed $O(kn)$ memory, where $k$ is the number
 of priority levels, and $n$ is the number of tasks.
@@ -61,13 +61,14 @@ bit of $b$ set.
 
 After that point, we want to determine the index of the set bit, which is the
 base-2 log of the number.
-The method used is inspired by John Owens' method as listed on the bithacks page,
-but has been altered in implementation to take fewer instructions on the ARM processor.
+The method used is inspired by John Owens' method as listed on the Stanford bit
+twiddling hacks page, but has been altered in implementation to take fewer
+instructions on the ARM processor.
 The algorithm essentially binary searches through the bit vector for the set bit.
 
 At each step, we know that the set bit is in the bottom $2i$ bits of $c$, and we want
 to narrow that down to a range of $i$ bits.
-At each step, we run the following pseudocode:
+At each step, we run the following pseudo-code:
 
 \begin{center}
 \begin{lstlisting}
@@ -103,7 +104,7 @@ The entire algorithm takes 14 instructions of hand-written assembly.
 
 We consider the result to be undefined if $b=0$, and expect the caller to check
 this case before running this algorithm to try to find the least significant set bit.
-The $b=0$ case is special to the caller anyway, and needs to be handled seperately,
+The $b=0$ case is special to the caller anyway, and needs to be handled separately,
 and doing this makes it easier to optimize the algorithm.
 
 \subsection{Task Resource Allocation}
@@ -131,7 +132,7 @@ To find the arguments passed to the syscall, the kernel can just read the values
 from the saved context.
 To return a value to the user task, the kernel can write to the stored value of
 \texttt{r0}, which will be restored to the user task when context switching back,
-and will be interpretted as a return argument.
+and will be interpreted as a return argument.
 
 This approach has two advantages.
 Firstly, returning values this way makes it very easy to handle returning values
@@ -161,7 +162,7 @@ currently out of scope.
 However, I've had considerable difficulty in my past experiences with trying to
 convince GCC to emit the correct assembly code to not clobber values returned in this
 way.
-Therefore, I'm not going to try to implement this solutino unless it becomes a
+Therefore, I'm not going to try to implement this solution unless it becomes a
 performance problem.
 
 \section{Source Listing}
