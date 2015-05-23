@@ -21,17 +21,54 @@
  * and 31 represents the MSB.
  */
 static inline int least_significant_set_bit(int n) {
-	const int n2 = n & -n; // MAGIC that makes only lowest bit set in result
     int log = 0;
+    int scratch;
+
+	n = n & -n; // MAGIC that makes only lowest bit set in result
 
     // this method of doing log base 2 is from
     // https://graphics.stanford.edu/~seander/bithacks.html#IntegerLog,
     // credited to John Owens
+    // this implementation has been modified somewhat to optimize for
+    // what arm assembly is capable of doing
     // this only works since we know n2 to be a power of 2
-    if (0xaaaaaaaa & n2) log += 1;
-    if (0xcccccccc & n2) log += 2;
-    if (0xf0f0f0f0 & n2) log += 4;
-    if (0xff00ff00 & n2) log += 8;
+
+    // this has been hand-optimized to reduce the number of instructions
+    __asm__ (
+        // at each step, logical right shift by i bits
+        // if the result is non-zero, we know that the set bit is in at least the i+1th
+        // position, so we add i to the count
+        // then update n to the right-shifted value to repeat
+        "lsrs %1, %2, #16\n\t"
+        "addne %0, %0, #16\n\t"
+        "movne %2, %1\n\t"
+
+        "lsrs %1, %2, #8\n\t"
+        "addne %0, %0, #8\n\t"
+        "movne %2, %1\n\t"
+
+        "lsrs %1, %2, #4\n\t"
+        "addne %0, %0, #4\n\t"
+        "movne %2, %1\n\t"
+
+        "lsrs %1, %2, #2\n\t"
+        "addne %0, %0, #2\n\t"
+        "movne %2, %1\n\t"
+
+        "lsrs %1, %2, #1\n\t"
+        "addne %0, %0, #1"
+
+        : "+r"(log), "=r"(scratch), "+r"(n)
+    );
+
+    // equivalent C code left here to document what it is that I'm doing
+    /*
     if (0xffff0000 & n2) log += 16;
+    if (0xff00ff00 & n2) log += 8;
+    if (0xf0f0f0f0 & n2) log += 4;
+    if (0xcccccccc & n2) log += 2;
+    if (0xaaaaaaaa & n2) log += 1;
+    */
+
     return log;
 }
