@@ -51,17 +51,22 @@ static inline int least_significant_set_bit(int n) {
         "addne %0, %0, #4\n\t"
         "movne %2, %1\n\t"
 
-        "lsrs %1, %2, #2\n\t"
-        "addne %0, %0, #2\n\t"
-        "movne %2, %1\n\t"
-
-        "lsrs %1, %2, #1\n\t"
-        "addne %0, %0, #1"
+        // this is a bit of a hack
+        // at this point, the number is one of 0x8, 0x4, 0x2, 0x1
+        // for which we want to add 3, 2, 1 and 0 respectively
+        // we can cheat a bit, to skip the last round of iteration
+        // for all but 0x8, n >> 1 is the right relation
+        "tst %2, #0x8\n\t"
+        "addne %0, %0, #3\n\t"
+        "addeq %0, %0, %2, lsr #1"
 
         : "+r"(log), "=r"(scratch), "+r"(n)
     );
 
     // equivalent C code left here to document what it is that I'm doing
+    // this doesn't translate into assembly very well, since ARM is bad
+    // at expressing large constants in a single instruction.
+    // The value would have to be loaded from a constant stored in .rodata
     /*
     if (0xffff0000 & n2) log += 16;
     if (0xff00ff00 & n2) log += 8;
