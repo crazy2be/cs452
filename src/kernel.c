@@ -101,9 +101,11 @@ void parent_tid_handler(struct task_descriptor *current_task) {
     uc->r0 = current_task->parent_tid;
 }
 
+extern int stack_top;
+
 void setup_tasks(void) {
     tasks.next_tid = 0;
-    tasks.memory_alloc = (void*) 0x200000;
+    tasks.memory_alloc = (void*) &stack_top + USER_STACK_SIZE;
 }
 
 /**
