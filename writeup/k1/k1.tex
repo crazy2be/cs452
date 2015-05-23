@@ -1,0 +1,138 @@
+\documentclass{article}
+
+\begin{document}
+\section{Instructions}
+\section{Design Decisions}
+\subsection{Priority Queue}
+The priority queue used to implement the ready queue of the scheduler is
+arguably the most complex datastructure used in the kernel.
+The data structure currently being used is a series of FIFO queues, one for
+each priority level.
+When a task is enqueued, it is added to the queue corresponding to its priority
+level.
+When a consuming a task from the priority queue, a task is dequeued from the
+non-empty queue with the highest priority.
+Each individual queue is implemented as a doubly-linked list, where the
+\texttt{next} and \texttt{prev} pointers of each node are part of the task
+descriptor itself.
+Doing this is possible since a task is in at most one queue at any given time.
+Inlining these fields allows us to not need to seperately allocate memory for
+linked list nodes, which simplifies the design.
+For efficiency, we maintain a bit-vector which allows us to efficiently find
+the non-empty queue with the highest priority.
+The $i$th bit of the bit vector is set if the queue of priority $i$ is non-empty.
+To find the highest priority non-empty queue, can find the index of the least
+significant set bit, which can be done fairly efficiently.
+
+This implementation is reasonably efficient in both memory and time.
+The memory usage is linear in the number of task descriptors, no matter
+how many queues need to be created.
+Moreover, the time taken to enqueue and dequeue task descriptors is constant,
+and fairly fast in practice.
+
+To be fair, this implementation is almost exactly what was suggested in the lecture.
+This is by no means novel work.
+
+We did consider alternate implementations at various points, and eventually rejected them.
+The first implementation done was a priority queue implemented as a fixed-capacity heap.
+However, enqueueing and dequeueing elements from the heap takes $O(\log(n))$ time,
+which is too slow for our purposes.
+
+Another implementation considered was a ringbuffer storing pointers to task descriptors.
+However, we then need to have multiple ringbuffers, one for each priority level.
+Each buffer needs to have sufficient space allocated to accomodate the maximum
+number of tasks.
+Therefore, this implementation consumed $O(kn)$ memory, where $k$ is the number
+of priority levels, and $n$ is the number of tasks.
+This would have gotten worse yet after implementing message passing, where each
+a queue is needed for each task.
+At this point, memory consumption would be $O(n^2)$, which is simply not scalable.
+
+\subsection{Integer Log}
+As a subproblem of implementing the priority queue, we needed to be able to take
+a bit vector $b$, and quickly find the least significant set bit.
+This allows us to quickly determine the right constituent queue to dequeue the next
+task from.
+To do this, we first calculate \texttt{c = b \& -b}, which leaves only the least significant
+bit of $b$ set.
+
+After that point, we want to determine the index of the set bit, which is the
+base-2 log of the number.
+The method used is inspired by John Owens' method as listed on the bithacks page,
+but has been altered in implementation to take fewer instructions on the ARM processor.
+The algorithm essentially binary searches through the bit vector for the set bit.
+
+It right shifts the input by 16 bits, and uses ARM conditional execution flags
+to check if the result is non-zero.
+If it is, then the set bit is in the high 16 bits of $c$, so we add 16 to the log,
+and set $c$ to the right shifted value.
+Otherwise, we do nothing.
+At the end of this step, we know that the 16 most significant bits of $c$ are unset.
+
+We then repeat this process for a left shift of 8 bits, 4 bits, 2 bits, and 1 bit.
+
+The entire algorithm takes 17 instructions of hand-written assembly.
+Further optimizations may be possible, but fairly little time has been spent on this
+code so far.
+
+\subsection{Task Resource Allocation}
+All task descriptors are simply allocated in a statically allocated table.
+A task ID is just an integer index into that table.
+This approach makes the implementation very simple, but precludes the reuse
+of memory allocated for task descriptors, since task IDs themselves cannot
+be reused.
+If we should ever want to support reusing task resources after a task exits,
+we will need to switch the task descriptor table to a different implementation.
+
+Memory allocated for task stacks is allocated in 4K blocks after the end of
+the kernel's stack.
+Each individual stack grows down, but the overall set of task stacks grows up in
+4K increments.
+Like the task descriptors themselves, memory is not currently reused after the
+task exits.
+
+\subsection{Argument Passing}
+To pass arguments and return values to and from syscalls, the kernel manipulates
+the context of the task as stored in memory.
+During the context switch, all the registers of the user task are stored on the
+user's stack, including \texttt{r0}-\texttt{r3}, which are used to pass arguments.
+To find the arguments passed to the syscall, the kernel can just read the values
+from the saved context.
+To return a value to the user task, the kernel can write to the stored value of
+\texttt{r0}, which will be restored to the user task when context switching back,
+and will be interpretted as a return argument.
+
+This approach has two advantages.
+Firstly, returning values this way makes it very easy to handle returning values
+to tasks which aren't immediately returned to.
+The kernel just stores the return value in the context, and doesn't need to care
+when that context is restored.
+Secondly, it makes the context switching code very simple, since no special treatment
+of the arguments is required.
+The context switching simply preserves the entire context, and is agnostic to what,
+if any, arguments have been passed to the syscall.
+
+However, this approach does result in unnecessary memory accesses.
+The obvious way to avoid this would be to pass the syscall arguments back to the kernel
+in their original registers.
+As it turns out, trying to make a C function have returns in registers (i.e.:\ a 4-member
+struct returned in \texttt{r0}-\texttt{r3}) is not easy to do.
+Some compilers implement non-standard extensions which support doing this, but GCC
+is not one of them.
+There is a plausible workaround which uses explicit register variables.
+The function would return \texttt{void}, but then return values could be picked up
+by accessing variables declared as being stored in \texttt{r0}-\texttt{r3}.
+This would allow us to not save those registers in memory for syscalls, since
+there is no expectation that those values will be preserved through the function call.
+They just need to be passed to the kernel, not restored when the context switches back.
+We only need to preserve the full context during interrupts, which is
+currently out of scope.
+However, I've had considerable difficulty in my past experiences with trying to
+convince GCC to emit the correct assembly code to not clobber values returned in this
+way.
+Therefore, I'm not going to try to implement this solutino unless it becomes a
+performance problem.
+
+\section{Source Listing}
+\section{Questions}
+\end{document}
