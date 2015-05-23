@@ -20,25 +20,54 @@
  * @return The index of the least significant set bit in `n`, where 0 represents the LSB,
  * and 31 represents the MSB.
  */
-static inline int least_significant_set_bit(int n) {
-    int log = 0;
-    int scratch;
+static inline unsigned least_significant_set_bit(unsigned n) {
+    unsigned log = 0;
 
 	n = n & -n; // MAGIC that makes only lowest bit set in result
 
-    // this method of doing log base 2 is from
+    // This method of doing log base 2 is from
     // https://graphics.stanford.edu/~seander/bithacks.html#IntegerLog,
-    // credited to John Owens
-    // this implementation has been modified somewhat to optimize for
-    // what arm assembly is capable of doing
-    // this only works since we know n2 to be a power of 2
+    // credited to John Owens.
+    // This implementation has been modified somewhat to optimize for
+    // what arm assembly is capable of doing.
+    // This only works since we know n to be a power of 2.
+    // The original method repeatedly ANDs the value with magic constants.
+    // However, ARM instructions can only use a very limited range of constants
+    // as immediate values, so we use iterative logical right shift as an alternative.
 
-    // this has been hand-optimized to reduce the number of instructions
+    // At each step, we know the set bit is in the lowest 2i bits of n
+    // We logical right shift by i bits
+    // If the result is non-zero, we know that n >= 2^i,
+    // so we use the identity `log_2(n) = i + log_2(n / 2^i)`
+    // We add i to the log, then update n to the right-shifted value to repeat.
+    // After each step, we know that n < 2^i, and we repeat the algorithm
+    // to calculate the log iteratively.
+
+    if (n >> 16) {
+        log += 16;
+        n = n >> 16;
+    }
+    if (n >> 8) {
+        log += 8;
+        n = n >> 8;
+    }
+    if (n >> 4) {
+        log += 4;
+        n = n >> 4;
+    }
+
+    // This is a bit of a hack.
+    // At this point, the number is one of 0x8, 0x4, 0x2, 0x1
+    // for which we want to add 3, 2, 1 and 0 respectively
+    // We can cheat a bit, to skip the last round of iteration.
+    // It turns out that log_2 for these 4 cases is equal to n/2 - n/8.
+    log += n / 2 - n / 8;
+
+    // Original hand-optimized assembly code left here to document what it is that I
+    // expect the compiler should generate.
+    // I've ported the assembly back into C for portability / readability.
+    /*
     __asm__ (
-        // at each step, logical right shift by i bits
-        // if the result is non-zero, we know that the set bit is in at least the i+1th
-        // position, so we add i to the count
-        // then update n to the right-shifted value to repeat
         "lsrs %1, %2, #16\n\t"
         "addne %0, %0, #16\n\t"
         "movne %2, %1\n\t"
@@ -51,31 +80,11 @@ static inline int least_significant_set_bit(int n) {
         "addne %0, %0, #4\n\t"
         "movne %2, %1\n\t"
 
-        // this is a bit of a hack
-        // at this point, the number is one of 0x8, 0x4, 0x2, 0x1
-        // for which we want to add 3, 2, 1 and 0 respectively
-        // we can cheat a bit, to skip the last round of iteration
-        // for all but 0x8, n/2 is the right relation
-
-        // add n/2 to log
         "add %0, %0, %2, lsr #1\n\t"
-        // subtract back n/8, which subtracts 1 for n=8, and leaves the other cases alone
-        // this compensates for the above addition adding to much for n=8
         "sub %0, %0, %2, lsr #3"
 
         : "+r"(log), "=r"(scratch), "+r"(n)
     );
-
-    // equivalent C code left here to document what it is that I'm doing
-    // this doesn't translate into assembly very well, since ARM is bad
-    // at expressing large constants in a single instruction.
-    // The value would have to be loaded from a constant stored in .rodata
-    /*
-    if (0xffff0000 & n2) log += 16;
-    if (0xff00ff00 & n2) log += 8;
-    if (0xf0f0f0f0 & n2) log += 4;
-    if (0xcccccccc & n2) log += 2;
-    if (0xaaaaaaaa & n2) log += 1;
     */
 
     return log;
