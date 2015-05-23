@@ -1,4 +1,7 @@
 \documentclass{article}
+\usepackage{listings}
+
+\lstset{basicstyle=\footnotesize\ttfamily,breaklines=true}
 
 \begin{document}
 \section{Instructions}
@@ -62,18 +65,46 @@ The method used is inspired by John Owens' method as listed on the bithacks page
 but has been altered in implementation to take fewer instructions on the ARM processor.
 The algorithm essentially binary searches through the bit vector for the set bit.
 
-It right shifts the input by 16 bits, and uses ARM conditional execution flags
-to check if the result is non-zero.
-If it is, then the set bit is in the high 16 bits of $c$, so we add 16 to the log,
-and set $c$ to the right shifted value.
-Otherwise, we do nothing.
-At the end of this step, we know that the 16 most significant bits of $c$ are unset.
+At each step, we know that the set bit is in the bottom $2i$ bits of $c$, and we want
+to narrow that down to a range of $i$ bits.
+At each step, we run the following pseudocode:
 
-We then repeat this process for a left shift of 8 bits, 4 bits, 2 bits, and 1 bit.
+\begin{center}
+\begin{lstlisting}
+if (c >> i) {
+    c = c >> i;
+    log += i;
+}
+\end{lstlisting}
+\end{center}
 
-The entire algorithm takes 17 instructions of hand-written assembly.
-Further optimizations may be possible, but fairly little time has been spent on this
-code so far.
+If the set bit is in the high $i$ bits, then we divide by $2^i$, and add $i$ to the log.
+If the set bit is in the low $i$ bits, we do nothing.
+We then iterate to find the log of the new (or possibly unchanged) value of $c$.
+At the end of this step, we know that set bit is within the bottom $i$ bits of $c$.
+We perform this process for $i=16$, 8 and 4.
+
+A previous copy of the algorithm then repeated the process for a shift of 2 bits and 1 bit
+to find the final result.
+However, it turns out that there is a trick that can be used for the last 4 cases.
+
+Once $2i=4$, 4 values of $c$ are possible: 8, 4, 2 and 1.
+The integer logs of these are 3, 2, 1 and 0 respectively.
+It turns out that this is equal to \texttt{c / 2 - c / 8},
+assuming integer division.
+Since these divisions can be translated into bit-shifts, and because
+ARM allows the second operand to many instructions to be bit-shifted essentially
+for free, it turns out that this is a very cheap expression to calculate.
+This trick can be used to step the last two iterations (each of which costs 3
+instructions), and replace it with an addition and subtraction operation,
+thereby whittling 4 instruction off the total.
+
+The entire algorithm takes 14 instructions of hand-written assembly.
+
+We consider the result to be undefined if $b=0$, and expect the caller to check
+this case before running this algorithm to try to find the least significant set bit.
+The $b=0$ case is special to the caller anyway, and needs to be handled seperately,
+and doing this makes it easier to optimize the algorithm.
 
 \subsection{Task Resource Allocation}
 All task descriptors are simply allocated in a statically allocated table.
