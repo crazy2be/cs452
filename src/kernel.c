@@ -72,7 +72,7 @@ static inline struct user_context* get_task_context(struct task_descriptor* task
 // and perform validation.
 // There should be very little application logic in this code.
 
-void create_handler(struct task_descriptor *current_task) {
+static inline void create_handler(struct task_descriptor *current_task) {
     struct user_context *uc = get_task_context(current_task);
     int priority = (int) uc->r0;
     void *code = (void*) uc->r1;
@@ -91,12 +91,12 @@ void create_handler(struct task_descriptor *current_task) {
     uc->r0 = result;
 }
 
-void tid_handler(struct task_descriptor *current_task) {
+static inline void tid_handler(struct task_descriptor *current_task) {
     struct user_context *uc = get_task_context(current_task);
     uc->r0 = current_task->tid;
 }
 
-void parent_tid_handler(struct task_descriptor *current_task) {
+static inline void parent_tid_handler(struct task_descriptor *current_task) {
     struct user_context *uc = get_task_context(current_task);
     uc->r0 = current_task->parent_tid;
 }
