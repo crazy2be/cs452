@@ -1,0 +1,4 @@
+#!/bin/bash
+echo "\begin{verbatim}"
+cat -
+echo "\end{verbatim}"
