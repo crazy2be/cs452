@@ -1,6 +1,6 @@
 #pragma once
 
-#include "drivers/uart.h"
+#include "../kernel/drivers/uart.h"
 
 /**
  * @file
@@ -91,7 +91,5 @@ char io_getc(int channel);
  */
 void io_service(void);
 
-int fprintf(int channel, const char *format, ...);
-#define bwprintf(channel, ...) do { \
-	fprintf(channel, __VA_ARGS__); io_flush(channel); } while (0)
-#define printf(...) fprintf(COM2, __VA_ARGS__)
+int io_printf(int channel, const char *format, ...);
+#define printf(...) io_printf(COM2, __VA_ARGS__)

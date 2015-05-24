@@ -95,7 +95,7 @@ static void bwformat(int channel, char *fmt, va_list va) {
 	}
 }
 
-int fprintf(int channel, const char *fmt, ...) {
+int io_printf(int channel, const char *fmt, ...) {
 	va_list va;
 	va_start(va,fmt);
 	bwformat(channel, (char*)fmt, va); // Shouldn't need this cast...

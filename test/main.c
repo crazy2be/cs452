@@ -1,5 +1,5 @@
 #include <kernel.h>
-#include <bwio.h>
+#include <io.h>
 
 // lurky, but we have to include these to test stuff
 #include "../kernel/least_significant_set_bit.h"
@@ -9,12 +9,14 @@
 
 #define ASSERT(stmt) {\
     if (!(stmt)) { \
-        bwputstr(COM2, "ASSERTION FAILED (" __FILE__ ":" STRINGIFY1(__LINE__) ") : " STR1(stmt) EOL); \
+        io_puts(COM2, "ASSERTION FAILED (" __FILE__ ":" STRINGIFY1(__LINE__) ") : " STR1(stmt) EOL); \
+        io_flush(COM2); \
     } }
 
 
 void child(void) {
-    bwprintf(COM2, "Child task %d" EOL, tid());
+    io_printf(COM2, "Child task %d" EOL, tid());
+    io_flush(COM2);
 }
 
 void nop(void) {
