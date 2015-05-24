@@ -1,7 +1,9 @@
 MAKEFILE_NAME = ${firstword ${MAKEFILE_LIST}} # makefile name
 
 BUILD_DIR=build
-SRC_DIRS=kernel user test
+KERNEL_SRC_DIR=kernel
+TEST_SRC_DIR=test
+USER_SRC_DIR=user
 
 CFLAGS  = -g -fPIC -Wall -Werror -Iinclude -std=c99 -O2
 ARCH_CFLAGS = -mcpu=arm920t -msoft-float
@@ -50,31 +52,44 @@ LDFLAGS = -init main -Map $(MAP) -T $(LINKER_SCRIPT) -N -L/u/wbcowan/gnuarm-4.0.
 default: install
 endif
 
-# variables describing objects from C code
-SOURCES=$(shell find $(SRC_DIRS) -name '*.c')
-OBJECTS=$(addprefix $(BUILD_DIR)/, $(addsuffix .o, $(basename $(SOURCES))))
+# macro to turn source names into object names
+objectify=$(addprefix $(BUILD_DIR)/, $(addsuffix .o, $(basename $(1))))
+
+# find sources for each subproject independantly,
+# since it's not easy to split them back up again with make
+KERNEL_SOURCES=$(shell find $(KERNEL_SRC_DIR) -name *.c)
+USER_SOURCES=$(shell find $(USER_SRC_DIR) -name *.c)
+TEST_SOURCES=$(shell find $(TEST_SRC_DIR) -name *.c)
+
+KERNEL_ASM_SOURCES=$(shell find $(KERNEL_SRC_DIR) -name *.s)
+USER_ASM_SOURCES=$(shell find $(USER_SRC_DIR) -name *.s)
+TEST_ASM_SOURCES=$(shell find $(TEST_SRC_DIR) -name *.s)
+
+# definitions for compiling C source code
+SOURCES=$(KERNEL_SOURCES) $(USER_SOURCES) $(TEST_SOURCES)
+OBJECTS=$(call objectify, $(SOURCES))
 GENERATED_ASSEMBLY=${OBJECTS:.o=.s}
 DEPENDS=${OBJECTS:.o=.d}
 
-# variables describing objects from handwritten assembly
-ASM_SOURCES=$(shell find $(SRC_DIRS) -name '*.s')
-ASM_OBJECTS=$(addprefix $(BUILD_DIR)/, $(addsuffix .o, $(basename $(ASM_SOURCES))))
+# definitions for assembling handwritten assembly
+ASM_SOURCES=$(KERNEL_ASM_SOURCES) $(USER_ASM_SOURCES) $(TEST_ASM_SOURCES)
+ASM_OBJECTS=$(call objectify, $(ASM_SOURCES))
 
 DIRS=$(sort $(dir $(OBJECTS) $(ASM_OBJECTS)))
 
-# objects shared by both test and real kernels
-KERNEL_INIT = $(BUILD_DIR)/user/main.o
-TEST_INIT = $(BUILD_DIR)/test/main.o
-COMMON_OBJECTS = $(filter-out $(KERNEL_INIT) $(TEST_INIT), $(OBJECTS) $(ASM_OBJECTS))
+# definitions used for linker recipe
+KERNEL_COMMON_OBJECTS = $(call objectify, $(KERNEL_SOURCES) $(KERNEL_ASM_SOURCES))
+USER_COMMON_OBJECTS = $(call objectify, $(USER_SOURCES) $(USER_ASM_SOURCES))
+TEST_COMMON_OBJECTS = $(call objectify, $(TEST_SOURCES) $(TEST_ASM_SOURCES))
 
 $(KERNEL_BIN) $(TEST_BIN): %.bin : %.elf
 	arm-none-eabi-objcopy -O binary $< $@
 
-$(TEST_ELF): $(COMMON_OBJECTS) $(TEST_INIT)
-	$(LD) $(LDFLAGS) -o $@ $(COMMON_OBJECTS) $(TEST_INIT) -lgcc
+$(TEST_ELF): $(KERNEL_COMMON_OBJECTS) $(TEST_COMMON_OBJECTS)
+	$(LD) $(LDFLAGS) -o $@ $(KERNEL_COMMON_OBJECTS) $(TEST_COMMON_OBJECTS) -lgcc
 
-$(KERNEL_ELF): $(COMMON_OBJECTS) $(KERNEL_INIT)
-	$(LD) $(LDFLAGS) -o $@ $(COMMON_OBJECTS) $(KERNEL_INIT) -lgcc
+$(KERNEL_ELF): $(KERNEL_COMMON_OBJECTS) $(USER_COMMON_OBJECTS)
+	$(LD) $(LDFLAGS) -o $@ $(KERNEL_COMMON_OBJECTS) $(USER_COMMON_OBJECTS) -lgcc
 
 $(KERNEL_ELF) $(TEST_ELF): $(LINKER_SCRIPT)
 
