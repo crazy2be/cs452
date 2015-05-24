@@ -54,8 +54,11 @@ void pass(void) __attribute__((naked));
 /**
  * Stop execution of the calling task, and destroy it and all its
  * resources.
+ *
+ * TODO: This should be marked noreturn, but can't be currently, becausue
+ * Cowan's compiler doesn't understand that it doesn't return...
  */
-void exitk(void) __attribute__((naked, noreturn));
+void exitk(void) __attribute__((naked));
 
 // aliases for the above functions,
 // using the naming convention specified by the course

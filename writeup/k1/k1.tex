@@ -5,6 +5,7 @@
 
 \begin{document}
 \section{Instructions}
+\input{|"cat ../../README.md | sed -e '1,/BEGIN LaTeX INCLUDED/d' | pandoc -f markdown -t latex"}
 \section{Design Decisions}
 \subsection{Priority Queue}
 The priority queue used to implement the ready queue of the scheduler is
