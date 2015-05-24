@@ -2,6 +2,7 @@ CS452 Kernel
 ============
 Coming to a trains lab near you soon!
 
+<!---BEGIN LaTeX INCLUDED-->
 Installation
 ------------
 Simply run `make ENV=ts7200 install`. This will place the compiled kernel in
