@@ -1,0 +1,37 @@
+\subsection{Installation}\label{installation}
+
+Simply run \texttt{make ENV=ts7200 install}. This will place the
+compiled kernel in \texttt{/u/cs452/tftp/ARM/\$(USER)/k.elf} (where
+\texttt{\$(USER)} is whatever your username is on the computer which you
+are compiling it). You can then load this kernel from redboot using
+\texttt{load -b 0x00218000 -h 10.15.167.5 "ARM/\$(USER)/k.elf"}. At this
+stage, the kernel doesn't do much that is particularilly interesting,
+there is no shell or other interactive elements, it simply runs the code
+which it was given.
+
+\subsection{Emulator}\label{emulator}
+
+You can run the OS on an emulated arm CPU via
+\texttt{make ENV=qemu qemu-run}. In order for this to complete
+successfully, you will need:
+
+\begin{itemize}
+\itemsep1pt\parskip0pt\parsep0pt
+\item
+  A local install of QEMU
+\item
+  A local install of an arm-none-eabi toolchain
+\end{itemize}
+
+\subsection{Tests}\label{tests}
+
+The provided kernel has some basic tests, which you can run with
+\texttt{make ENV=qemu test}. (this depends on the emulator, above).
+
+\subsection{Debugging}\label{debugging}
+
+If something goes wrong and you want to investigate deeper, you can run
+\texttt{make ENV=qemu qemu-start} in one terminal (this starts qemu in a
+suspended state), and then \texttt{make ENV=qemu qemu-debug} in another.
+You can then set breakpoints, step, inspect memory, etc- anything you
+can normally do with gdb.
