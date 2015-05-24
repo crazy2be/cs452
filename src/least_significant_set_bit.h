@@ -20,63 +20,41 @@
  * @return The index of the least significant set bit in `n`, where 0 represents the LSB,
  * and 31 represents the MSB.
  */
-static inline int least_significant_set_bit(int n) {
-    int log = 0;
-    int scratch;
+static inline unsigned least_significant_set_bit(unsigned n) {
+    unsigned log = 0;
+    unsigned scratch;
 
 	n = n & -n; // MAGIC that makes only lowest bit set in result
 
-    // this method of doing log base 2 is from
+    // this method of doing log base 2 is inspired by
     // https://graphics.stanford.edu/~seander/bithacks.html#IntegerLog,
-    // credited to John Owens
-    // this implementation has been modified somewhat to optimize for
-    // what arm assembly is capable of doing
-    // this only works since we know n2 to be a power of 2
+    // but has been modified in expression to optimize for what operations
+    // are cheapest on ARM assembly.
+    // This only works since we know n2 to be a power of 2, thanks to
+    // our little trick above.
 
-    // this has been hand-optimized to reduce the number of instructions
-    __asm__ (
-        // at each step, logical right shift by i bits
-        // if the result is non-zero, we know that the set bit is in at least the i+1th
-        // position, so we add i to the count
-        // then update n to the right-shifted value to repeat
-        "lsrs %1, %2, #16\n\t"
-        "addne %0, %0, #16\n\t"
-        "movne %2, %1\n\t"
+	// At each step, logical right shift by i bits
+	// If the result is non-zero, we know that the set bit is in at least
+	// the i+1th position, so we add i to the count.
+	// Then update n to the right-shifted value to repeat.
+	// (This is effectively a binary search)
+	// Each one of these optimizes to 3 ARM instructions, like
+	//     lsrs scratch, n, #16
+	//     addne log, log, #16
+	//     movne n, scratch
+    if ((scratch = n >> 16)) { log += 16; n = scratch; }
+    if ((scratch = n >> 8))  { log += 8;  n = scratch; }
+    if ((scratch = n >> 4))  { log += 4;  n = scratch; }
 
-        "lsrs %1, %2, #8\n\t"
-        "addne %0, %0, #8\n\t"
-        "movne %2, %1\n\t"
-
-        "lsrs %1, %2, #4\n\t"
-        "addne %0, %0, #4\n\t"
-        "movne %2, %1\n\t"
-
-        // this is a bit of a hack
-        // at this point, the number is one of 0x8, 0x4, 0x2, 0x1
-        // for which we want to add 3, 2, 1 and 0 respectively
-        // we can cheat a bit, to skip the last round of iteration
-        // for all but 0x8, n/2 is the right relation
-
-        // add n/2 to log
-        "add %0, %0, %2, lsr #1\n\t"
-        // subtract back n/8, which subtracts 1 for n=8, and leaves the other cases alone
-        // this compensates for the above addition adding to much for n=8
-        "sub %0, %0, %2, lsr #3"
-
-        : "+r"(log), "=r"(scratch), "+r"(n)
-    );
-
-    // equivalent C code left here to document what it is that I'm doing
-    // this doesn't translate into assembly very well, since ARM is bad
-    // at expressing large constants in a single instruction.
-    // The value would have to be loaded from a constant stored in .rodata
-    /*
-    if (0xffff0000 & n2) log += 16;
-    if (0xff00ff00 & n2) log += 8;
-    if (0xf0f0f0f0 & n2) log += 4;
-    if (0xcccccccc & n2) log += 2;
-    if (0xaaaaaaaa & n2) log += 1;
-    */
+	// this is a bit of a hack
+	// at this point, the number is one of 0x8, 0x4, 0x2, 0x1
+	// for which we want to add 3, 2, 1 and 0 respectively
+	// we can cheat a bit, to skip the last round of iteration
+	// for all but 0x8, n/2 is the right relation
+    log += n/2;
+	// subtract back n/8, which subtracts 1 for n=8, and leaves the other cases
+	// alone this compensates for the above addition adding too much for n=8
+    log -= n/8;
 
     return log;
 }

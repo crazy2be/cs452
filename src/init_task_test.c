@@ -29,7 +29,10 @@ void lssb_tests(void) {
     ASSERT(0 == least_significant_set_bit(0xffffffff));
     ASSERT(2 == least_significant_set_bit(0xc));
     for (i = 0; i < 32; i++) {
-        ASSERT(i == least_significant_set_bit(0x1 << i));
+		int res = least_significant_set_bit(0x1 << i);
+		printf("Testing %d, got %d\n", i, res);
+		io_flush(COM2);
+        ASSERT(i == res);
     }
 }
 
