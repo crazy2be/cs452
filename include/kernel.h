@@ -1,10 +1,8 @@
 #pragma once
 
-#include <constants.h>
-
-#define COM1 0
-#define COM2 1
-#define COM_DEBUG 2 // Same as COM2 but syncronous in bwio.
+#define PRIORITY_MAX 0
+#define PRIORITY_MIN 31
+#define PRIORITY_COUNT (PRIORITY_MIN + 1)
 
 #define SYSCALL_PASS 0
 #define SYSCALL_EXIT 1

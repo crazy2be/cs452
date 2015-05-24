@@ -1,6 +1,6 @@
 #ifndef QEMU
 #include "uart.h"
-
+#include <io.h>
 #include "ts7200.h"
 
 extern void assert(int, const char*);

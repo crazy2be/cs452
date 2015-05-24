@@ -1,5 +1,14 @@
 #pragma once
 
+#define COM1 0
+#define COM2 1
+
+#ifdef QEMU
+#define EOL "\n"
+#else
+#define EOL "\n\r"
+#endif
+
 #include "../kernel/drivers/uart.h"
 
 /**
