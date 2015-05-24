@@ -20,6 +20,12 @@ void *memset(void *ptr, int value, int num) {
 	return ptr;
 }
 
+void memcopy(void *dst, void *src, unsigned len) {
+    while (len--) {
+        *(unsigned char*)dst++ = *(unsigned char*)src++;
+    }
+}
+
 int modi(int a, int b) {
 	return ((a % b) + b) % b;
 }
