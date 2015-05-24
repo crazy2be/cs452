@@ -1,1 +1,8 @@
-(cd ../.. && find . -type f -not -path './build/*' -not -path './writeup/*' -not -path './spec/*' -not -path '*/\.*' | xargs md5sum)
+cd ../.. && \
+    find . \
+        -type f \
+        -not -path './build/*' \
+        -not -path './writeup/*' \
+        -not -path './spec/*' \
+        -not -path '*/\.*' \
+  | xargs md5sum

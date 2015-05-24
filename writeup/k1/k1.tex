@@ -170,6 +170,44 @@ performance problem.
 The source code is hosted on git, the most recent revision is
 \input{|"git rev-parse HEAD | ./verbatim"}
 We are submitting the following files:
+\input{|"cat file-list | ./verbatim"}
 \input{|"./file-list | ./verbatim"}
 \section{Questions}
+A program with the user processes as specificed in the manual outputs:
+\begin{verbatim}
+Boot...IO...
+e1:0
+e2:0
+Created: 1
+Created: 2
+Child (tid=3, parent_tid=0)
+Child (tid=3, parent_tid=0)
+Created: 3
+Child (tid=4, parent_tid=0)
+Child (tid=4, parent_tid=0)
+Created: 4
+First: exiting
+Child (tid=1, parent_tid=0)
+Child (tid=2, parent_tid=0)
+Child (tid=1, parent_tid=0)
+Child (tid=2, parent_tid=0)
+\end{verbatim}
+\begin{itemize}
+\item The first 3 lines are printed as the OS boots up, and are printed the
+	same, regardless of the user task configuration.
+\item The next two "Created:" lines are printed before their corresponding
+	tasks get a chance to run, because the tasks which they correspond to
+	are lower priority than the init task which created them.
+\item The next two "Child" lines are printed before their corresponding
+	"Created" lines, because their corresponding tasks are higher priority
+	than the init task which created them, and hence get scheduled first.
+\item The init task exits before the first two tasks get a chance to run,
+	because both of them are lower priority than than init task itself, and
+	hence will never get scheduled while the init task is alive (they cannot
+	get blocked in this version of the kernel).
+\item Once the first two tasks are finally scheduled, their output is
+	interwoven because our scheduling is round-robin between tasks of the
+	same priority.
+\end{itemize}
+
 \end{document}
