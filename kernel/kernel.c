@@ -3,6 +3,7 @@
 #include "task_descriptor.h"
 #include "io.h"
 #include "drivers/timer.h"
+#include "drivers/uart.h"
 #include "context_switch.h"
 
 /** @file */

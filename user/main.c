@@ -19,7 +19,6 @@ void init_task(void) {
     // create two tasks at a lower priority
     for (i = 0; i < 2; i++) {
         int tid = create(16, &child);
-        (void) tid;
         io_printf(COM2, "Created: %d" EOL, tid);
         io_flush(COM2);
     }
@@ -27,7 +26,6 @@ void init_task(void) {
     // create two tasks at a higher priority
     for (i = 0; i < 2; i++) {
         int tid = create(14, &child);
-        (void) tid;
         io_printf(COM2, "Created: %d" EOL, tid);
         io_flush(COM2);
     }

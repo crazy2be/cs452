@@ -9,8 +9,6 @@
 #define EOL "\n\r"
 #endif
 
-#include "../kernel/drivers/uart.h"
-
 /**
  * @file
  *
