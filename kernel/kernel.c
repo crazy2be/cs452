@@ -3,8 +3,8 @@
 #include "task_descriptor.h"
 #include "io.h"
 #include "drivers/timer.h"
+#include "drivers/uart.h"
 #include "context_switch.h"
-#include "init_task.h"
 
 /** @file */
 
@@ -175,13 +175,13 @@ void setup(void) {
  * When I tried to make this a void function instead, it would no longer
  * run on the TS7200. *shrug*
  */
-int main(int argc, char *argv[]) {
+int boot(void (*init_task)(void), int init_task_priority) {
     struct task_descriptor * current_task;
 
     setup();
 
     // set up the first task
-    current_task = create_task(&init_task, init_task_priority, 0);
+    current_task = create_task(init_task, init_task_priority, 0);
     (void) current_task;
 
     do {

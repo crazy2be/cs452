@@ -1,6 +1,13 @@
 #pragma once
 
-#include "drivers/uart.h"
+#define COM1 0
+#define COM2 1
+
+#ifdef QEMU
+#define EOL "\n"
+#else
+#define EOL "\n\r"
+#endif
 
 /**
  * @file
@@ -90,3 +97,6 @@ char io_getc(int channel);
  * called, nothing happens.
  */
 void io_service(void);
+
+int io_printf(int channel, const char *format, ...);
+#define printf(...) io_printf(COM2, __VA_ARGS__)

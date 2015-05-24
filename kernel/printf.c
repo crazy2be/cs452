@@ -1,9 +1,9 @@
 #include "util.h"
 #include "io.h"
 
-void bwputc(int channel, char c) { io_putc(channel, c); }
+static void bwputc(int channel, char c) { io_putc(channel, c); }
 
-void bwputw(int channel, int n, char fc, char *bf) {
+static void bwputw(int channel, int n, char fc, char *bf) {
 	char ch;
 	char *p = bf;
 	while (*p++ && n > 0) n--;
@@ -11,7 +11,7 @@ void bwputw(int channel, int n, char fc, char *bf) {
 	while ((ch = *bf++)) bwputc(channel, ch);
 }
 
-int bwa2d(char ch) {
+static int bwa2d(char ch) {
 	if (ch >= '0' && ch <= '9') return ch - '0';
 	if (ch >= 'a' && ch <= 'f') return ch - 'a' + 10;
 	if (ch >= 'A' && ch <= 'F') return ch - 'A' + 10;
@@ -19,7 +19,7 @@ int bwa2d(char ch) {
 	return 1;
 }
 
-char bwa2i(char ch, char **src, int base, int *nump) {
+static char bwa2i(char ch, char **src, int base, int *nump) {
 	int num, digit;
 	char *p;
 
@@ -33,7 +33,7 @@ char bwa2i(char ch, char **src, int base, int *nump) {
 	return ch;
 }
 
-void bwui2a(unsigned int num, unsigned int base, char *bf) {
+static void bwui2a(unsigned int num, unsigned int base, char *bf) {
 	int n = 0;
 	int dgt;
 	unsigned int d = 1;
@@ -51,7 +51,7 @@ void bwui2a(unsigned int num, unsigned int base, char *bf) {
 	*bf = 0;
 }
 
-void bwi2a(int num, char *bf) {
+static void bwi2a(int num, char *bf) {
 	if (num < 0) {
 		num = -num;
 		*bf++ = '-';
@@ -59,19 +59,9 @@ void bwi2a(int num, char *bf) {
 	bwui2a(num, 10, bf);
 }
 
-typedef char *va_list;
+#include "vargs.h"
 
-#define __va_argsiz(t)	\
-		(((sizeof(t) + sizeof(int) - 1) / sizeof(int)) * sizeof(int))
-
-#define va_start(ap, pN) ((ap) = ((va_list) __builtin_next_arg(pN)))
-
-#define va_end(ap)	((void)0)
-
-#define va_arg(ap, t)	\
-		 (((ap) = (ap) + __va_argsiz(t)), *((t*) (void*) ((ap) - __va_argsiz(t))))
-
-void bwformat(int channel, char *fmt, va_list va) {
+static void bwformat(int channel, char *fmt, va_list va) {
 	char bf[12];
 	char ch, lz;
 	int w;
@@ -105,7 +95,7 @@ void bwformat(int channel, char *fmt, va_list va) {
 	}
 }
 
-int fprintf(int channel, const char *fmt, ...) {
+int io_printf(int channel, const char *fmt, ...) {
 	va_list va;
 	va_start(va,fmt);
 	bwformat(channel, (char*)fmt, va); // Shouldn't need this cast...

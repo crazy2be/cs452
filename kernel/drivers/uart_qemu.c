@@ -1,5 +1,6 @@
 #ifdef QEMU
 #include "uart.h"
+#include <io.h>
 
 extern void assert(int, const char*);
 

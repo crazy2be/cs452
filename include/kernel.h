@@ -1,6 +1,8 @@
 #pragma once
 
-#include <constants.h>
+#define PRIORITY_MAX 0
+#define PRIORITY_MIN 31
+#define PRIORITY_COUNT (PRIORITY_MIN + 1)
 
 #define SYSCALL_PASS 0
 #define SYSCALL_EXIT 1
@@ -59,6 +61,11 @@ void pass(void) __attribute__((naked));
  * Cowan's compiler doesn't understand that it doesn't return...
  */
 void exitk(void) __attribute__((naked));
+
+/**
+ * Main entrypoint into the kernel
+ */
+int boot(void (*init_task)(void), int init_task_priority);
 
 // aliases for the above functions,
 // using the naming convention specified by the course

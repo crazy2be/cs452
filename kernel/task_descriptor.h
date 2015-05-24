@@ -2,7 +2,7 @@
 
 /** @file */
 
-#include <constants.h>
+#include <kernel.h>
 #include "context_switch.h"
 
 /* enum task_state { ACTIVE, READY, ZOMBIE }; */

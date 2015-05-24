@@ -1,3 +1,4 @@
+#if 0
 #include "rbuf.h"
 
 #include <assert.h>
@@ -82,3 +83,4 @@ void main() {
 	full();
 	wrap();
 }
+#endif

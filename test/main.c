@@ -1,8 +1,8 @@
 #include <kernel.h>
-#include "init_task.h"
-#include "io.h"
-#include "util.h"
-#include "least_significant_set_bit.h"
+#include <io.h>
+
+// lurky, but we have to include these to test stuff
+#include "../kernel/least_significant_set_bit.h"
 
 #define STRINGIFY2(STR) #STR
 #define STRINGIFY1(STR) STRINGIFY2(STR)
@@ -15,14 +15,12 @@
 
 
 void child(void) {
-    printf("Child task %d" EOL, tid());
+    io_printf(COM2, "Child task %d" EOL, tid());
     io_flush(COM2);
 }
 
 void nop(void) {
 }
-
-const int init_task_priority = PRIORITY_MAX;
 
 void lssb_tests(void) {
     int i;
@@ -38,8 +36,6 @@ void init_task(void) {
     ASSERT(1);
     ASSERT(create(-1, child) == CREATE_INVALID_PRIORITY);
     ASSERT(create(32, child) == CREATE_INVALID_PRIORITY);
-    printf("init task priority is %d" EOL, init_task_priority);
-    io_flush(COM2);
     int i;
     for (i = 0; i < 10; i++) {
         // create tasks in descending priority order
@@ -51,4 +47,8 @@ void init_task(void) {
     }
 
     ASSERT(create(4, child) == CREATE_INSUFFICIENT_RESOURCES);
+}
+
+int main(int argc, char *argv[]) {
+    boot(init_task, PRIORITY_MAX);
 }
