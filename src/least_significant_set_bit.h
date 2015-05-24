@@ -26,47 +26,35 @@ static inline unsigned least_significant_set_bit(unsigned n) {
 
 	n = n & -n; // MAGIC that makes only lowest bit set in result
 
-    // This method of doing log base 2 is from
+    // This method of doing log base 2 is inspired by
     // https://graphics.stanford.edu/~seander/bithacks.html#IntegerLog,
-    // credited to John Owens.
-    // This implementation has been modified somewhat to optimize for
-    // what arm assembly is capable of doing.
-    // This only works since we know n to be a power of 2.
-    // The original method repeatedly ANDs the value with magic constants.
-    // However, ARM instructions can only use a very limited range of constants
-    // as immediate values, so we use iterative logical right shift as an alternative.
+    // but has been modified in expression to optimize for what operations
+    // are cheapest on ARM assembly.
+    // This only works since we know n2 to be a power of 2, thanks to
+    // our little trick above.
 
-    __asm__ (
-        // At each step, we know the set bit is in the lowest 2i bits of n
-        // We logical right shift by i bits
-        // If the result is non-zero, we know that n >= 2^i,
-        // so we use the identity `log_2(n) = i + log_2(n / 2^i)`
-        // We add i to the log, then update n to the right-shifted value to repeat.
-        // After each step, we know that n < 2^i, and we repeat the algorithm
-        // to calculate the log iteratively.
-        "lsrs %1, %2, #16\n\t"
-        "addne %0, %0, #16\n\t"
-        "movne %2, %1\n\t"
+	// At each step, logical right shift by i bits
+	// If the result is non-zero, we know that the set bit is in at least
+	// the i+1th position, so we add i to the count.
+	// Then update n to the right-shifted value to repeat.
+	// (This is effectively a binary search)
+	// Each one of these optimizes to 3 ARM instructions, like
+	//     lsrs scratch, n, #16
+	//     addne log, log, #16
+	//     movne n, scratch
+    if ((scratch = n >> 16)) { log += 16; n = scratch; }
+    if ((scratch = n >> 8))  { log += 8;  n = scratch; }
+    if ((scratch = n >> 4))  { log += 4;  n = scratch; }
 
-        // Repeat the algorithm for shifts of 8 and 4 bit
-        "lsrs %1, %2, #8\n\t"
-        "addne %0, %0, #8\n\t"
-        "movne %2, %1\n\t"
-
-        "lsrs %1, %2, #4\n\t"
-        "addne %0, %0, #4\n\t"
-        "movne %2, %1\n\t"
-
-        // This is a bit of a hack.
-        // At this point, the number is one of 0x8, 0x4, 0x2, 0x1
-        // for which we want to add 3, 2, 1 and 0 respectively
-        // We can cheat a bit, to skip the last round of iteration.
-        // It turns out that log_2 for these 4 cases is equal to n/2 - n/8.
-        "add %0, %0, %2, lsr #1\n\t"
-        "sub %0, %0, %2, lsr #3"
-
-        : "+r"(log), "=r"(scratch), "+r"(n)
-    );
+	// this is a bit of a hack
+	// at this point, the number is one of 0x8, 0x4, 0x2, 0x1
+	// for which we want to add 3, 2, 1 and 0 respectively
+	// we can cheat a bit, to skip the last two rounds of iteration
+	// for all but 0x8, n/2 is the right relation
+    log += n/2;
+	// subtract back n/8, which subtracts 1 for n=8, and leaves the other cases
+	// alone this compensates for the above addition adding too much for n=8
+    log -= n/8;
 
     return log;
 }
