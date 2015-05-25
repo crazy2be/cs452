@@ -2,6 +2,7 @@ MAKEFILE_NAME = ${firstword ${MAKEFILE_LIST}} # makefile name
 
 BUILD_DIR=build
 KERNEL_SRC_DIR=kernel
+GEN_SRC_DIR=gen
 TEST_SRC_DIR=test
 USER_SRC_DIR=user
 
@@ -57,11 +58,11 @@ objectify=$(addprefix $(BUILD_DIR)/, $(addsuffix .o, $(basename $(1))))
 
 # find sources for each subproject independantly,
 # since it's not easy to split them back up again with make
-KERNEL_SOURCES=$(shell find $(KERNEL_SRC_DIR) -name *.c)
+KERNEL_SOURCES=$(shell find $(KERNEL_SRC_DIR) $(GEN_SRC_DIR) -name *.c)
 USER_SOURCES=$(shell find $(USER_SRC_DIR) -name *.c)
 TEST_SOURCES=$(shell find $(TEST_SRC_DIR) -name *.c)
 
-KERNEL_ASM_SOURCES=$(shell find $(KERNEL_SRC_DIR) -name *.s)
+KERNEL_ASM_SOURCES=$(shell find $(KERNEL_SRC_DIR) $(GEN_SRC_DIR) -name *.s)
 USER_ASM_SOURCES=$(shell find $(USER_SRC_DIR) -name *.s)
 TEST_ASM_SOURCES=$(shell find $(TEST_SRC_DIR) -name *.s)
 
@@ -81,6 +82,8 @@ DIRS=$(sort $(dir $(OBJECTS) $(ASM_OBJECTS)))
 KERNEL_COMMON_OBJECTS = $(call objectify, $(KERNEL_SOURCES) $(KERNEL_ASM_SOURCES))
 USER_COMMON_OBJECTS = $(call objectify, $(USER_SOURCES) $(USER_ASM_SOURCES))
 TEST_COMMON_OBJECTS = $(call objectify, $(TEST_SOURCES) $(TEST_ASM_SOURCES))
+# SAVE ME PETER!
+IGNORED_VARIABLE_HACK := $(shell python kernel/syscall.py)
 
 $(KERNEL_BIN) $(TEST_BIN): %.bin : %.elf
 	arm-none-eabi-objcopy -O binary $< $@

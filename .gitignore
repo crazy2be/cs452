@@ -1,4 +1,5 @@
 /build
+/gen
 /test_output
 /docs
 /writeup/*/*.aux

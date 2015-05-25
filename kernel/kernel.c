@@ -175,6 +175,7 @@ void setup(void) {
  * When I tried to make this a void function instead, it would no longer
  * run on the TS7200. *shrug*
  */
+#include "../gen/syscalls.h"
 int boot(void (*init_task)(void), int init_task_priority) {
     struct task_descriptor * current_task;
 
@@ -203,7 +204,7 @@ int boot(void (*init_task)(void), int init_task_priority) {
             // no-op
             priority_task_queue_push(&queue, current_task);
             break;
-        case SYSCALL_EXIT:
+        case SYSCALL_EXITK:
             // drop the current task off the queue
             break;
         case SYSCALL_TID:
