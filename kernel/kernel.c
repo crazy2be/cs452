@@ -219,6 +219,18 @@ int boot(void (*init_task)(void), int init_task_priority) {
             create_handler(current_task);
             priority_task_queue_push(&queue, current_task);
             break;
+		case SYSCALL_SEND:
+// 			send_handler(current_task);
+			priority_task_queue_push(&queue, current_task);
+			break;
+		case SYSCALL_RECEIVE:
+// 			recieve_handler(current_task);
+			priority_task_queue_push(&queue, current_task);
+			break;
+		case SYSCALL_REPLY:
+// 			reply_handler(current_task);
+			priority_task_queue_push(&queue, current_task);
+			break;
         default:
             assert(0, "UNKNOWN SYSCALL NUMBER");
             break;

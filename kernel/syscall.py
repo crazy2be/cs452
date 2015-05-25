@@ -1,4 +1,5 @@
-syscalls = ["pass", "exitk", "create", "tid", "parent_tid"]
+syscalls = ["pass", "exitk", "create", "tid", "parent_tid",
+			"send", "receive", "reply"]
 
 asm = open("gen/syscall.s", 'w')
 header = open("gen/syscalls.h", 'w')

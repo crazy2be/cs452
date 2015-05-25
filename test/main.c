@@ -9,7 +9,7 @@
 
 #define ASSERT(stmt) {\
     if (!(stmt)) { \
-        io_puts(COM2, "ASSERTION FAILED (" __FILE__ ":" STRINGIFY1(__LINE__) ") : " STR1(stmt) EOL); \
+        io_puts(COM2, "ASSERTION FAILED (" __FILE__ ":" STRINGIFY1(__LINE__) ") : " STRINGIFY1(stmt) EOL); \
         io_flush(COM2); \
     } }
 
@@ -32,22 +32,54 @@ void lssb_tests(void) {
     }
 }
 
+struct Msg {
+	int foo;
+	int bar;
+};
+struct Reply {
+	int foo2;
+	int bar2;
+};
+static int receiving_tid = -1;
+void sending_task(void) {
+	for (int i = 0; i < 10; i++) {
+		struct Msg msg = {0xFFffffff, 0x55555555};
+		struct Reply rep;
+		send(receiving_tid, &msg, sizeof(msg), &rep, sizeof(rep));
+		printf("Sent %d %d, got %d %d\n", msg.foo, msg.bar, rep.foo2, rep.bar2);
+	}
+}
+void receiving_task(void) {
+	for (int i = 0; i < 10; i++) {
+		struct Msg msg;
+		int tid;
+		receive(&tid, &msg, sizeof(msg));
+		struct Reply rep = {0x74546765, 0x45676367};
+		printf("Got %d %d, replying with %d %d\n", msg.foo, msg.bar, rep.foo2, rep.bar2);
+		reply(tid, &rep, sizeof(reply));
+	}
+}
+
 void init_task(void) {
     lssb_tests();
     ASSERT(1);
     ASSERT(create(-1, child) == CREATE_INVALID_PRIORITY);
     ASSERT(create(32, child) == CREATE_INVALID_PRIORITY);
-    int i;
-    for (i = 0; i < 10; i++) {
-        // create tasks in descending priority order
-        create(PRIORITY_MIN - i, &child);
-    }
+	printf("Creating messaging tasks...");
+	receiving_tid = create(PRIORITY_MIN, receiving_task);
+	create(PRIORITY_MIN, sending_task);
+	printf("Created tasks, init task exiting...");
+//     int i;
+//     for (i = 0; i < 10; i++) {
+//         // create tasks in descending priority order
+//         create(PRIORITY_MIN - i, &child);
+//     }
 
-    for (; i < 255; i++) {
-        create(PRIORITY_MIN, &nop);
-    }
-
-    ASSERT(create(4, child) == CREATE_INSUFFICIENT_RESOURCES);
+//     for (; i < 255; i++) {
+//         create(PRIORITY_MIN, &nop);
+//     }
+//
+//     ASSERT(create(4, child) == CREATE_INSUFFICIENT_RESOURCES);
 }
 
 int main(int argc, char *argv[]) {
