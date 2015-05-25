@@ -9,7 +9,9 @@
 /** @file */
 
 #define MAX_TID 255
-#define USER_STACK_SIZE 0x1000 // 4K stack
+// TODO: eventually, we will want to have variable stack sizes, controlled by some
+// parameter to create
+#define USER_STACK_SIZE 0x10000 // 64K stack
 
 struct task_collection {
     // for now, a TID is just an index into this array
