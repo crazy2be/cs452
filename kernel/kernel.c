@@ -166,7 +166,7 @@ static void copy_msg(struct task_descriptor *to, struct task_descriptor *from) {
 static void copy_reply(struct task_descriptor *to, struct task_descriptor *from) {
 	// TODO
 }
-static void aaaaaa(struct task_descriptor *to, struct task_descriptor *from) {
+static void dispatch_msg(struct task_descriptor *to, struct task_descriptor *from) {
 	printf("Sending from %d to %d\n", from->tid, to->tid);
 	copy_msg(to, from);
 	from->state = REPLY_BLK;
@@ -179,7 +179,7 @@ static inline void send_handler(struct task_descriptor *current_task) {
 	assert(to_tid >= 0 && to_tid <= tasks.next_tid, "tid"); // TODO
 	struct task_descriptor *to_td = &tasks.task_buf[to_tid];
 	if (to_td->state == RECEIVING) {
-		aaaaaa(to_td, current_task);
+		dispatch_msg(to_td, current_task);
 	} else {
 		task_queue_push(&to_td->waiting_for_replies, current_task);
 		current_task->state = SENDING;
@@ -192,7 +192,7 @@ static inline void receive_handler(struct task_descriptor *current_task) {
 		current_task->state = RECEIVING;
 		return;
 	}
-	aaaaaa(current_task, from_td);
+	dispatch_msg(current_task, from_td);
 }
 
 static inline void reply_handler(struct task_descriptor *current_task) {
