@@ -1,8 +1,4 @@
 cd ../.. && \
-    find . \
-        -type f \
-        -not -path './build/*' \
-        -not -path './writeup/*' \
-        -not -path './spec/*' \
-        -not -path '*/\.*' \
+    git ls-files \
+  | grep -v -E '^(spec|writeup)/' \
   | xargs md5sum
