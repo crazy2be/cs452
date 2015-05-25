@@ -2,7 +2,13 @@
 #include "util.h"
 
 static int hash(const char *key) {
-    return 0;
+    //djb2 hash implementation from http://www.cse.yorku.ca/~oz/hash.html
+    unsigned hash = 5381;
+    int c;
+    while ((c = *key++)) {
+        hash = ((hash << 5) + hash) + c;
+    }
+    return hash % BUCKET_COUNT;
 }
 
 static struct hashtable_entry* alloc_entry(struct hashtable *ht) {

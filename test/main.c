@@ -11,7 +11,7 @@
 
 #define ASSERT(stmt) {\
     if (!(stmt)) { \
-        io_puts(COM2, "ASSERTION FAILED (" __FILE__ ":" STRINGIFY1(__LINE__) ") : " STR1(stmt) EOL); \
+        io_puts(COM2, "ASSERTION FAILED (" __FILE__ ":" STRINGIFY1(__LINE__) ") : " STRINGIFY2(stmt) EOL); \
         io_flush(COM2); \
     } }
 
