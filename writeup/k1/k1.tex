@@ -65,7 +65,8 @@ base-2 log of the number.
 The method used is inspired by John Owens' method as listed on the Stanford bit
 twiddling hacks page, but has been altered in implementation to take fewer
 instructions on the ARM processor.
-The algorithm essentially binary searches through the bit vector for the set bit.
+The algorithm is essentially a bit-level \textbf{binary search} through the bit
+vector for the set bit.
 
 At each step, we know that the set bit is in the bottom $2i$ bits of $c$, and we want
 to narrow that down to a range of $i$ bits.
