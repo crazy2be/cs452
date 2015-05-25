@@ -1,9 +1,13 @@
-\documentclass{article}
+\documentclass[titlepage]{article}
 \usepackage{listings}
 
 \lstset{basicstyle=\footnotesize\ttfamily,breaklines=true}
 
 \begin{document}
+\title{Kernel 1}
+\author{Justin McGirr (\#20413625), Peter Raboud (\#20437716)}
+\maketitle
+
 \section{Instructions}
 \input{|"cat README.tex"}
 \section{Design Decisions}
@@ -200,7 +204,9 @@ Therefore, I'm not going to try to implement this solution unless it becomes a
 performance problem.
 
 \section{Source Code}
-The source code is hosted on git, the most recent revision is
+The source code is hosted on git.
+The version we wish to submit is on the \texttt{k1} branch, specifically
+the commit:
 \input{|"git rev-parse k1 | ./verbatim"}
 We are submitting the following files:
 \input{|"cat file-list | ./verbatim"}
