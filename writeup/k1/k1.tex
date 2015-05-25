@@ -7,6 +7,38 @@
 \section{Instructions}
 \input{|"cat README.tex"}
 \section{Design Decisions}
+\subsection{Structure}
+The kernel is essentially structured as a single main loop.
+The loop calls the priority task queue in order to find the next ready task
+to execute.
+It uses the context switch to yield control flow to this task, as well as to
+return control flow to the kernel when the task causes a software interrupt.
+When the task returns, and sends a syscall to the kernel, the loop calls
+the appropriate syscall handler in order to perform the action requested by
+the syscall.
+The loop continues running until all tasks exit.
+
+Functionality is abstracted into multiple modules, listed here:
+
+\begin{itemize}
+\item A priority task queue
+\item I/O subroutines
+\item A context switch
+\item Handlers and callers for each syscall
+\end{itemize}
+
+There are also some miscellaenous code used for initializing the kernel's environment
+(such as exception handlers), as well as some code which is currently not used (such
+as ring buffers for buffered IO).
+
+The kernel maintains some degree of separation from the user code.
+User code is structured within its own directory.
+By convention, it only includes headers from the \texttt{include} directory,
+which limits the size of the interface between the user and kernel code.
+Currently, this interface comprises the syscalls, a method to start the kernel from
+the program's entrypoint, as well as IO routines.
+(By assignment 4, the IO routines will be replaced by real IO syscalls.)
+
 \subsection{Priority Queue}
 The priority queue used to implement the ready queue of the scheduler is
 arguably the most complex data structure used in the kernel.
