@@ -166,17 +166,20 @@ static void copy_msg(struct task_descriptor *to, struct task_descriptor *from) {
 static void copy_reply(struct task_descriptor *to, struct task_descriptor *from) {
 	// TODO
 }
+static void aaaaaa(struct task_descriptor *to, struct task_descriptor *from) {
+	printf("Sending from %d to %d\n", from->tid, to->tid);
+	copy_msg(to, from);
+	from->state = REPLY_BLK;
+	to->state = READY;
+	priority_task_queue_push(&queue, to);
+}
 static inline void send_handler(struct task_descriptor *current_task) {
     struct user_context *uc = get_task_context(current_task);
 	int to_tid = uc->r0;
 	assert(to_tid >= 0 && to_tid <= tasks.next_tid, "tid"); // TODO
 	struct task_descriptor *to_td = &tasks.task_buf[to_tid];
 	if (to_td->state == RECEIVING) {
-		printf("Sending from %d to %d\n", current_task->tid, to_td->tid);
-		copy_msg(to_td, current_task);
-		current_task->state = REPLY_BLK;
-		to_td->state = READY;
-		priority_task_queue_push(&queue, to_td);
+		aaaaaa(to_td, current_task);
 	} else {
 		task_queue_push(&to_td->waiting_for_replies, current_task);
 		current_task->state = SENDING;
@@ -189,11 +192,7 @@ static inline void receive_handler(struct task_descriptor *current_task) {
 		current_task->state = RECEIVING;
 		return;
 	}
-	printf("Receiving from %d to %d\n", from_td->tid, current_task->tid);
-	copy_msg(current_task, from_td);
-	from_td->state = REPLY_BLK;
-	current_task->state = READY;
-	priority_task_queue_push(&queue, current_task);
+	aaaaaa(current_task, from_td);
 }
 
 static inline void reply_handler(struct task_descriptor *current_task) {
@@ -201,7 +200,7 @@ static inline void reply_handler(struct task_descriptor *current_task) {
 	int reply_tid = uc->r0;
 	assert(reply_tid >= 0 && reply_tid <= tasks.next_tid, "tid"); // TODO
 	struct task_descriptor *reply_td = &tasks.task_buf[reply_tid];
-	printf("State: %d\n", reply_td->state);
+	printf("State of %d: %d\n", reply_tid, reply_td->state);
 	assert(reply_td->state == REPLY_BLK, "not blk");
 	copy_reply(reply_td, current_task);
 	reply_td->state = READY;
