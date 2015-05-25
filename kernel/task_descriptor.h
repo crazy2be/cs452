@@ -5,22 +5,6 @@
 #include <kernel.h>
 #include "context_switch.h"
 
-/* enum task_state { ACTIVE, READY, ZOMBIE }; */
-
-struct task_descriptor {
-    int tid;
-    int parent_tid;
-    int priority;
-
-    // We don't have any use for this now, but we probably will later
-    /* enum task_state state; */
-    /* void *memory_segment; */
-
-    struct user_context *context;
-
-    struct task_descriptor *next, *prev;
-};
-
 /**
  * FIFO queue of task descriptors implemented as a doubly-linked list.
  *
@@ -35,6 +19,7 @@ struct task_descriptor {
  *
  * Insertion and deletion from the queue is constant time.
  */
+struct task_descriptor;
 struct task_queue {
     struct task_descriptor *first, *last;
 };
@@ -55,6 +40,24 @@ struct task_descriptor *task_queue_pop(struct task_queue *q);
  * Add a task descriptor at the start of the queue.
  */
 void task_queue_push(struct task_queue *q, struct task_descriptor *d);
+
+
+enum task_state { ACTIVE, READY, SENDING, RECEIVING, REPLY_BLK, ZOMBIE };
+struct task_descriptor {
+    int tid;
+    int parent_tid;
+    int priority;
+
+    enum task_state state;
+	struct task_queue waiting_for_replies;
+
+    // We don't have any use for this now, but we probably will later
+    /* void *memory_segment; */
+
+    struct user_context *context;
+
+    struct task_descriptor *next, *prev;
+};
 
 /**
  * Conceptually like the `task_queue`, but tasks are popped from the queue

@@ -45,6 +45,7 @@ void sending_task(void) {
 	for (int i = 0; i < 10; i++) {
 		struct Msg msg = {0xFFffffff, 0x55555555};
 		struct Reply rep;
+		printf("Sending %d %d\n", msg.foo, msg.bar);
 		send(receiving_tid, &msg, sizeof(msg), &rep, sizeof(rep));
 		printf("Sent %d %d, got %d %d\n", msg.foo, msg.bar, rep.foo2, rep.bar2);
 	}
@@ -57,6 +58,7 @@ void receiving_task(void) {
 		struct Reply rep = {0x74546765, 0x45676367};
 		printf("Got %d %d, replying with %d %d\n", msg.foo, msg.bar, rep.foo2, rep.bar2);
 		reply(tid, &rep, sizeof(reply));
+		printf("Replied\n");
 	}
 }
 
@@ -65,10 +67,10 @@ void init_task(void) {
     ASSERT(1);
     ASSERT(create(-1, child) == CREATE_INVALID_PRIORITY);
     ASSERT(create(32, child) == CREATE_INVALID_PRIORITY);
-	printf("Creating messaging tasks...");
+	printf("Creating messaging tasks...\n");
 	receiving_tid = create(PRIORITY_MIN, receiving_task);
-	create(PRIORITY_MIN, sending_task);
-	printf("Created tasks, init task exiting...");
+	int sending_tid = create(PRIORITY_MIN, sending_task);
+	printf("Created tasks %d %d, init task exiting...\n", sending_tid, receiving_tid);
 //     int i;
 //     for (i = 0; i < 10; i++) {
 //         // create tasks in descending priority order

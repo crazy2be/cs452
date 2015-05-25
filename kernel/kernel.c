@@ -23,6 +23,63 @@ struct task_collection {
 static struct task_collection tasks;
 static struct priority_task_queue queue;
 
+void setup_tasks(void) {
+    tasks.next_tid = 0;
+	extern int stack_top;
+    tasks.memory_alloc = (void*) &stack_top + USER_STACK_SIZE;
+}
+
+void setup(void) {
+    // write to the control registers of the UARTs to properly configure them
+    // for transmission
+	uart_configure(COM1, 2400, OFF);
+	uart_configure(COM2, 115200, OFF);
+
+    // clear UART errors
+	uart_clrerr(COM1);
+	uart_clrerr(COM2);
+
+	while (!uart_canwrite(COM2)) {} uart_write(COM2, 'B');
+	while (!uart_canwrite(COM2)) {} uart_write(COM2, 'o');
+	while (!uart_canwrite(COM2)) {} uart_write(COM2, 'o');
+	while (!uart_canwrite(COM2)) {} uart_write(COM2, 't');
+
+	// Zero BSS, because we should.
+	extern char __bss_start__, __bss_end__;
+	memset(&__bss_start__, 0, &__bss_end__ - &__bss_start__);
+	while (!uart_canwrite(COM2)) {} uart_write(COM2, '.');
+
+	timer_init();
+	while (!uart_canwrite(COM2)) {} uart_write(COM2, '.');
+	io_init();
+	while (!uart_canwrite(COM2)) {} uart_write(COM2, '.');
+
+	io_puts(COM2, "IO..." EOL);
+	io_flush(COM2);
+
+	printf("e1:%x" EOL, uart_err(COM1));
+	printf("e2:%x" EOL, uart_err(COM2));
+	io_flush(COM2);
+
+	// Copy exception vector from where it's linked/loaded to the start of
+	// memory, where ARM expects to find it. Assumes all instructions in the
+	// exception vector are branch instructions.
+	// http://www.ryanday.net/2010/09/08/arm-programming-part-1/
+	extern volatile int exception_vector_table_src_begin;
+	volatile int* exception_vector_table_src = &exception_vector_table_src_begin;
+	volatile int* exception_vector_table_dst = (volatile int*)0x0;
+	// Note this is automatically divided by 4 because pointers.
+	unsigned exception_vector_branch_adjustment =
+		exception_vector_table_src - exception_vector_table_dst;
+	for (int i = 0; i < 8; i++) {
+		exception_vector_table_dst[i] = exception_vector_table_src[i]
+			+ exception_vector_branch_adjustment;
+	}
+
+    priority_task_queue_init(&queue);
+
+    setup_tasks();
+}
 /**
  * Internal kernel utility for creating a task, and allocating the necessary resources
  *
@@ -40,12 +97,12 @@ struct task_descriptor *create_task(void *entrypoint, int priority, int parent_t
     void *sp = tasks.memory_alloc;
     tasks.memory_alloc += USER_STACK_SIZE;
     struct task_descriptor *task = &tasks.task_buf[tasks.next_tid];
-
-    task->tid = tasks.next_tid++;
-    task->parent_tid = parent_tid;
-    task->priority = priority;
-    /* task->state = READY; */
-    /* task->memory_segment = sp; */
+	*task = (struct task_descriptor){
+		.tid = tasks.next_tid++,
+		.parent_tid = parent_tid,
+		.priority = priority,
+		.state = READY,
+	};
 
     struct user_context *uc = ((struct user_context*) sp) - 1;
     uc->pc = (unsigned) entrypoint;
@@ -101,80 +158,58 @@ static inline void parent_tid_handler(struct task_descriptor *current_task) {
     uc->r0 = current_task->parent_tid;
 }
 
-extern int stack_top;
+static void copy_msg(struct task_descriptor *to, struct task_descriptor *from) {
+	//struct user_context *uc_to = get_task_context(to);
+	//struct user_context *uc_from = get_task_context(from);
 
-void setup_tasks(void) {
-    tasks.next_tid = 0;
-    tasks.memory_alloc = (void*) &stack_top + USER_STACK_SIZE;
 }
-
-/**
- * Performs miscellaeneous set up which is required before actually starting
- * the kernel.
- */
-void setup(void) {
-    // write to the control registers of the UARTs to properly configure them
-    // for transmission
-	uart_configure(COM1, 2400, OFF);
-	uart_configure(COM2, 115200, OFF);
-
-    // clear UART errors
-	uart_clrerr(COM1);
-	uart_clrerr(COM2);
-
-	while (!uart_canwrite(COM2)) {} uart_write(COM2, 'B');
-	while (!uart_canwrite(COM2)) {} uart_write(COM2, 'o');
-	while (!uart_canwrite(COM2)) {} uart_write(COM2, 'o');
-	while (!uart_canwrite(COM2)) {} uart_write(COM2, 't');
-
-	// Zero BSS, because we should.
-	extern char __bss_start__, __bss_end__;
-	memset(&__bss_start__, 0, &__bss_end__ - &__bss_start__);
-	while (!uart_canwrite(COM2)) {} uart_write(COM2, '.');
-
-	timer_init();
-	while (!uart_canwrite(COM2)) {} uart_write(COM2, '.');
-	io_init();
-	while (!uart_canwrite(COM2)) {} uart_write(COM2, '.');
-
-	io_puts(COM2, "IO..." EOL);
-	io_flush(COM2);
-
-	printf("e1:%x" EOL, uart_err(COM1));
-	printf("e2:%x" EOL, uart_err(COM2));
-	io_flush(COM2);
-
-	// Copy exception vector from where it's linked/loaded to the start of
-	// memory, where ARM expects to find it. Assumes all instructions in the
-	// exception vector are branch instructions.
-	// http://www.ryanday.net/2010/09/08/arm-programming-part-1/
-	extern volatile int exception_vector_table_src_begin;
-	volatile int* exception_vector_table_src = &exception_vector_table_src_begin;
-	volatile int* exception_vector_table_dst = (volatile int*)0x0;
-	// Note this is automatically divided by 4 because pointers.
-	unsigned exception_vector_branch_adjustment =
-		exception_vector_table_src - exception_vector_table_dst;
-	for (int i = 0; i < 8; i++) {
-		exception_vector_table_dst[i] = exception_vector_table_src[i]
-			+ exception_vector_branch_adjustment;
+static void copy_reply(struct task_descriptor *to, struct task_descriptor *from) {
+	// TODO
+}
+static inline void send_handler(struct task_descriptor *current_task) {
+    struct user_context *uc = get_task_context(current_task);
+	int to_tid = uc->r0;
+	assert(to_tid >= 0 && to_tid <= tasks.next_tid, "tid"); // TODO
+	struct task_descriptor *to_td = &tasks.task_buf[to_tid];
+	if (to_td->state == RECEIVING) {
+		printf("Sending from %d to %d\n", current_task->tid, to_td->tid);
+		copy_msg(to_td, current_task);
+		current_task->state = REPLY_BLK;
+		to_td->state = READY;
+		priority_task_queue_push(&queue, to_td);
+	} else {
+		task_queue_push(&to_td->waiting_for_replies, current_task);
+		current_task->state = SENDING;
 	}
-
-    priority_task_queue_init(&queue);
-
-    setup_tasks();
 }
 
+static inline void receive_handler(struct task_descriptor *current_task) {
+	struct task_descriptor *from_td = task_queue_pop(&current_task->waiting_for_replies);
+	if (from_td == NULL) {
+		current_task->state = RECEIVING;
+		return;
+	}
+	printf("Receiving from %d to %d\n", from_td->tid, current_task->tid);
+	copy_msg(current_task, from_td);
+	from_td->state = REPLY_BLK;
+	current_task->state = READY;
+	priority_task_queue_push(&queue, current_task);
+}
 
-/**
- * Main loop of the kernel.
- *
- * Initializes the kernel, starts the first user task, then schedules tasks
- * and responds to syscalls until there is no work left to do.
- *
- * This takes argv and argc, but doesn't actually use them.
- * When I tried to make this a void function instead, it would no longer
- * run on the TS7200. *shrug*
- */
+static inline void reply_handler(struct task_descriptor *current_task) {
+	struct user_context *uc = get_task_context(current_task);
+	int reply_tid = uc->r0;
+	assert(reply_tid >= 0 && reply_tid <= tasks.next_tid, "tid"); // TODO
+	struct task_descriptor *reply_td = &tasks.task_buf[reply_tid];
+	printf("State: %d\n", reply_td->state);
+	assert(reply_td->state == REPLY_BLK, "not blk");
+	copy_reply(reply_td, current_task);
+	reply_td->state = READY;
+	current_task->state = READY;
+	priority_task_queue_push(&queue, reply_td);
+	priority_task_queue_push(&queue, current_task);
+}
+
 #include "../gen/syscalls.h"
 int boot(void (*init_task)(void), int init_task_priority) {
     struct task_descriptor * current_task;
@@ -220,16 +255,13 @@ int boot(void (*init_task)(void), int init_task_priority) {
             priority_task_queue_push(&queue, current_task);
             break;
 		case SYSCALL_SEND:
-// 			send_handler(current_task);
-			priority_task_queue_push(&queue, current_task);
+			send_handler(current_task);
 			break;
 		case SYSCALL_RECEIVE:
-// 			recieve_handler(current_task);
-			priority_task_queue_push(&queue, current_task);
+			receive_handler(current_task);
 			break;
 		case SYSCALL_REPLY:
-// 			reply_handler(current_task);
-			priority_task_queue_push(&queue, current_task);
+			reply_handler(current_task);
 			break;
         default:
             assert(0, "UNKNOWN SYSCALL NUMBER");
@@ -238,6 +270,7 @@ int boot(void (*init_task)(void), int init_task_priority) {
 
         // find the next task scheduled for execution, if any
         current_task = priority_task_queue_pop(&queue);
+		if (current_task) assert(current_task->state == READY, "not ready");
     } while (current_task);
 
     return 0;
