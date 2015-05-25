@@ -23,3 +23,23 @@ void *memset(void *ptr, int value, int num) {
 int modi(int a, int b) {
 	return ((a % b) + b) % b;
 }
+
+int strlen(const char *s) {
+    const char *p = s;
+    while (*p++);
+    return p - s - 1;
+}
+
+char* strcpy(char *dst, const char *src) {
+    char *p = dst;
+    while ((*p++ = *src++));
+    return dst;
+}
+
+int strcmp(const char *a, const char *b) {
+    while (*a && *a == *b) {
+        a++;
+        b++;
+    }
+    return *a - *b;
+}

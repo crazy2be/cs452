@@ -3,6 +3,8 @@
 
 // lurky, but we have to include these to test stuff
 #include "../kernel/least_significant_set_bit.h"
+#include "../kernel/hashtable.h"
+#include "../kernel/prng.h"
 
 #define STRINGIFY2(STR) #STR
 #define STRINGIFY1(STR) STRINGIFY2(STR)
@@ -32,8 +34,43 @@ void lssb_tests(void) {
     }
 }
 
+void hashtable_tests(void) {
+    struct prng gen;
+    struct hashtable ht;
+    int val, i;
+    char buf[MAX_KEYLEN + 1];
+    hashtable_init(&ht);
+    ASSERT(HASHTABLE_SUCCESS == hashtable_set(&ht, "foo", 7));
+    ASSERT(HASHTABLE_SUCCESS == hashtable_get(&ht, "foo", &val));
+    ASSERT(7 == val);
+    ASSERT(HASHTABLE_KEY_NOT_FOUND == hashtable_get(&ht, "bar", &val));
+
+    // stress test test of insertions
+    hashtable_init(&ht);
+    const int reps = 255;
+    const unsigned seed = 0xab32719c;
+    prng_init(&gen, seed);
+    for (i = 0; i < reps; i++) {
+        prng_gens(&gen, buf, MAX_KEYLEN + 1);
+
+        // assert that there are no collisions with our key generation
+        ASSERT(HASHTABLE_KEY_NOT_FOUND == hashtable_get(&ht, buf, &val));
+
+        ASSERT(HASHTABLE_SUCCESS == hashtable_set(&ht, buf, i));
+    }
+
+    prng_init(&gen, seed);
+    for (i = 0; i < reps; i++) {
+        prng_gens(&gen, buf, MAX_KEYLEN + 1);
+
+        ASSERT(HASHTABLE_SUCCESS == hashtable_get(&ht, buf, &val));
+        ASSERT(i == val);
+    }
+}
+
 void init_task(void) {
     lssb_tests();
+    hashtable_tests();
     ASSERT(1);
     ASSERT(create(-1, child) == CREATE_INVALID_PRIORITY);
     ASSERT(create(32, child) == CREATE_INVALID_PRIORITY);
