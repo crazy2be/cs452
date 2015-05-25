@@ -169,6 +169,7 @@ static void copy_reply(struct task_descriptor *to, struct task_descriptor *from)
 static void dispatch_msg(struct task_descriptor *to, struct task_descriptor *from) {
 	printf("Sending from %d to %d\n", from->tid, to->tid);
 	copy_msg(to, from);
+	*(unsigned*)get_task_context(to)->r0 = from->tid;
 	from->state = REPLY_BLK;
 	to->state = READY;
 	priority_task_queue_push(&queue, to);
