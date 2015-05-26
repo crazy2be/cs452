@@ -213,14 +213,14 @@ static inline void send_handler(struct task_descriptor *current_task) {
         return;
     }
 
-	if (to_td->state == RECEIVING) {
+	if (to_td->state == RECV_BLK) {
         // if the task we're sending to is waiting for a reply,
         // immediately exchange the message
 		dispatch_msg(to_td, current_task);
 	} else {
         // otherwise, queue up on that task, and wait to be processed
 		task_queue_push(&to_td->waiting_for_replies, current_task);
-		current_task->state = SENDING;
+		current_task->state = SEND_BLK;
 	}
 }
 
@@ -229,7 +229,7 @@ static inline void receive_handler(struct task_descriptor *current_task) {
 	if (from_td) {
         dispatch_msg(current_task, from_td);
 	} else {
-		current_task->state = RECEIVING;
+		current_task->state = RECV_BLK;
     }
 }
 
