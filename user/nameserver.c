@@ -48,7 +48,7 @@ void nameserver(void) {
 }
 
 int whois(const char *name) {
-    int success, resp, name_len;
+    int tid, resp, name_len;
     struct request req;
 
     name_len = strlen(name);
@@ -60,17 +60,17 @@ int whois(const char *name) {
     strcpy(req.name, name);
 
     // could optimize to only send the used part of the req
-    resp = send(NAMESERVER_TID, &req, sizeof(req), &success, sizeof(success));
+    resp = send(NAMESERVER_TID, &req, sizeof(req), &tid, sizeof(tid));
 
     if (resp != sizeof(tid)) {
         return resp;
     }
 
-    return success;
+    return tid;
 }
 
 int register_as(const char *name) {
-    int tid, resp, name_len;
+    int success, resp, name_len;
     struct request req;
 
     name_len = strlen(name);
@@ -80,11 +80,11 @@ int register_as(const char *name) {
 
     req.type = REGISTER_AS;
     strcpy(req.name, name);
-    resp = send(NAMESERVER_TID, &req, sizeof(req), &tid, sizeof(tid));
+    resp = send(NAMESERVER_TID, &req, sizeof(req), &success, sizeof(success));
 
-    if (resp != sizeof(tid)) {
+    if (resp != sizeof(success)) {
         return resp;
     }
 
-    return tid;
+    return success;
 }
