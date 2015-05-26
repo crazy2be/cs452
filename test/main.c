@@ -37,7 +37,7 @@ void memcpy_tests(void) {
     for (offset_a = 0; offset_a < 3; offset_a++) {
         for (offset_b = 0; offset_b < 3; offset_b++) {
             len = bufsz - ((offset_a > offset_b) ? offset_a : offset_b);
-            memcopy(buf_b + offset_b, buf_a + offset_a, len);
+            memcpy(buf_b + offset_b, buf_a + offset_a, len);
             for (i = 0; i < len; i++) {
                 ASSERT(buf_b[i + offset_b] == i + offset_a);
             }
@@ -57,32 +57,42 @@ void lssb_tests(void) {
 }
 
 struct Msg {
-	int foo;
-	int bar;
+	int a;
+	int b;
 };
 struct Reply {
-	int foo2;
-	int bar2;
+	int sum;
+	int prod;
 };
 static int receiving_tid = -1;
+static int producers = 20;
+// webscale multiplication!
 void sending_task(void) {
 	for (int i = 0; i < 10; i++) {
-		struct Msg msg = {0xFFffffff, 0x55555555};
+		struct Msg msg;
 		struct Reply rep;
-		printf("Sending %d %d\n", msg.foo, msg.bar);
-		send(receiving_tid, &msg, sizeof(msg), &rep, sizeof(rep));
-		printf("Sent %d %d, got %d %d\n", msg.foo, msg.bar, rep.foo2, rep.bar2);
+
+        msg.a = i * 4;
+        msg.b = i * 17 + 128;
+
+        ASSERT(send(receiving_tid, &msg, sizeof(msg), &rep, sizeof(rep)) == sizeof(rep));
+        ASSERT(rep.sum == msg.a + msg.b);
+        ASSERT(rep.prod == msg.a * msg.b);
 	}
 }
+
 void receiving_task(void) {
-	for (int i = 0; i < 10; i++) {
+	for (int i = 0; i < producers * 10; i++) {
 		struct Msg msg;
+		struct Reply rep;
 		int tid;
-		receive(&tid, &msg, sizeof(msg));
-		struct Reply rep = {0x74546765, 0x45676367};
-		printf("Got %d %d, replying with %d %d\n", msg.foo, msg.bar, rep.foo2, rep.bar2);
-		reply(tid, &rep, sizeof(reply));
-		printf("Replied\n");
+
+		ASSERT(receive(&tid, &msg, sizeof(msg)) == sizeof(msg));
+
+        rep.sum = msg.a + msg.b;
+        rep.prod = msg.a * msg.b;
+
+		reply(tid, &rep, sizeof(rep));
 	}
 }
 
@@ -127,23 +137,27 @@ void init_task(void) {
     ASSERT(1);
     ASSERT(create(-1, child) == CREATE_INVALID_PRIORITY);
     ASSERT(create(32, child) == CREATE_INVALID_PRIORITY);
-	printf("Creating messaging tasks...\n");
-	receiving_tid = create(PRIORITY_MIN, receiving_task);
-	int sending_tid = create(PRIORITY_MIN, sending_task);
-	printf("Created tasks %d %d, init task exiting...\n", sending_tid, receiving_tid);
-//     int i;
-//     for (i = 0; i < 10; i++) {
-//         // create tasks in descending priority order
-//         create(PRIORITY_MIN - i, &child);
-//     }
+    int i;
+    for (i = 0; i < 10; i++) {
+        // create tasks in descending priority order
+        create(PRIORITY_MIN - i, &child);
+    }
 
-//     for (; i < 255; i++) {
-//         create(PRIORITY_MIN, &nop);
-//     }
-//
-//     ASSERT(create(4, child) == CREATE_INSUFFICIENT_RESOURCES);
+    for (; i < 255; i++) {
+        create(PRIORITY_MIN, &nop);
+    }
+
+    ASSERT(create(4, child) == CREATE_INSUFFICIENT_RESOURCES);
+}
+
+void message_suite(void) {
+	receiving_tid = create(PRIORITY_MIN, receiving_task);
+    for (int i = 0; i < producers; i++) {
+        create(PRIORITY_MIN, sending_task);
+    }
 }
 
 int main(int argc, char *argv[]) {
     boot(init_task, PRIORITY_MAX);
+    boot(message_suite, PRIORITY_MAX);
 }

@@ -20,10 +20,12 @@ void *memset(void *ptr, int value, int num) {
 	return ptr;
 }
 
-void memcopy(void *dst, void *src, unsigned len) {
+void* memcpy(void *dst, const void *src, size_t len) {
+    unsigned char *p = (unsigned char*) dst;
     while (len--) {
-        *(unsigned char*)dst++ = *(unsigned char*)src++;
+        *p++ = *(unsigned char*)src++;
     }
+    return dst;
 }
 
 int modi(int a, int b) {

@@ -140,6 +140,13 @@ qemu-start: $(KERNEL_BIN)
 qemu-debug: $(KERNEL_ELF)
 	arm-none-eabi-gdb -ex "target remote localhost:1234" $(KERNEL_ELF)
 
+qemu-start-test: $(TEST_BIN)
+	@echo "Starting in suspended mode for debugging... Press Ctrl+A x to quit."
+	qemu-system-arm -M versatilepb -m 32M -nographic -s -S -kernel $(TEST_BIN)
+
+qemu-debug-test: $(TEST_ELF)
+	arm-none-eabi-gdb -ex "target remote localhost:1234" $(TEST_ELF)
+
 sync:
 	rsync -avzd . uw:cs452-kernel/
 	ssh uw "bash -c 'cd cs452-kernel && make clean && make ENV=ts7200 install'"

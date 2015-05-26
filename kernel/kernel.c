@@ -160,22 +160,26 @@ static inline void parent_tid_handler(struct task_descriptor *current_task) {
     uc->r0 = current_task->parent_tid;
 }
 
-static void copy_msg(struct task_descriptor *to, struct task_descriptor *from) {
-	//struct user_context *uc_to = get_task_context(to);
-	//struct user_context *uc_from = get_task_context(from);
-
-}
-static void copy_reply(struct task_descriptor *to, struct task_descriptor *from) {
-	// TODO
-}
 static void dispatch_msg(struct task_descriptor *to, struct task_descriptor *from) {
-	printf("Sending from %d to %d\n", from->tid, to->tid);
-	copy_msg(to, from);
-	*(unsigned*)get_task_context(to)->r0 = from->tid;
+    struct user_context *to_context = get_task_context(to);
+    struct user_context *from_context = get_task_context(from);
+
+    // write tid of sender to pointer provided by receiver
+	*(unsigned*)to_context->r0 = from->tid;
+
+    // copy message into buffer
+    // truncate it if it won't fit into the receiving buffer
+    memcpy((void*) to_context->r1, (void*) from_context->r1,
+            MIN((int) to_context->r2, (int) from_context->r2));
+
+    // return sent msg len to the receiver
+    to_context->r0 = to_context->r2;
+
 	from->state = REPLY_BLK;
 	to->state = READY;
 	priority_task_queue_push(&queue, to);
 }
+
 static inline void send_handler(struct task_descriptor *current_task) {
     struct user_context *uc = get_task_context(current_task);
 	int to_tid = uc->r0;
@@ -199,16 +203,26 @@ static inline void receive_handler(struct task_descriptor *current_task) {
 }
 
 static inline void reply_handler(struct task_descriptor *current_task) {
-	struct user_context *uc = get_task_context(current_task);
-	int reply_tid = uc->r0;
-	assert(reply_tid >= 0 && reply_tid <= tasks.next_tid, "tid"); // TODO
-	struct task_descriptor *reply_td = &tasks.task_buf[reply_tid];
-	printf("State of %d: %d\n", reply_tid, reply_td->state);
-	assert(reply_td->state == REPLY_BLK, "not blk");
-	copy_reply(reply_td, current_task);
-	reply_td->state = READY;
+	struct user_context *recv_context = get_task_context(current_task);
+	int send_tid = recv_context->r0;
+	assert(send_tid >= 0 && send_tid <= tasks.next_tid, "tid"); // TODO
+	struct task_descriptor *send_td = &tasks.task_buf[send_tid];
+	assert(send_td->state == REPLY_BLK, "not blk");
+
+    struct user_context *send_context = get_task_context(send_td);
+
+    // copy the reply back
+    // some special stuff is required to get the 5th argument
+    int send_len = *(int*)(send_context + 1);
+    int recv_len = recv_context->r2;
+    memcpy((void*) send_context->r3, (void*) recv_context->r1, MIN(send_len, recv_len));
+    // return the length of the reply to the sender
+    send_context->r0 = recv_len;
+
+    // queue both the sending and receiving tasks to execute again
+	send_td->state = READY;
 	current_task->state = READY;
-	priority_task_queue_push(&queue, reply_td);
+	priority_task_queue_push(&queue, send_td);
 	priority_task_queue_push(&queue, current_task);
 }
 
