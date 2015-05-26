@@ -58,7 +58,7 @@ int create(int priority, void *code);
 #define CREATE_INSUFFICIENT_RESOURCES -2
 
 #define Send send
-int send(int tid, void *msg, int msglen, void *reply, int replylen);
+int send(int tid, const void *msg, int msglen, void *reply, int replylen);
 #define SEND_IMPOSSIBLE_TID -1
 #define SEND_INVALID_TID -2
 #define SEND_INCOMPLETE -3
@@ -67,7 +67,7 @@ int send(int tid, void *msg, int msglen, void *reply, int replylen);
 int receive(int *tid, void *msg, int msglen);
 
 #define Reply reply
-int reply(int tid, void *reply, int replylen);
+int reply(int tid, const void *reply, int replylen);
 #define REPLY_SUCCESSFUL 0
 #define REPLY_IMPOSSIBLE_TID -1
 #define REPLY_INVALID_TID -2

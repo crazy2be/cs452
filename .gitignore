@@ -5,3 +5,4 @@
 /writeup/*/*.aux
 /writeup/*/*.log
 /writeup/*/*.pdf
+*.swp
