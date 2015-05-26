@@ -5,12 +5,12 @@ void child(void) {
     int tid_v = tid();
     int parent_tid_v = parent_tid();
 
-    io_printf(COM2, "Child (tid=%d, parent_tid=%d)" EOL, tid_v, parent_tid_v);
+    io_printf(COM2, "Child (tid=%d, parent_tid=%d random=%x)" EOL, tid_v, parent_tid_v, rand());
     io_flush(COM2);
 
     pass();
 
-    io_printf(COM2, "Child (tid=%d, parent_tid=%d)" EOL, tid_v, parent_tid_v);
+    io_printf(COM2, "Child (tid=%d, parent_tid=%d random=%x)" EOL, tid_v, parent_tid_v, rand());
     io_flush(COM2);
 }
 

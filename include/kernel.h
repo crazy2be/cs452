@@ -73,3 +73,5 @@ int reply(int tid, const void *reply, int replylen);
 #define REPLY_INVALID_TID -2
 #define REPLY_UNSOLICITED -3
 #define REPLY_TOO_LONG -4
+
+unsigned rand(void);
