@@ -64,8 +64,13 @@ struct Reply {
 	int sum;
 	int prod;
 };
+
+// this is pretty bad, but it's just for testing
 static int receiving_tid = -1;
+static int misbehaving_receiving_tid = -1;
+static int nop_tid = -1;
 static int producers = 20;
+
 // webscale multiplication!
 void sending_task(void) {
 	for (int i = 0; i < 10; i++) {
@@ -92,8 +97,50 @@ void receiving_task(void) {
         rep.sum = msg.a + msg.b;
         rep.prod = msg.a * msg.b;
 
-		reply(tid, &rep, sizeof(rep));
+		ASSERT(reply(tid, &rep, sizeof(rep)) == REPLY_SUCCESSFUL);
 	}
+}
+
+void misbehaving_sending_task(void) {
+    struct Msg msg;
+    struct Reply rep;
+
+    // check sending to impossible tasks
+    ASSERT(send(-6, &msg, sizeof(msg), &rep, sizeof(rep)) == SEND_IMPOSSIBLE_TID);
+    ASSERT(send(267, &msg, sizeof(msg), &rep, sizeof(rep)) == SEND_IMPOSSIBLE_TID);
+    ASSERT(send(254, &msg, sizeof(msg), &rep, sizeof(rep)) == SEND_INVALID_TID);
+    ASSERT(send(tid(), &msg, sizeof(msg), &rep, sizeof(rep)) == SEND_INVALID_TID);
+
+    // our parent should have exited by now, so we shouldn't be able to send to it
+    ASSERT(send(parent_tid(), &msg, sizeof(msg), &rep, sizeof(rep)) == SEND_INVALID_TID);
+
+    ASSERT(send(misbehaving_receiving_tid, &msg, sizeof(msg), &rep, sizeof(rep)) == sizeof(rep));
+
+    // the other task should exit before we have a chance to send
+    ASSERT(send(misbehaving_receiving_tid, &msg, sizeof(msg), &rep, sizeof(rep)) == SEND_INCOMPLETE);
+    printf("Misbehaving send done" EOL);
+}
+
+void misbehaving_receiving_task(void) {
+    struct Msg msg;
+    struct Reply rep;
+
+    ASSERT(reply(-6, &rep, sizeof(rep)) == REPLY_IMPOSSIBLE_TID);
+    ASSERT(reply(267, &rep, sizeof(rep)) == REPLY_IMPOSSIBLE_TID);
+    ASSERT(reply(254, &rep, sizeof(rep)) == REPLY_INVALID_TID);
+    ASSERT(reply(tid(), &rep, sizeof(rep)) == REPLY_INVALID_TID);
+
+    // our parent should have exited by now, so we shouldn't be able to send to it
+    ASSERT(reply(parent_tid(), &rep, sizeof(rep)) == REPLY_INVALID_TID);
+
+    // we shouldn't be able to reply to somebody that hasn't sent a message to us
+    ASSERT(reply(nop_tid, &rep, sizeof(rep)) == REPLY_UNSOLICITED);
+
+    int tid;
+    ASSERT(receive(&tid, &msg, sizeof(msg)) == sizeof(msg));
+    ASSERT(reply(tid, &rep, sizeof(rep) + 1) == REPLY_TOO_LONG);
+    ASSERT(reply(tid, &rep, sizeof(rep)) == REPLY_SUCCESSFUL);
+    printf("Misbehaving receive done" EOL);
 }
 
 void hashtable_tests(void) {
@@ -155,6 +202,10 @@ void message_suite(void) {
     for (int i = 0; i < producers; i++) {
         create(PRIORITY_MIN, sending_task);
     }
+
+    misbehaving_receiving_tid = create(PRIORITY_MIN - 1, misbehaving_receiving_task);
+    nop_tid = create(PRIORITY_MIN, nop);
+    create(PRIORITY_MIN - 1, misbehaving_sending_task);
 }
 
 int main(int argc, char *argv[]) {

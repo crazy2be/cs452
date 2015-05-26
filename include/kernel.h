@@ -59,9 +59,17 @@ int create(int priority, void *code);
 
 #define Send send
 int send(int tid, void *msg, int msglen, void *reply, int replylen);
+#define SEND_IMPOSSIBLE_TID -1
+#define SEND_INVALID_TID -2
+#define SEND_INCOMPLETE -3
 
 #define Receive receive
 int receive(int *tid, void *msg, int msglen);
 
 #define Reply reply
 int reply(int tid, void *reply, int replylen);
+#define REPLY_SUCCESSFUL 0
+#define REPLY_IMPOSSIBLE_TID -1
+#define REPLY_INVALID_TID -2
+#define REPLY_UNSOLICITED -3
+#define REPLY_TOO_LONG -4

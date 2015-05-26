@@ -160,6 +160,21 @@ static inline void parent_tid_handler(struct task_descriptor *current_task) {
     uc->r0 = current_task->parent_tid;
 }
 
+static inline void exit_handler(struct task_descriptor *current_task) {
+    // TODO: we need to signal to tasks trying to send/receive to this
+    // that the send/receive has failed
+    // Should we signal when the task exits after receiving, but before replying?
+    // some other task might still reply to the message, according to the spec
+    current_task->state = ZOMBIE;
+    struct task_descriptor *td;
+    while ((td = task_queue_pop(&current_task->waiting_for_replies))) {
+        // signal to the sending task that the send failed
+        get_task_context(td)->r0 = SEND_INCOMPLETE;
+        td->state = READY;
+        priority_task_queue_push(&queue, td);
+    }
+}
+
 static void dispatch_msg(struct task_descriptor *to, struct task_descriptor *from) {
     struct user_context *to_context = get_task_context(to);
     struct user_context *from_context = get_task_context(from);
@@ -183,11 +198,27 @@ static void dispatch_msg(struct task_descriptor *to, struct task_descriptor *fro
 static inline void send_handler(struct task_descriptor *current_task) {
     struct user_context *uc = get_task_context(current_task);
 	int to_tid = uc->r0;
-	assert(to_tid >= 0 && to_tid <= tasks.next_tid, "tid"); // TODO
+    // check if the tid exists & is not us
+    if (to_tid < 0 || tasks.next_tid <= to_tid || to_tid == current_task->tid) {
+        uc->r0 = (to_tid < 0 || MAX_TID <= to_tid) ? SEND_IMPOSSIBLE_TID : SEND_INVALID_TID;
+        priority_task_queue_push(&queue, current_task);
+        return;
+    }
 	struct task_descriptor *to_td = &tasks.task_buf[to_tid];
+
+    // check that we're not sending to an exited task
+    if (to_td->state == ZOMBIE) {
+        uc->r0 = SEND_INVALID_TID;
+        priority_task_queue_push(&queue, current_task);
+        return;
+    }
+
 	if (to_td->state == RECEIVING) {
+        // if the task we're sending to is waiting for a reply,
+        // immediately exchange the message
 		dispatch_msg(to_td, current_task);
 	} else {
+        // otherwise, queue up on that task, and wait to be processed
 		task_queue_push(&to_td->waiting_for_replies, current_task);
 		current_task->state = SENDING;
 	}
@@ -195,19 +226,32 @@ static inline void send_handler(struct task_descriptor *current_task) {
 
 static inline void receive_handler(struct task_descriptor *current_task) {
 	struct task_descriptor *from_td = task_queue_pop(&current_task->waiting_for_replies);
-	if (from_td == NULL) {
+	if (from_td) {
+        dispatch_msg(current_task, from_td);
+	} else {
 		current_task->state = RECEIVING;
-		return;
-	}
-	dispatch_msg(current_task, from_td);
+    }
 }
 
 static inline void reply_handler(struct task_descriptor *current_task) {
 	struct user_context *recv_context = get_task_context(current_task);
 	int send_tid = recv_context->r0;
-	assert(send_tid >= 0 && send_tid <= tasks.next_tid, "tid"); // TODO
+
+    // check if the tid exists & is not us
+    if (send_tid < 0 || tasks.next_tid <= send_tid || send_tid == current_task->tid) {
+        recv_context->r0 = (send_tid < 0 || MAX_TID <= send_tid) ? REPLY_IMPOSSIBLE_TID : REPLY_INVALID_TID;
+        priority_task_queue_push(&queue, current_task);
+        return;
+    }
+
 	struct task_descriptor *send_td = &tasks.task_buf[send_tid];
-	assert(send_td->state == REPLY_BLK, "not blk");
+
+    // check that we sending to a task that expects a reply
+    if (send_td->state != REPLY_BLK) {
+        recv_context->r0 = (send_td->state == ZOMBIE) ? REPLY_INVALID_TID : REPLY_UNSOLICITED;
+        priority_task_queue_push(&queue, current_task);
+        return;
+    }
 
     struct user_context *send_context = get_task_context(send_td);
 
@@ -215,13 +259,21 @@ static inline void reply_handler(struct task_descriptor *current_task) {
     // some special stuff is required to get the 5th argument
     int send_len = *(int*)(send_context + 1);
     int recv_len = recv_context->r2;
-    memcpy((void*) send_context->r3, (void*) recv_context->r1, MIN(send_len, recv_len));
+
+    if (send_len < recv_len) {
+        recv_context->r0 = REPLY_TOO_LONG;
+        priority_task_queue_push(&queue, current_task);
+        return;
+    }
+
+    memcpy((void*) send_context->r3, (void*) recv_context->r1, recv_len);
+
     // return the length of the reply to the sender
     send_context->r0 = recv_len;
+    recv_context->r0 = REPLY_SUCCESSFUL;
 
     // queue both the sending and receiving tasks to execute again
 	send_td->state = READY;
-	current_task->state = READY;
 	priority_task_queue_push(&queue, send_td);
 	priority_task_queue_push(&queue, current_task);
 }
@@ -257,6 +309,8 @@ int boot(void (*init_task)(void), int init_task_priority) {
             break;
         case SYSCALL_EXITK:
             // drop the current task off the queue
+
+            exit_handler(current_task);
             break;
         case SYSCALL_TID:
             tid_handler(current_task);

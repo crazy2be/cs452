@@ -42,7 +42,7 @@ struct task_descriptor *task_queue_pop(struct task_queue *q);
 void task_queue_push(struct task_queue *q, struct task_descriptor *d);
 
 
-enum task_state { ACTIVE, READY, SENDING, RECEIVING, REPLY_BLK, ZOMBIE };
+enum task_state { READY, SENDING, RECEIVING, REPLY_BLK, ZOMBIE };
 struct task_descriptor {
     int tid;
     int parent_tid;
