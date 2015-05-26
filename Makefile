@@ -58,11 +58,11 @@ objectify=$(addprefix $(BUILD_DIR)/, $(addsuffix .o, $(basename $(1))))
 
 # find sources for each subproject independantly,
 # since it's not easy to split them back up again with make
-KERNEL_SOURCES=$(shell find $(KERNEL_SRC_DIR) $(GEN_SRC_DIR) -name *.c)
+KERNEL_SOURCES=$(shell find $(KERNEL_SRC_DIR) -name *.c)
 USER_SOURCES=$(shell find $(USER_SRC_DIR) -name *.c)
 TEST_SOURCES=$(shell find $(TEST_SRC_DIR) -name *.c)
 
-KERNEL_ASM_SOURCES=$(shell find $(KERNEL_SRC_DIR) $(GEN_SRC_DIR) -name *.s)
+KERNEL_ASM_SOURCES=$(shell find $(KERNEL_SRC_DIR) -name *.s) $(GEN_SRC_DIR)/syscalls.s
 USER_ASM_SOURCES=$(shell find $(USER_SRC_DIR) -name *.s)
 TEST_ASM_SOURCES=$(shell find $(TEST_SRC_DIR) -name *.s)
 
@@ -82,8 +82,8 @@ DIRS=$(sort $(dir $(OBJECTS) $(ASM_OBJECTS)))
 KERNEL_COMMON_OBJECTS = $(call objectify, $(KERNEL_SOURCES) $(KERNEL_ASM_SOURCES))
 USER_COMMON_OBJECTS = $(call objectify, $(USER_SOURCES) $(USER_ASM_SOURCES))
 TEST_COMMON_OBJECTS = $(call objectify, $(TEST_SOURCES) $(TEST_ASM_SOURCES))
-# SAVE ME PETER!
-IGNORED_VARIABLE_HACK := $(shell python kernel/syscall.py)
+GENERATED_SOURCES = $(GEN_SRC_DIR)/syscalls.s $(GEN_SRC_DIR)/syscalls.h
+
 
 $(KERNEL_BIN) $(TEST_BIN): %.bin : %.elf
 	arm-none-eabi-objcopy -O binary $< $@
@@ -113,6 +113,12 @@ $(C_OBJECTS): $(BUILD_DIR)/%.o : $(BUILD_DIR)/%.s
 # generate build directories before starting build
 $(C_OBJECTS) $(GENERATED_ASSEMBLY): | $(DIRS)
 
+$(GENERATED_ASSEMBLY): $(GENERATED_SOURCES)
+
+$(GENERATED_SOURCES): kernel/syscall.py
+	mkdir -p $(GEN_SRC_DIR)
+	python $<
+
 $(DIRS):
 	@mkdir -p $@
 
@@ -120,7 +126,7 @@ $(DIRS):
 $(ASM_OBJECTS) $(GENERATED_ASSEMBLY): $(MAKEFILE_NAME)
 
 clean:
-	rm -rf $(BUILD_DIR)
+	rm -rf $(BUILD_DIR) $(GEN_SRC_DIR)
 
 ELF_DESTINATION = /u/cs452/tftp/ARM/$(USER)/k.elf
 install: $(KERNEL_ELF)

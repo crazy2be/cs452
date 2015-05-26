@@ -1,7 +1,7 @@
 syscalls = ["pass", "exitk", "create", "tid", "parent_tid",
 			"send", "receive", "reply"]
 
-asm = open("gen/syscall.s", 'w')
+asm = open("gen/syscalls.s", 'w')
 header = open("gen/syscalls.h", 'w')
 for i, syscall in enumerate(syscalls):
 	asm.write(".equ SYSCALL_{0}, {1}\n".format(syscall.upper(), i))
