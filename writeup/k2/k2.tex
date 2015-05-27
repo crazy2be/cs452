@@ -13,6 +13,21 @@
 
 \input{|"cat ../../README.md | sed -e '1,/BEGIN LaTeX INCLUDED/d' | pandoc -f markdown -t latex"}
 \section{Design Decisions}
+% TODO: we should do some asserting on task states in the kernel
+Very little has changed with the architecture of the kernel since the previous assignment.
+
+One change was to actually store the current state of a task in it's task descriptor.
+Previously, the state of the task could be inferred, and did not need to be explicitly stored.
+(If a task was currently being executed, it is active; if in the ready queue, it is ready; otherwise
+it is a zombie. No other possible states existed.)
+We now need to store whether a task is in the \texttt{REPLY\_BLK} or \texttt{RECV\_BLK} states,
+since this cannot be inferred by whether the task is on some particular queue.
+
+We also added a send queue attached to each task descriptor.
+This is a FIFO queue which maintains a list of task descriptors which wish to send a message
+to that task.
+The FIFO queue was actually already implemented as a subproblem of the priority queue used
+for the ready queue, and so very little new code needed to be written for this.
 
 \section{Source Code}
 The source code is hosted on git, at \url{git.uwaterloo.ca/pgraboud/cs452-kernel}.
