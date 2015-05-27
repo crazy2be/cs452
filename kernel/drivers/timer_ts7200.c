@@ -8,7 +8,8 @@ void timer_init() {
 	int data = *reg;
 	data = data | ENABLE_MASK; // Enable timer
 	data = data & ~MODE_MASK; // Free running timer mode
-	data = data & ~CLKSEL_MASK; // 2khz Clock
+	//data = data & ~CLKSEL_MASK; // 2khz Clock
+	data = data | CLKSEL_MASK; // 508khz Clock
 	*reg = data;
 }
 void timer_service() {

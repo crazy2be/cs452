@@ -1,7 +1,8 @@
 #if QEMU
 #define TIME_SECOND (1000000/256) // 1Mhz / 256
 #else
-#define TIME_SECOND 2000 // 2kHz
+//#define TIME_SECOND 2000 // 2kHz
+#define TIME_SECOND 508000 // 508kHz
 #endif
 
 void timer_init();
