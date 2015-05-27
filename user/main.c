@@ -1,5 +1,6 @@
 #include <kernel.h>
 #include <io.h>
+#include "benchmark.h"
 
 void child(void) {
     int tid_v = tid();
@@ -35,5 +36,5 @@ void init_task(void) {
 }
 
 int main(int argc, char *argv[]) {
-    boot(init_task, 15);
+    boot(benchmark, 0);
 }

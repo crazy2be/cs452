@@ -31,7 +31,21 @@ void setup_tasks(void) {
     tasks.memory_alloc = (void*) &stack_top + USER_STACK_SIZE;
 }
 
+void setup_cache(void) {
+    unsigned flags;
+    __asm__("mrc p15, 0, %0, c1, c0, 0" : "=r"(flags));
+#define FLAG_BITS 0x10c
+#ifdef BENCHMARK_CACHE
+    flags |= FLAG_BITS;
+#else
+    flags &= ~FLAG_BITS;
+#endif
+    __asm__ __volatile__ ("mcr p15, 0, %0, c1, c0, 0" : : "r"(flags));
+}
+
 void setup(void) {
+    setup_cache();
+
     // write to the control registers of the UARTs to properly configure them
     // for transmission
 	uart_configure(COM1, 2400, OFF);
