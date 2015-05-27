@@ -142,10 +142,11 @@ void rps_server(void) {
                 } else {
                     int move = req;
                     int partner_move = partner_status - STATUS_MOVED_ROCK + MOVE_ROCK;
-                    if (move == partner_move) {
+                    int diff = move - partner_move;
+                    if (diff == 0) {
                         rps_reply(tid, RESP_DRAW);
                         rps_reply(partner, RESP_DRAW);
-                    } else if (move > partner_move && move != MOVE_ROCK) {
+                    } else if (diff == 1 || diff == -2) {
                         rps_reply(tid, RESP_WON);
                         rps_reply(partner, RESP_LOST);
                     } else {
