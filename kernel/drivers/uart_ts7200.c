@@ -2,14 +2,13 @@
 #include "uart.h"
 #include <io.h>
 #include "ts7200.h"
-
-extern void assert(int, const char*);
+#include "../util.h"
 
 static int* reg(int channel, int off) {
 	switch (channel) {
 		case COM1: return (int*)(UART1_BASE + off);
 		case COM2: return (int*)(UART2_BASE + off);
-		default: assert(0, "Invalid channel"); return (int*)-1;
+		default: KASSERT(0 && "Invalid channel"); return (int*)-1;
 	}
 }
 
@@ -36,7 +35,7 @@ void uart_configure(int channel, int speed, int fifo) {
 		// Was: 128. Calculated by (7372800 / (16 * 2400)) - 1
 		// BAUDDIV = (FUARTCLK / (16 * Baud rate)) - 1 p.543 of ep93xx
 		case 2400: *high = 0x0; *low = 191; break;
-		default: assert(0, "Unsupported baud");
+		default: KASSERT(0 && "Unsupported baud");
 	}
 
 	// Fifo/flags
@@ -54,9 +53,9 @@ int uart_canwrite(int channel) {
 	return *flags & TXFE_MASK; // TODO: CTS_MASK?
 }
 void uart_write(int channel, char c) {
-	assert(uart_canwrite(channel), "can't write!");
+	KASSERT(uart_canwrite(channel) && "can't write!");
 	if (channel == COM1) {
-		assert(*reg(COM1, UART_FLAG_OFFSET) & CTS_MASK, "not cts");
+		KASSERT((*reg(COM1, UART_FLAG_OFFSET) & CTS_MASK) && "not cts");
 	}
 	int *data = reg(channel, UART_DATA_OFFSET);
 	*data = c;
@@ -66,7 +65,7 @@ int uart_canread(int channel) {
 	return *flags & RXFF_MASK;
 }
 char uart_read(int channel) {
-	assert(uart_canread(channel), "can't read!");
+	KASSERT(uart_canread(channel) && "can't read!");
 	int *data = reg(channel, UART_DATA_OFFSET);
 	return *data;
 }
