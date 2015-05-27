@@ -3,7 +3,10 @@
 #include <io.h>
 #include "../kernel/drivers/timer.h"
 
-#ifdef SEND_FIRST
+// we expect the build script to provide BENCHMARK_SEND_FIRST, BENCHMARK_CACHE,
+// and BENCHMARK_MSG_SIZE
+
+#if BENCHMARK_SEND_FIRST
 #define SEND_PRIORITY 14
 #define RECV_PRIORITY 15
 #else
@@ -11,27 +14,27 @@
 #define RECV_PRIORITY 14
 #endif
 
-#define MSG_SIZE 64
+#define BENCHMARK_MSG_SIZE 64
 
 #define RECEIVER_TID 2
-#define ITERATIONS 200000
+#define ITERATIONS 200
 
 
 static void sender(void) {
-    unsigned char buf[MSG_SIZE];
+    unsigned char buf[BENCHMARK_MSG_SIZE];
     for (unsigned i = 0; i < ITERATIONS; i++) {
-        send(RECEIVER_TID, buf, MSG_SIZE, buf, MSG_SIZE);
+        send(RECEIVER_TID, buf, BENCHMARK_MSG_SIZE, buf, BENCHMARK_MSG_SIZE);
     }
 }
 
 static void receiver(void) {
     int tid;
-    unsigned char buf[MSG_SIZE];
+    unsigned char buf[BENCHMARK_MSG_SIZE];
     for (unsigned i = 0; i < ITERATIONS; i++) {
-        receive(&tid, buf, MSG_SIZE);
-        reply(tid, buf, MSG_SIZE);
+        receive(&tid, buf, BENCHMARK_MSG_SIZE);
+        reply(tid, buf, BENCHMARK_MSG_SIZE);
     }
-    send(parent_tid(), 0, 0, buf, MSG_SIZE);
+    send(parent_tid(), 0, 0, buf, BENCHMARK_MSG_SIZE);
 }
 
 void benchmark(void) {
@@ -47,5 +50,5 @@ void benchmark(void) {
     long long end = timer_time();
 
     printf("Benchmark took %d time (msg_size = %d, iterations = %d, pdelta = %d)" EOL,
-        (unsigned) (end - start), MSG_SIZE, ITERATIONS, SEND_PRIORITY - RECV_PRIORITY);
+        (unsigned) (end - start), BENCHMARK_MSG_SIZE, ITERATIONS, SEND_PRIORITY - RECV_PRIORITY);
 }

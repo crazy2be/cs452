@@ -6,7 +6,9 @@ GEN_SRC_DIR=gen
 TEST_SRC_DIR=test
 USER_SRC_DIR=user
 
-CFLAGS  = -g -fPIC -Wall -Werror -Iinclude -std=c99 -O2
+BENCHMARK_FLAGS = -DBENCHMARK_CACHE -DBENCHMARK_SEND_FIRST -DBENCHMARK_MSG_SIZE=64
+
+CFLAGS  = -g -fPIC -Wall -Werror -Iinclude -std=c99 -O2 $(BENCHMARK_FLAGS)
 ARCH_CFLAGS = -mcpu=arm920t -msoft-float
 # -g: include hooks for gdb
 # -mcpu=arm920t: generate code for the 920t architecture
