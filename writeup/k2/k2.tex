@@ -13,7 +13,6 @@
 
 \input{|"cat ../../README.md | sed -e '1,/BEGIN LaTeX INCLUDED/d' | pandoc -f markdown -t latex"}
 \section{Design Decisions}
-% TODO: we should do some asserting on task states in the kernel
 Very little has changed with the architecture of the kernel since the previous assignment.
 
 One change was to actually store the current state of a task in it's task descriptor.
