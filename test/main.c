@@ -1,21 +1,12 @@
 #include <kernel.h>
 #include <io.h>
+#include <assert.h>
 
 // lurky, but we have to include these to test stuff
 #include "../kernel/least_significant_set_bit.h"
 #include "../kernel/hashtable.h"
 #include "../kernel/prng.h"
 #include "../kernel/util.h"
-
-#define STRINGIFY2(STR) #STR
-#define STRINGIFY1(STR) STRINGIFY2(STR)
-
-#define ASSERT(stmt) {\
-    if (!(stmt)) { \
-        io_puts(COM2, "ASSERTION FAILED (" __FILE__ ":" STRINGIFY1(__LINE__) ") : " STRINGIFY2(stmt) EOL); \
-        io_flush(COM2); \
-    } }
-
 
 void child(void) {
     io_printf(COM2, "Child task %d" EOL, tid());

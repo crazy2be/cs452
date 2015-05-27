@@ -5,6 +5,7 @@
 #include "drivers/timer.h"
 #include "drivers/uart.h"
 #include "context_switch.h"
+#include "prng.h"
 
 /** @file */
 
@@ -24,6 +25,7 @@ struct task_collection {
 
 static struct task_collection tasks;
 static struct priority_task_queue queue;
+static struct prng random_gen;
 
 void setup_tasks(void) {
     tasks.next_tid = 0;
@@ -93,6 +95,8 @@ void setup(void) {
 	}
 
     priority_task_queue_init(&queue);
+
+    prng_init(&random_gen, 0xdeadbeef);
 
     setup_tasks();
 }
@@ -290,6 +294,11 @@ static inline void reply_handler(struct task_descriptor *current_task) {
 	priority_task_queue_push(&queue, current_task);
 }
 
+void rand_handler(struct task_descriptor *current_task) {
+    get_task_context(current_task)->r0 = prng_gen(&random_gen);
+    priority_task_queue_push(&queue, current_task);
+}
+
 #include "../gen/syscalls.h"
 int boot(void (*init_task)(void), int init_task_priority) {
     struct task_descriptor * current_task;
@@ -347,6 +356,9 @@ int boot(void (*init_task)(void), int init_task_priority) {
 		case SYSCALL_REPLY:
 			reply_handler(current_task);
 			break;
+        case SYSCALL_RAND:
+            rand_handler(current_task);
+            break;
         default:
             KASSERT(0 && "UNKNOWN SYSCALL NUMBER");
             break;
