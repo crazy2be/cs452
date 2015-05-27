@@ -51,7 +51,7 @@ int io_buf_is_empty(int channel) {
 }
 
 int io_buflen(int bufn) {
-	assert(bufn >= 0 && bufn < 4, "invalid bufn");
+	KASSERT(bufn >= 0 && bufn < 4 && "invalid bufn");
 	return rbuf[bufn].l;
 }
 

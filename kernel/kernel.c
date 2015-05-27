@@ -287,6 +287,7 @@ int boot(void (*init_task)(void), int init_task_priority) {
     (void) current_task;
 
     do {
+        KASSERT(current_task->state == READY);
         struct syscall_context sc;
 
         // context switch to the next task to be run
@@ -300,6 +301,7 @@ int boot(void (*init_task)(void), int init_task_priority) {
         // after responding to the syscall, schedule it for execution
         // on the appropriate queue (unless exit is called, in which
         // case the task is not rescheduled).
+        KASSERT(1 && "TEST ASSERT");
         switch (sc.syscall_num) {
         case SYSCALL_PASS:
             // no-op
@@ -332,13 +334,12 @@ int boot(void (*init_task)(void), int init_task_priority) {
 			reply_handler(current_task);
 			break;
         default:
-            assert(0, "UNKNOWN SYSCALL NUMBER");
+            KASSERT(0 && "UNKNOWN SYSCALL NUMBER");
             break;
         }
 
         // find the next task scheduled for execution, if any
         current_task = priority_task_queue_pop(&queue);
-		if (current_task) assert(current_task->state == READY, "not ready");
     } while (current_task);
 
     return 0;

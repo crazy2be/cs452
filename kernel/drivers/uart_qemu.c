@@ -1,8 +1,7 @@
 #ifdef QEMU
 #include "uart.h"
 #include <io.h>
-
-extern void assert(int, const char*);
+#include "../util.h"
 
 // https://balau82.wordpress.com/2010/11/30/emulating-arm-pl011-serial-ports/
 // http://infocenter.arm.com/help/topic/com.arm.doc.ddi0183f/DDI0183.pdf
@@ -27,7 +26,7 @@ static volatile int* reg(int channel, int off) {
 		// the train controller, but in QEMU, UART0 is stdout.
 		case COM1: return (int*)(UART1 + off);
 		case COM2: return (int*)(UART0 + off);
-		default: assert(0, "Invalid channel"); return (int*)-1;
+		default: KASSERT(0 && "Invalid channel"); return (int*)-1;
 	}
 }
 

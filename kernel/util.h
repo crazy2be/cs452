@@ -5,7 +5,20 @@
 #define MIN(x, y) (((x) < (y)) ? (x) : (y))
 #define MAX(x, y) (((x) > (y)) ? (x) : (y))
 
-void assert(int musttrue, const char *msg);
+#define STRINGIFY2(STR) #STR
+#define STRINGIFY1(STR) STRINGIFY2(STR)
+
+void exited_main(void);
+
+#include <io.h>
+
+#define KASSERT(stmt) {\
+    if (!(stmt)) { \
+        io_puts(COM2, "KERNEL ASSERTION FAILED (" __FILE__ ":" STRINGIFY1(__LINE__) ") : " STRINGIFY2(stmt) EOL); \
+        io_flush(COM2); \
+        __asm__ __volatile__ ("b exited_main"); /* just stop execution in the kernel */ \
+    } }
+
 void sleep(int n);
 void *memset(void *ptr, int value, int num);
 // non-traditional name b/c of conflict with built-in function
