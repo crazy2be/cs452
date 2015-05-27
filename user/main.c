@@ -34,7 +34,7 @@ void rps_client(void) {
     ASSERT(resp == RESP_CONNECTED);
     printf("Client %d connected" EOL, tid());
 
-    unsigned rounds_to_play = rand() % 100;
+    unsigned rounds_to_play = rand() % 20;
 
     for (unsigned i = 0; i < rounds_to_play; i++) {
         int move = rand() % 3;
@@ -125,7 +125,6 @@ void rps_server(void) {
                     rps_quit(partner, status, &clients_left);
                 }
                 rps_quit(tid, status, &clients_left);
-                printf("SERVER: client %d quit" EOL, tid);
             }
             break;
         case MOVE_ROCK:
