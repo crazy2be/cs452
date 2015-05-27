@@ -90,6 +90,7 @@ void receiving_task(void) {
 
 		ASSERT(reply(tid, &rep, sizeof(rep)) == REPLY_SUCCESSFUL);
 	}
+    printf("Receive done" EOL);
 }
 
 void misbehaving_sending_task(void) {
