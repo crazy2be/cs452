@@ -1,0 +1,27 @@
+\documentclass[titlepage]{article}
+\usepackage{listings}
+\usepackage{hyperref}
+
+\lstset{basicstyle=\footnotesize\ttfamily,breaklines=true}
+
+\begin{document}
+\title{Kernel 1}
+\author{Justin McGirr (\#20413625), Peter Raboud (\#20437716)}
+\maketitle
+
+\section{Instructions}
+
+\input{|"cat ../../README.md | sed -e '1,/BEGIN LaTeX INCLUDED/d' | pandoc -f markdown -t latex"}
+\section{Design Decisions}
+
+\section{Source Code}
+The source code is hosted on git, at \url{git.uwaterloo.ca/pgraboud/cs452-kernel}.
+The version we wish to submit is on the \texttt{k1} branch, specifically
+the commit:
+\input{|"git rev-parse k1 | ./../verbatim"}
+We are submitting the following files:
+\input{|"cat ../file-list | ./../verbatim"}
+\input{|"./../file-list | ./../verbatim"}
+\section{Questions}
+
+\end{document}

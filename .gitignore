@@ -3,5 +3,6 @@
 /test_output
 /docs
 /writeup/*/*.aux
+/writeup/*/*.out
 /writeup/*/*.log
 /writeup/*/*.pdf
