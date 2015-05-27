@@ -27,6 +27,28 @@ struct user_context {
     unsigned r12;
 };
 
+// Sugaring to access arguments, agnostic to where they're stored
+// This abstraction is zero-cost, since we instruct the compiler to inline this.
+// The switch disappears if n is a constant.
+static inline unsigned syscall_arg(struct user_context *uc, unsigned n) {
+    switch (n) {
+    case 0:
+        return uc->r0;
+    case 1:
+        return uc->r1;
+    case 2:
+        return uc->r2;
+    case 3:
+        return uc->r3;
+    default:
+        return ((unsigned*)(uc + 1))[n - 4];
+    }
+}
+
+static inline void syscall_return(struct user_context *uc, unsigned r) {
+    uc->r0 = r;
+}
+
 /**
  * Used to return to the kernel from a syscall by the user task,
  * with both the syscall number, and the user's context (which is
