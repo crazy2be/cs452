@@ -11,4 +11,5 @@ long long timer_time();
 int time_hours(long long time);
 int time_minutes(long long time);
 int time_seconds(long long time);
+int time_useconds(long long time);
 int time_fraction(long long time);
