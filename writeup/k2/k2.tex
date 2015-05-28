@@ -10,8 +10,8 @@
 \maketitle
 
 \section{Instructions}
-
 \input{|"cat ../../README.md | sed -e '1,/BEGIN LaTeX INCLUDED/d' | pandoc -f markdown -t latex"}
+
 \section{Design Decisions}
 Very little has changed with the architecture of the kernel since the previous assignment.
 
@@ -36,8 +36,12 @@ the commit:
 We are submitting the following files:
 \input{|"cat ../file-list | ./../verbatim"}
 \input{|"./../file-list | ./../verbatim"}
-\section{Questions}
 
+\section{Timings}
+\begin{tabular}
+\input{|"python timings.py"}
+
+\section{Questions}
 We chose to give both the client and server tasks priorities lower than
 the first user task, and give the server priority over the clients.
 This is done to ensure that the server registers with the nameserver before
