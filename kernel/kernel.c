@@ -6,6 +6,7 @@
 #include "drivers/uart.h"
 #include "context_switch.h"
 #include "prng.h"
+#include "irq.h"
 
 /** @file */
 
@@ -47,6 +48,7 @@ void setup_cache(void) {
 
 void setup(void) {
     setup_cache();
+    setup_irq();
 
     // write to the control registers of the UARTs to properly configure them
     // for transmission

@@ -170,6 +170,7 @@ void rps_server(void) {
 
 
 void init_task(void) {
+    *(volatile unsigned*) 0x10140018 = 0xffffffff;
     create(PRIORITY_MAX, nameserver);
     create(PRIORITY_MIN, rps_server);
     for (int i = MIN_CLIENT_TID; i <= MAX_CLIENT_TID; i++) {
