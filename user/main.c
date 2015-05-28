@@ -55,6 +55,9 @@ void rps_client(void) {
             case RESP_QUIT:
                 printf("Client %d won round %d by default, now quitting..." EOL, tid(), i);
                 return;
+            default:
+                ASSERT(0 && "Unknown response from the RPS server");
+                break;
         }
     }
 
@@ -157,7 +160,8 @@ void rps_server(void) {
             }
             break;
         default:
-            // whatever, dude...
+            ASSERT(0 && "Unknown request from the RPS client");
+            break;
             break;
         }
     }
