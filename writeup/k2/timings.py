@@ -8,9 +8,17 @@ names = [("Message Length", "4 bytes", "64 bytes"),
 values = [85576, 183622, 57698, 116555, 82515, 180606, 55978, 114805,
 		  32216, 69954, 22956, 45539, 32200, 67887, 21755, 44332]
 
+USE_LATEX = len(sys.argv) > 1 and sys.argv[1] == 'latex'
+if USE_LATEX: print '\\begin{tabular}{l|l|l|l||r}'
+print ['\t', '&'][USE_LATEX].join([name[0] for name in names] + ["Speed (us)"]),
+if USE_LATEX: print '\\\\',
+print
+
 for i, val in enumerate(values):
-	mlen = names[0][1 + i % 2]
-	caches = i / 2 % 2
-	sendb4 = i / 4 % 2
-	opt = i / 8 % 2
-	print mlen, caches, sendb4, opt, val
+	print ['\t', '&'][USE_LATEX].join(
+		[names[j][1 + i / (2**j) % 2] for j, name in enumerate(names)]
+			+ [str(values[i]/200)]),
+	if USE_LATEX: print '\\\\',
+	print
+
+if USE_LATEX: print '\\end{tabular}'
