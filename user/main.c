@@ -180,6 +180,6 @@ void init_task(void) {
 
 #include "benchmark.h"
 int main(int argc, char *argv[]) {
-    boot(benchmark, 0);
-	// boot(init_task, 0);
+    /* boot(benchmark, 0); */
+	boot(init_task, 0);
 }
