@@ -1,0 +1,17 @@
+Message Length	Caches	Send before Reply	Optimization	Team	Speed (us)
+4 bytes	off	yes	off	Peter and Justin	427
+64 bytes	off	yes	off	Peter and Justin	918
+4 bytes	on	yes	off	Peter and Justin	288
+64 bytes	on	yes	off	Peter and Justin	582
+4 bytes	off	no	off	Peter and Justin	412
+64 bytes	off	no	off	Peter and Justin	903
+4 bytes	on	no	off	Peter and Justin	279
+64 bytes	on	no	off	Peter and Justin	574
+4 bytes	off	yes	on	Peter and Justin	161
+64 bytes	off	yes	on	Peter and Justin	349
+4 bytes	on	yes	on	Peter and Justin	114
+64 bytes	on	yes	on	Peter and Justin	227
+4 bytes	off	no	on	Peter and Justin	161
+64 bytes	off	no	on	Peter and Justin	339
+4 bytes	on	no	on	Peter and Justin	108
+64 bytes	on	no	on	Peter and Justin	221
