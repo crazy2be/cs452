@@ -183,6 +183,7 @@ enter_kernel:
 enter_kernel_irq:
     @ Abuse sp_irq to store r0 while we're in system mode
     @ This works since we don't allocate a stack for IRQ mode
+    @ TODO: we should just load the cpsr directly into sp
     mov sp, r0
 
     mrs r0, cpsr
@@ -203,10 +204,12 @@ enter_kernel_irq:
 
     @@@@@ IRQ MODE @@@@@
 
+    @ TODO: these steps can be compacted into one stmfd instruction
     @ store r0 from user (now stored in sp_irq)
     stmfd r1!, {sp}
 
     @ store user pc
+    sub lr, lr, #4
     stmfd r1!, {lr}
 
     @ store user cpsr
