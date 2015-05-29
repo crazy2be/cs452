@@ -1,5 +1,6 @@
 .text
 .globl enter_kernel
+.globl enter_kernel_irq
 .globl exit_kernel
 .globl pass
 
@@ -73,7 +74,7 @@ exit_kernel:
     ldmfd r1!, {lr}
 
     @ switch back to supervisor mode
-    and r3, r3, #0x13
+    and r3, r3, #0xfffffff3
     msr cpsr, r3
 
     @@@@@ SUPERVISOR MODE @@@@@
@@ -169,6 +170,66 @@ enter_kernel:
     @ note: what was r0 in the original context is now r3
     ldmfd sp!, {r3-r12,lr}
 
+
+    @ return the user stack pointer
+    @ strangely, because we are returning to the point saved by the lr,
+    @ this actually returns from the exit_kernel function
+
+    @ r3 is the value of r0 originally passed into exit_kernel
+    @ this is apparently how c returns a struct value
+	stmia r3, {r0, r1}
+    bx lr
+
+enter_kernel_irq:
+    @ Abuse sp_irq to store r0 while we're in system mode
+    @ This works since we don't allocate a stack for IRQ mode
+    mov sp, r0
+
+    mrs r0, cpsr
+    orr r0, r0, #0x1f
+    msr cpsr, r0
+
+    @@@@@ SYSTEM MODE @@@@@
+
+    stmfd sp!, {r1-r12}
+    str lr, [sp, #-16]
+
+    @ save user stack pointer before returning to IRQ mode
+    mov r1, sp
+
+    and r0, r0, #0xfffffff2
+    msr cpsr, r0
+
+    @@@@@ IRQ MODE @@@@@
+
+    @ store r0 from user (now stored in sp_irq)
+    stmfd r1!, {sp}
+
+    @ store user cpsr
+    mrs r2, spsr
+    stmfd r1!, {r2}
+
+    @ store user pc
+    stmfd r1!, {lr}
+
+    orr r0, r0, #0x13
+    msr cpsr, r0
+
+    @@@@@ SVC MODE @@@@@
+
+    @ restore the kernel registers
+    @ this must correspond to what is being saved in exit_kernel
+    @ load the kernel's original psr
+    @ TODO: is this even necessary?
+    ldmfd sp!, {r0}
+    msr cpsr, r0
+
+    @ now, restore the rest of the registers
+    @ note: what was r0 in the original context is now r3
+    ldmfd sp!, {r3-r12,lr}
+
+    @ dummy value to return as syscall code
+    mov r0, #37
 
     @ return the user stack pointer
     @ strangely, because we are returning to the point saved by the lr,

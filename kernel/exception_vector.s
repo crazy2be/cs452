@@ -9,5 +9,5 @@ b enter_kernel  @ Software Interrupt
 b .             @ Prefetch abort (invalid instruction?)
 b .             @ Data abort (invalid memory access?)
 b .             @ Reserved
-b .             @ IRQ
+b enter_kernel_irq   @ IRQ
 b .             @ FRQ

@@ -361,6 +361,10 @@ int boot(void (*init_task)(void), int init_task_priority) {
         case SYSCALL_RAND:
             rand_handler(current_task);
             break;
+        case 37:
+            priority_task_queue_push(&queue, current_task);
+            printf("GOT AN INTERRUPT" EOL);
+            break;
         default:
             KASSERT(0 && "UNKNOWN SYSCALL NUMBER");
             break;

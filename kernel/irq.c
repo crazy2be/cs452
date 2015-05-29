@@ -1,4 +1,5 @@
 #include "irq.h"
+#include <io.h>
 
 void setup_irq(void) {
     // TODO: see A.2.6.8 in the arm manual
@@ -20,4 +21,9 @@ void setup_irq(void) {
     *(volatile unsigned*)(0x800c0010) = 0xffffffff;
 #endif
 
+}
+
+void irq_handler(void) {
+    printf("IN IRQ HANDLER" EOL);
+    for(;;);
 }
