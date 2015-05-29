@@ -171,11 +171,14 @@ void rps_server(void) {
 
 void init_task(void) {
     *(volatile unsigned*) 0x10140018 = 0xdeadbeef;
+    printf("After interrupt generated" EOL);
+    *(volatile unsigned*) 0x10140018 = 0xdeadbeef;
+    printf("After interrupt generated" EOL);
     int tid;
     tid = create(PRIORITY_MAX, nameserver);
     printf("Got %d as TID for name server" EOL, tid);
     tid = create(PRIORITY_MIN, rps_server);
-    *(volatile unsigned*) 0x10140018 = 0xdeadbeef;
+    /* *(volatile unsigned*) 0x10140018 = 0xdeadbeef; */
     printf("Got %d as TID for rps server" EOL, tid);
     for (int i = MIN_CLIENT_TID; i <= MAX_CLIENT_TID; i++) {
         tid = create(PRIORITY_MIN, rps_client);

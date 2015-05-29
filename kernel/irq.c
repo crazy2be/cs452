@@ -1,6 +1,8 @@
 #include "irq.h"
 #include <io.h>
 
+#define VWRITE(addr, data) *(volatile unsigned *)(addr) = (data)
+
 void setup_irq(void) {
     // TODO: see A.2.6.8 in the arm manual
 
@@ -14,11 +16,11 @@ void setup_irq(void) {
 #ifdef QEMU
     // see http://infocenter.arm.com/help/topic/com.arm.doc.dui0224i/DUI0224I_realview_platform_baseboard_for_arm926ej_s_ug.pdf
     // PICIntEnable
-    *(volatile unsigned*)(0x10140010) = 0x0000ffff;
+    VWRITE(0x10140010, 0x0000ffff);
 #else
     // writing to VICxIntEnable (see ep93xx user manual)
-    *(volatile unsigned*)(0x800b0010) = 0xffffffff;
-    *(volatile unsigned*)(0x800c0010) = 0xffffffff;
+    VWRITE(0x800b0010, 0xffffffff);
+    VWRITE(0x800c0010, 0xffffffff);
 #endif
 }
 
@@ -28,21 +30,23 @@ void irq_handler(void) {
 }
 
 void clear_irq(unsigned interrupts_c) {
-    volatile unsigned *soft_int;
 #ifdef QEMU
-    soft_int = (volatile unsigned*) 0x1014001c;
+    VWRITE(0x1014001c, interrupts_c);
+    // DEBUG: disable interrupts after clearing
+    // NOTE: if we disable interrupts here, the problem doesn't go away
+    // this leads me to believe that whatever state gets screwed up isn't caused by further interrupts
+    // We also know that this does actually disable interrupts, since if we comment this
+    // out, we can send in further interrupts
+    VWRITE(0x10140014, 0x0000ffff);
 #else
     ASSERT(0);
 #endif
-    *soft_int = interrupts_c;
 }
 
 void set_irq(unsigned interrupts) {
-    volatile unsigned *soft_int;
 #ifdef QEMU
-    soft_int = (volatile unsigned*) 0x10140018;
+    VWRITE(0x10140018, interrupts);
 #else
     ASSERT(0);
 #endif
-    *soft_int = interrupts;
 }
