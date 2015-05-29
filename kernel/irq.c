@@ -32,12 +32,6 @@ void irq_handler(void) {
 void clear_irq(unsigned interrupts_c) {
 #ifdef QEMU
     VWRITE(0x1014001c, interrupts_c);
-    // DEBUG: disable interrupts after clearing
-    // NOTE: if we disable interrupts here, the problem doesn't go away
-    // this leads me to believe that whatever state gets screwed up isn't caused by further interrupts
-    // We also know that this does actually disable interrupts, since if we comment this
-    // out, we can send in further interrupts
-    VWRITE(0x10140014, 0x0000ffff);
 #else
     ASSERT(0);
 #endif
