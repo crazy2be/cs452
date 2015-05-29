@@ -170,11 +170,16 @@ void rps_server(void) {
 
 
 void init_task(void) {
-    *(volatile unsigned*) 0x10140018 = 0xffffffff;
-    create(PRIORITY_MAX, nameserver);
-    create(PRIORITY_MIN, rps_server);
+    *(volatile unsigned*) 0x10140018 = 0xdeadbeef;
+    int tid;
+    tid = create(PRIORITY_MAX, nameserver);
+    printf("Got %d as TID for name server" EOL, tid);
+    tid = create(PRIORITY_MIN, rps_server);
+    *(volatile unsigned*) 0x10140018 = 0xdeadbeef;
+    printf("Got %d as TID for rps server" EOL, tid);
     for (int i = MIN_CLIENT_TID; i <= MAX_CLIENT_TID; i++) {
-        int tid = create(PRIORITY_MIN, rps_client);
+        tid = create(PRIORITY_MIN, rps_client);
+        printf("Got %d as TID for client %d" EOL, tid, i);
         ASSERT(i == tid);
     }
 }

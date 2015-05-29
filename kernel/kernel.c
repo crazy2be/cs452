@@ -362,6 +362,7 @@ int boot(void (*init_task)(void), int init_task_priority) {
             rand_handler(current_task);
             break;
         case 37:
+            clear_irq(0xffffffff);
             priority_task_queue_push(&queue, current_task);
             printf("GOT AN INTERRUPT" EOL);
             break;

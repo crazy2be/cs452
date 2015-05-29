@@ -192,6 +192,7 @@ enter_kernel_irq:
     @@@@@ SYSTEM MODE @@@@@
 
     stmfd sp!, {r1-r12}
+    @ save lr_usr in what will be the bottom position in the stack
     str lr, [sp, #-16]
 
     @ save user stack pointer before returning to IRQ mode
@@ -205,12 +206,14 @@ enter_kernel_irq:
     @ store r0 from user (now stored in sp_irq)
     stmfd r1!, {sp}
 
+    @ store user pc
+    stmfd r1!, {lr}
+
     @ store user cpsr
     mrs r2, spsr
     stmfd r1!, {r2}
 
-    @ store user pc
-    stmfd r1!, {lr}
+    @ decrement stack pointer to account for having already stored lr_usr above
     sub r1, r1, #4
 
     orr r0, r0, #0x13
