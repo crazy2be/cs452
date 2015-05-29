@@ -211,6 +211,7 @@ enter_kernel_irq:
 
     @ store user pc
     stmfd r1!, {lr}
+    sub r1, r1, #4
 
     orr r0, r0, #0x13
     msr cpsr, r0
