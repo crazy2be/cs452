@@ -178,7 +178,6 @@ void init_task(void) {
     tid = create(PRIORITY_MAX, nameserver);
     printf("Got %d as TID for name server" EOL, tid);
     tid = create(PRIORITY_MIN, rps_server);
-    /* *(volatile unsigned*) 0x10140018 = 0xdeadbeef; */
     printf("Got %d as TID for rps server" EOL, tid);
     for (int i = MIN_CLIENT_TID; i <= MAX_CLIENT_TID; i++) {
         tid = create(PRIORITY_MIN, rps_client);
