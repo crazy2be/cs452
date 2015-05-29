@@ -221,9 +221,11 @@ enter_kernel_irq:
     @ restore the kernel registers
     @ this must correspond to what is being saved in exit_kernel
     @ load the kernel's original psr
-    @ TODO: is this even necessary?
     ldmfd sp!, {r0}
-    msr cpsr, r0
+    @ TODO: it turns out that we don't want to do this
+    @ we should not save & restore the kernel cpsr, but for now I've just
+    @ commented out this line in order to throw away the value
+    @ msr cpsr, r0
 
     @ now, restore the rest of the registers
     @ note: what was r0 in the original context is now r3
