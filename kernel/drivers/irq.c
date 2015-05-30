@@ -24,11 +24,6 @@ void setup_irq(void) {
 #endif
 }
 
-void irq_handler(void) {
-    printf("IN IRQ HANDLER" EOL);
-    for(;;);
-}
-
 void clear_irq(unsigned interrupts_c) {
 #ifdef QEMU
     VWRITE(0x1014001c, interrupts_c);
@@ -40,6 +35,14 @@ void clear_irq(unsigned interrupts_c) {
 void set_irq(unsigned interrupts) {
 #ifdef QEMU
     VWRITE(0x10140018, interrupts);
+#else
+    ASSERT(0);
+#endif
+}
+
+unsigned get_irq(void) {
+#ifdef QEMU
+    return *(volatile unsigned*) 0x10140000;
 #else
     ASSERT(0);
 #endif
