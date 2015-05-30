@@ -21,9 +21,12 @@
 
 @ state save of user task should be 16 registers
 
-@ state save of kernel should be 11 registers (cpsr, r4-r12, r14)
-@ we can save less since we don't care about r0-r3, and r13
+@ state save of kernel should be 11 registers (r0, r4-r12, r14)
+@ we can save less since we don't care about r1-r3, and r13
 @ is preserved for us
+@ we also don't care about cpsr, since the compiler doesn't assume
+@ this is preserved by the call to exit_kernel
+@ r0 is a pointer to the struct returned by exit_kernel
 
 @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 
@@ -36,12 +39,6 @@ exit_kernel:
     @ r0 is where C expects us to write the struct return value
     @ r1 is the user task's stack pointer
 
-    @ save the supervisor psr
-    mrs r2, cpsr
-
-    @ shuffle the struct return pointer around so it can be saved in order with the stmfd
-    mov r3, r0
-
     @ first, save the kernel's state.
     @ this needs to match exactly with how it's loaded back in enter_kernel.
 
@@ -49,7 +46,7 @@ exit_kernel:
     @ save r4-r12, since these registers are expected to be untouched by this call
     @ save r3, since this is the address that C expects us to write the return struct into
     @ save r2 (value of cpsr) to be able to restore the kernel psr (TODO: necessary?)
-    stmfd sp!, {r2-r3, r4-r12, r14}
+    stmfd sp!, {r0, r4-r12, r14}
 
     @ Now, restore the user state
     @ Restore the SP and LR while in system mode
@@ -154,22 +151,15 @@ enter_kernel:
 
     stmfd r1!, {r2-r5}
 
-    @ restore the kernel registers
-    @ this must correspond to what is being saved in exit_kernel
-    @ load the kernel's original psr
-    @ TODO: is this even necessary?
-    ldmfd sp!, {r0}
-    msr cpsr, r0
-
     @ get the syscall number
     ldr r0, [lr, #-4]
     @ the least-significant byte of the swi instruction is the syscall number
     and r0, r0, #0xff
 
-    @ now, restore the rest of the registers
+    @ restore the kernel registers
+    @ this must correspond to what is being saved in exit_kernel
     @ note: what was r0 in the original context is now r3
     ldmfd sp!, {r3-r12,lr}
-
 
     @ return the user stack pointer
     @ strangely, because we are returning to the point saved by the lr,
@@ -218,14 +208,6 @@ enter_kernel_irq:
 
     @ restore the kernel registers
     @ this must correspond to what is being saved in exit_kernel
-    @ load the kernel's original psr
-    ldmfd sp!, {r0}
-    @ TODO: it turns out that we don't want to do this
-    @ we should not save & restore the kernel cpsr, but for now I've just
-    @ commented out this line in order to throw away the value
-    @ msr cpsr, r0
-
-    @ now, restore the rest of the registers
     @ note: what was r0 in the original context is now r3
     ldmfd sp!, {r3-r12,lr}
 
