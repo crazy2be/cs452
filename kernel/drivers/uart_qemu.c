@@ -3,22 +3,15 @@
 #include <io.h>
 #include "../util.h"
 
+// included here since this defines a bunch of UART flags which are the same
+// in the qemu pbversatile arch
+#include "ts7200.h"
+
 // https://balau82.wordpress.com/2010/11/30/emulating-arm-pl011-serial-ports/
 // http://infocenter.arm.com/help/topic/com.arm.doc.ddi0183f/DDI0183.pdf
 #define UART0 0x101F1000
 #define UART1 0x101F2000
 #define DR 0
-
-#define UART_RSR_OFFSET 0x04
-#define UART_FLAG_OFFSET	0x18	// low 8 bits
-	#define CTS_MASK	0x1
-	#define DSR_MASK	0x2
-	#define DCD_MASK	0x4
-	#define TXBUSY_MASK	0x8
-	#define RXFE_MASK	0x10	// Receive buffer empty
-	#define TXFF_MASK	0x20	// Transmit buffer full
-	#define RXFF_MASK	0x40	// Receive buffer full
-	#define TXFE_MASK	0x80	// Transmit buffer empty
 
 static volatile int* reg(int channel, int off) {
 	switch (channel) {

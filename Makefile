@@ -86,6 +86,9 @@ USER_COMMON_OBJECTS = $(call objectify, $(USER_SOURCES) $(USER_ASM_SOURCES))
 TEST_COMMON_OBJECTS = $(call objectify, $(TEST_SOURCES) $(TEST_ASM_SOURCES))
 GENERATED_SOURCES = $(GEN_SRC_DIR)/syscalls.s $(GEN_SRC_DIR)/syscalls.h
 
+UNITY_SOURCE = $(BUILD_DIR)/unity.c
+UNITY_OBJ = $(UNITY_SOURCE:.c=.o)
+UNITY_DEPEND = $(UNITY_SOURCE:.c=.d)
 
 $(KERNEL_BIN) $(TEST_BIN): %.bin : %.elf
 	arm-none-eabi-objcopy -O binary $< $@
@@ -93,8 +96,14 @@ $(KERNEL_BIN) $(TEST_BIN): %.bin : %.elf
 $(TEST_ELF): $(KERNEL_COMMON_OBJECTS) $(TEST_COMMON_OBJECTS)
 	$(LD) $(LDFLAGS) -o $@ $(KERNEL_COMMON_OBJECTS) $(TEST_COMMON_OBJECTS) -lgcc
 
+# optionally perform a unity build for better optimization
+ifdef UNITY
+$(KERNEL_ELF): $(UNITY_OBJ) $(ASM_OBJECTS)
+	$(LD) $(LDFLAGS) -o $@ $(UNITY_OBJ) $(ASM_OBJECTS) -lgcc
+else
 $(KERNEL_ELF): $(KERNEL_COMMON_OBJECTS) $(USER_COMMON_OBJECTS)
 	$(LD) $(LDFLAGS) -o $@ $(KERNEL_COMMON_OBJECTS) $(USER_COMMON_OBJECTS) -lgcc
+endif
 
 $(KERNEL_ELF) $(TEST_ELF): $(LINKER_SCRIPT)
 
@@ -113,7 +122,7 @@ $(C_OBJECTS): $(BUILD_DIR)/%.o : $(BUILD_DIR)/%.s
 	$(AS) $(ASFLAGS) -o $@ $<
 
 # generate build directories before starting build
-$(C_OBJECTS) $(GENERATED_ASSEMBLY): | $(DIRS)
+$(C_OBJECTS) $(GENERATED_ASSEMBLY) $(UNITY_SOURCE): | $(DIRS)
 
 $(GENERATED_ASSEMBLY): $(GENERATED_SOURCES)
 
@@ -126,6 +135,16 @@ $(DIRS):
 
 # regenerate everything after the makefile changes
 $(ASM_OBJECTS) $(GENERATED_ASSEMBLY): $(MAKEFILE_NAME)
+
+# this generates a "unity compile" for the main kernel/user program
+# this is admittedly pretty gross, but helps the compiler optimize things better
+$(UNITY_SOURCE): $(MAKEFILE_NAME) $(KERNEL_SOURCES) $(USER_SOURCES)
+	./unity.sh $(KERNEL_SOURCES) $(USER_SOURCES) > $@
+
+$(UNITY_OBJ): $(UNITY_SOURCE) $(GENERATED_SOURCES)
+	$(CC) $(CFLAGS) $(ARCH_CFLAGS) -c -MD -MT $@ -o $@ $<
+
+-include $(UNITY_DEPEND)
 
 clean:
 	rm -rf $(BUILD_DIR) $(GEN_SRC_DIR)
@@ -158,6 +177,8 @@ qemu-debug-test: $(TEST_ELF)
 sync:
 	rsync -avzd . uw:cs452-kernel/
 	ssh uw "bash -c 'cd cs452-kernel && make clean && make ENV=ts7200 install'"
+
+all: $(KERNEL_ELF)
 
 TEST_OUTPUT=test_output
 TEST_EXPECTED=test_expected
