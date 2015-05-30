@@ -4,9 +4,9 @@
 #include "io.h"
 #include "drivers/timer.h"
 #include "drivers/uart.h"
+#include "drivers/irq.h"
 #include "context_switch.h"
 #include "prng.h"
-#include "irq.h"
 
 /** @file */
 
