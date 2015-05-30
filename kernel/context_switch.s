@@ -213,4 +213,5 @@ enter_kernel_irq:
     @ dummy value to return as syscall code
     mov r0, #37
 
+    restore_kernel_state
 .endm
