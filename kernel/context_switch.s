@@ -152,6 +152,8 @@ enter_kernel:
     @ the least-significant byte of the swi instruction is the syscall number
     and r0, r0, #0xff
 
+    @ this code is reused by enter_kernel_irq
+.macro restore_kernel_state
     @ restore the kernel registers
     @ this must correspond to what is being saved in exit_kernel
     @ note: what was r0 in the original context is now r3
@@ -165,7 +167,17 @@ enter_kernel:
     @ this is apparently how c returns a struct value
 	stmia r3, {r0, r1}
     bx lr
+.endm
+    restore_kernel_state
 
+@ This is quite similar to enter_kernel, but there are a few key differences
+@  - There is no IRQ stack, so we abuse sp_irq as a temporary (whereas in
+@    enter_kernel we free up r0 by saving it on the kernel stack). This changes
+@    the location order in which we store r0
+@  - The SPSR and LR are stored in IRQ mode, not SVC mode, so we have to switch
+@    back to that before going to SVC mode.
+@  - The LR points to a location 1 instruction after where we want to return to,
+@    so we fix it before saving it on the user stack
 enter_kernel_irq:
     @ Abuse sp_irq to store cpsr temp
     mrs sp, cpsr
@@ -186,7 +198,7 @@ enter_kernel_irq:
 
     @@@@@ IRQ MODE @@@@@
 
-    @ store user pc & cpsr
+    @ store user pc, cpsr, and user lr (in that order)
     @ the link register points to the instruction *after* the one we should
     @ return to
     sub lr, lr, #4
@@ -201,16 +213,4 @@ enter_kernel_irq:
     @ dummy value to return as syscall code
     mov r0, #37
 
-    @ restore the kernel registers
-    @ this must correspond to what is being saved in exit_kernel
-    @ note: what was r0 in the original context is now r3
-    ldmfd sp!, {r3-r12,lr}
-
-    @ return the user stack pointer
-    @ strangely, because we are returning to the point saved by the lr,
-    @ this actually returns from the exit_kernel function
-
-    @ r3 is the value of r0 originally passed into exit_kernel
-    @ this is apparently how c returns a struct value
-	stmia r3, {r0, r1}
-    bx lr
+.endm
