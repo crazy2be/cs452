@@ -181,40 +181,32 @@ enter_kernel:
     bx lr
 
 enter_kernel_irq:
-    @ Abuse sp_irq to store r0 while we're in system mode
-    @ This works since we don't allocate a stack for IRQ mode
-    @ TODO: we should just load the cpsr directly into sp
-    mov sp, r0
-
-    mrs r0, cpsr
-    orr r0, r0, #0x1f
-    msr cpsr, r0
+    @ Abuse sp_irq to store cpsr temp
+    mrs sp, cpsr
+    orr sp, sp, #0x1f
+    msr cpsr, sp
 
     @@@@@ SYSTEM MODE @@@@@
 
-    stmfd sp!, {r1-r12}
+    stmfd sp!, {r0-r12}
     @ save lr_usr in what will be the bottom position in the stack
-    str lr, [sp, #-16]
+    str lr, [sp, #-12]
 
     @ save user stack pointer before returning to IRQ mode
     mov r1, sp
 
+    mrs r0, cpsr
     and r0, r0, #0xfffffff2
     msr cpsr, r0
 
     @@@@@ IRQ MODE @@@@@
 
-    @ TODO: these steps can be compacted into one stmfd instruction
-    @ store r0 from user (now stored in sp_irq)
-    stmfd r1!, {sp}
-
-    @ store user pc
+    @ store user pc & cpsr
+    @ the link register points to the instruction *after* the one we should
+    @ return to
     sub lr, lr, #4
-    stmfd r1!, {lr}
-
-    @ store user cpsr
     mrs r2, spsr
-    stmfd r1!, {r2}
+    stmfd r1!, {r2, lr}
 
     @ decrement stack pointer to account for having already stored lr_usr above
     sub r1, r1, #4
