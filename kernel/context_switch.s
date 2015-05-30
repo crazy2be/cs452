@@ -44,8 +44,7 @@ exit_kernel:
 
     @ save LR since the LR gets overwritten when a user task switches into the kernel
     @ save r4-r12, since these registers are expected to be untouched by this call
-    @ save r3, since this is the address that C expects us to write the return struct into
-    @ save r2 (value of cpsr) to be able to restore the kernel psr (TODO: necessary?)
+    @ save r0, since this is the address that C expects us to write the return struct into
     stmfd sp!, {r0, r4-r12, r14}
 
     @ Now, restore the user state
@@ -58,9 +57,6 @@ exit_kernel:
     msr cpsr, r3
 
     @@@@@ SYSTEM MODE @@@@@
-
-    @ TODO: probably should reorder the way we store registers on the stack for efficiency
-    @ let's just get it working first
 
     @ restore the user stack pointer and link register
 
