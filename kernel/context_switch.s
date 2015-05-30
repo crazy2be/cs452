@@ -136,7 +136,7 @@ enter_kernel:
     @ stmfd saves them in the correct order
     @ they are r5, r4, r3, and r2, respectively
 
-    @ put user's initial r0 into r2
+    @ put user's initial r0 into r5
     ldmfd sp!, {r5}
 
     @ load the spsr (user's original cpsr)
@@ -175,11 +175,10 @@ enter_kernel_irq:
     @@@@@ SYSTEM MODE @@@@@
 
     stmfd sp!, {r0-r12}
-    @ save lr_usr in what will be the bottom position in the stack
-    str lr, [sp, #-12]
 
-    @ save user stack pointer before returning to IRQ mode
+    @ save user sp and lr before returning to IRQ mode
     mov r1, sp
+    mov r2, lr
 
     mrs r0, cpsr
     and r0, r0, #0xfffffff2
@@ -191,24 +190,21 @@ enter_kernel_irq:
     @ the link register points to the instruction *after* the one we should
     @ return to
     sub lr, lr, #4
-    mrs r2, spsr
-    stmfd r1!, {r2, lr}
-
-    @ decrement stack pointer to account for having already stored lr_usr above
-    sub r1, r1, #4
+    mrs r3, spsr
+    stmfd r1!, {r2, r3, lr}
 
     orr r0, r0, #0x13
     msr cpsr, r0
 
     @@@@@ SVC MODE @@@@@
 
+    @ dummy value to return as syscall code
+    mov r0, #37
+
     @ restore the kernel registers
     @ this must correspond to what is being saved in exit_kernel
     @ note: what was r0 in the original context is now r3
     ldmfd sp!, {r3-r12,lr}
-
-    @ dummy value to return as syscall code
-    mov r0, #37
 
     @ return the user stack pointer
     @ strangely, because we are returning to the point saved by the lr,
