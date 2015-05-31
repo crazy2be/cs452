@@ -143,6 +143,12 @@ struct task_descriptor *create_task(void *entrypoint, int priority, int parent_t
     return task;
 }
 
+static inline int tid_valid(int tid) {
+	return tid >= 0 && tid < tasks.next_tid
+		&& tasks.task_buf[tid].state != ZOMBIE;
+}
+static inline int tid_possible(int tid) { return tid >= 0 && tid <= MAX_TID; }
+
 // Implementation of syscalls
 //
 // All that any of these functions should do is to retrieve arguments from
@@ -222,19 +228,12 @@ static inline void send_handler(struct task_descriptor *current_task) {
     struct user_context *uc = current_task->context;
 	int to_tid = syscall_arg(uc, 0);
     // check if the tid exists & is not us
-    if (to_tid < 0 || tasks.next_tid <= to_tid || to_tid == current_task->tid) {
-        syscall_set_return(uc, (to_tid < 0 || MAX_TID <= to_tid) ? SEND_IMPOSSIBLE_TID : SEND_INVALID_TID);
+    if (!tid_valid(to_tid) || to_tid == current_task->tid) {
+        syscall_set_return(uc, tid_possible(to_tid) ? SEND_INVALID_TID: SEND_IMPOSSIBLE_TID);
         priority_task_queue_push(&queue, current_task);
         return;
     }
 	struct task_descriptor *to_td = &tasks.task_buf[to_tid];
-
-    // check that we're not sending to an exited task
-    if (to_td->state == ZOMBIE) {
-        syscall_set_return(uc, SEND_INVALID_TID);
-        priority_task_queue_push(&queue, current_task);
-        return;
-    }
 
 	if (to_td->state == RECV_BLK) {
         // if the task we're sending to is waiting for a reply,
@@ -261,9 +260,9 @@ static inline void reply_handler(struct task_descriptor *current_task) {
 	int send_tid = syscall_arg(recv_context, 0);
 
     // check if the tid exists & is not us
-    if (send_tid < 0 || tasks.next_tid <= send_tid || send_tid == current_task->tid) {
+    if (!tid_valid(send_tid) || send_tid == current_task->tid) {
         syscall_set_return(recv_context,
-            (send_tid < 0 || MAX_TID <= send_tid) ? REPLY_IMPOSSIBLE_TID : REPLY_INVALID_TID);
+            tid_possible(send_tid) ? REPLY_INVALID_TID : REPLY_IMPOSSIBLE_TID);
         priority_task_queue_push(&queue, current_task);
         return;
     }
@@ -272,7 +271,7 @@ static inline void reply_handler(struct task_descriptor *current_task) {
 
     // check that we sending to a task that expects a reply
     if (send_td->state != REPLY_BLK) {
-        syscall_set_return(recv_context, (send_td->state == ZOMBIE) ? REPLY_INVALID_TID : REPLY_UNSOLICITED);
+        syscall_set_return(recv_context, REPLY_UNSOLICITED);
         priority_task_queue_push(&queue, current_task);
         return;
     }
