@@ -171,14 +171,12 @@ static inline void create_handler(struct task_descriptor *current_task) {
     }
 
     syscall_return(uc, result);
+	priority_task_queue_push(&queue, current_task);
 }
 
-static inline void tid_handler(struct task_descriptor *current_task) {
-    syscall_return(get_task_context(current_task), current_task->tid);
-}
-
-static inline void parent_tid_handler(struct task_descriptor *current_task) {
-    syscall_return(get_task_context(current_task), current_task->parent_tid);
+static inline void pass_handler(struct task_descriptor *current_task) {
+	// no-op, just reschedule.
+	priority_task_queue_push(&queue, current_task);
 }
 
 static inline void exit_handler(struct task_descriptor *current_task) {
@@ -194,6 +192,17 @@ static inline void exit_handler(struct task_descriptor *current_task) {
         td->state = READY;
         priority_task_queue_push(&queue, td);
     }
+	// drop the current task off the queue
+}
+
+static inline void tid_handler(struct task_descriptor *current_task) {
+    syscall_return(get_task_context(current_task), current_task->tid);
+	priority_task_queue_push(&queue, current_task);
+}
+
+static inline void parent_tid_handler(struct task_descriptor *current_task) {
+    syscall_return(get_task_context(current_task), current_task->parent_tid);
+	priority_task_queue_push(&queue, current_task);
 }
 
 static void dispatch_msg(struct task_descriptor *to, struct task_descriptor *from) {
@@ -346,46 +355,21 @@ int boot(void (*init_task)(void), int init_task_priority) {
         // on the appropriate queue (unless exit is called, in which
         // case the task is not rescheduled).
         KASSERT(1 && "TEST ASSERT");
+		// TODO: We may be able to/want to gen this. That way we can ensure the
+		// order matches the numeric order of the syscall numbers, ensuring
+		// this is optimized to a jump table.
         switch (sc.syscall_num) {
-        case SYSCALL_PASS:
-            // no-op
-            priority_task_queue_push(&queue, current_task);
-            break;
-        case SYSCALL_EXITK:
-            // drop the current task off the queue
-
-            exit_handler(current_task);
-            break;
-        case SYSCALL_TID:
-            tid_handler(current_task);
-            priority_task_queue_push(&queue, current_task);
-            break;
-        case SYSCALL_PARENT_TID:
-            parent_tid_handler(current_task);
-            priority_task_queue_push(&queue, current_task);
-            break;
-        case SYSCALL_CREATE:
-            create_handler(current_task);
-            priority_task_queue_push(&queue, current_task);
-            break;
-		case SYSCALL_SEND:
-			send_handler(current_task);
-			break;
-		case SYSCALL_RECEIVE:
-			receive_handler(current_task);
-			break;
-		case SYSCALL_REPLY:
-			reply_handler(current_task);
-			break;
-		case SYSCALL_AWAIT:
-			await_handler(current_task);
-			break;
-        case SYSCALL_RAND:
-            rand_handler(current_task);
-            break;
-        case 37:
-            irq_handler(current_task);
-            break;
+        case SYSCALL_CREATE: create_handler(current_task); break;
+        case SYSCALL_PASS: pass_handler(current_task); break;
+		case SYSCALL_EXITK: exit_handler(current_task); break;
+        case SYSCALL_TID: tid_handler(current_task); break;
+        case SYSCALL_PARENT_TID: parent_tid_handler(current_task); break;
+		case SYSCALL_SEND: send_handler(current_task); break;
+		case SYSCALL_RECEIVE: receive_handler(current_task); break;
+		case SYSCALL_REPLY: reply_handler(current_task); break;
+		case SYSCALL_AWAIT: await_handler(current_task); break;
+        case SYSCALL_RAND: rand_handler(current_task); break;
+        case 37: irq_handler(current_task); break;
         default:
             KASSERT(0 && "UNKNOWN SYSCALL NUMBER");
             break;

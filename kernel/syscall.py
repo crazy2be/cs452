@@ -1,4 +1,4 @@
-syscalls = ["pass", "exitk", "create", "tid", "parent_tid",
+syscalls = ["create", "pass", "exitk", "tid", "parent_tid",
 			"send", "receive", "reply", "await", "rand"]
 
 asm = open("gen/syscalls.s", 'w')
