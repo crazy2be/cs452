@@ -143,10 +143,6 @@ struct task_descriptor *create_task(void *entrypoint, int priority, int parent_t
     return task;
 }
 
-static inline struct user_context* get_task_context(struct task_descriptor* task) {
-    return task->context;
-}
-
 // Implementation of syscalls
 //
 // All that any of these functions should do is to retrieve arguments from
@@ -155,7 +151,7 @@ static inline struct user_context* get_task_context(struct task_descriptor* task
 // There should be very little application logic in this code.
 
 static inline void create_handler(struct task_descriptor *current_task) {
-    struct user_context *uc = get_task_context(current_task);
+    struct user_context *uc = current_task->context;
     int priority = (int) syscall_arg(uc, 0);
     void *code = (void*) syscall_arg(uc, 1);
     int result;
@@ -188,7 +184,7 @@ static inline void exit_handler(struct task_descriptor *current_task) {
     struct task_descriptor *td;
     while ((td = task_queue_pop(&current_task->waiting_for_replies))) {
         // signal to the sending task that the send failed
-        syscall_return(get_task_context(td), SEND_INCOMPLETE);
+        syscall_return(td->context, SEND_INCOMPLETE);
         td->state = READY;
         priority_task_queue_push(&queue, td);
     }
@@ -196,29 +192,26 @@ static inline void exit_handler(struct task_descriptor *current_task) {
 }
 
 static inline void tid_handler(struct task_descriptor *current_task) {
-    syscall_return(get_task_context(current_task), current_task->tid);
+    syscall_return(current_task->context, current_task->tid);
 	priority_task_queue_push(&queue, current_task);
 }
 
 static inline void parent_tid_handler(struct task_descriptor *current_task) {
-    syscall_return(get_task_context(current_task), current_task->parent_tid);
+    syscall_return(current_task->context, current_task->parent_tid);
 	priority_task_queue_push(&queue, current_task);
 }
 
 static void dispatch_msg(struct task_descriptor *to, struct task_descriptor *from) {
-    struct user_context *to_context = get_task_context(to);
-    struct user_context *from_context = get_task_context(from);
-
     // write tid of sender to pointer provided by receiver
-    *(unsigned*)syscall_arg(to_context, 0) = from->tid;
+    *(unsigned*)syscall_arg(to->context, 0) = from->tid;
 
     // copy message into buffer
     // truncate it if it won't fit into the receiving buffer
-    memcpy((void*) syscall_arg(to_context, 1), (void*) syscall_arg(from_context, 1),
-            MIN((int) syscall_arg(to_context, 2), (int) syscall_arg(from_context, 2)));
+    memcpy((void*) syscall_arg(to->context, 1), (void*) syscall_arg(from->context, 1),
+            MIN((int) syscall_arg(to->context, 2), (int) syscall_arg(from->context, 2)));
 
     // return sent msg len to the receiver
-    syscall_return(to_context, syscall_arg(from_context, 2));
+    syscall_return(to->context, syscall_arg(from->context, 2));
 
 	from->state = REPLY_BLK;
 	to->state = READY;
@@ -226,7 +219,7 @@ static void dispatch_msg(struct task_descriptor *to, struct task_descriptor *fro
 }
 
 static inline void send_handler(struct task_descriptor *current_task) {
-    struct user_context *uc = get_task_context(current_task);
+    struct user_context *uc = current_task->context;
 	int to_tid = syscall_arg(uc, 0);
     // check if the tid exists & is not us
     if (to_tid < 0 || tasks.next_tid <= to_tid || to_tid == current_task->tid) {
@@ -264,7 +257,7 @@ static inline void receive_handler(struct task_descriptor *current_task) {
 }
 
 static inline void reply_handler(struct task_descriptor *current_task) {
-	struct user_context *recv_context = get_task_context(current_task);
+	struct user_context *recv_context = current_task->context;
 	int send_tid = syscall_arg(recv_context, 0);
 
     // check if the tid exists & is not us
@@ -284,7 +277,7 @@ static inline void reply_handler(struct task_descriptor *current_task) {
         return;
     }
 
-    struct user_context *send_context = get_task_context(send_td);
+    struct user_context *send_context = send_td->context;
 
     // copy the reply back
     int send_len = syscall_arg(send_context, 4);
@@ -313,7 +306,7 @@ static inline void await_handler(struct task_descriptor *current_task) {
 }
 
 static inline void rand_handler(struct task_descriptor *current_task) {
-    get_task_context(current_task)->r0 = prng_gen(&random_gen);
+    current_task->context->r0 = prng_gen(&random_gen);
     priority_task_queue_push(&queue, current_task);
 }
 
