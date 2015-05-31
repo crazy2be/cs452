@@ -35,10 +35,9 @@ void timer_init(void) {
     *reg = TIMER_INIT_MASK;
 }
 
-/* long long timer_time(void) { */
-/* 	return -*(TIMER0 + TIMER_VALUE); */
-/* //	return -(long long)*(int*)(TIMER3_BASE + VAL_OFFSET) + ((long long)s_cwraps << 32); */
-/* } */
+long long timer_time(void) {
+	return *(volatile unsigned*)(TIMER_BASE + TIMER_VALUE_OFFSET);
+}
 
 void timer_clear_interrupt(void) {
     volatile unsigned *clr = (unsigned*)(TIMER_BASE + TIMER_INTCLR_OFFSET);

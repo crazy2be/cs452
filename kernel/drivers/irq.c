@@ -12,6 +12,7 @@
 #define VIC1_BASE 0x800b0000
 #define VIC2_BASE 0x800c0000
 
+#define STATUS_OFFSET 0x0
 #define ENABLE_OFFSET 0x10
 #define SOFTINT_OFFSET 0x18
 #define SOFTINT_CLEAR_OFFSET 0x1c
@@ -52,8 +53,8 @@ void setup_irq(void) {
     VWRITE(0x10140010, IRQ_MASK(IRQ_TIMER));
 #else
     // writing to VIC1IntEnable & VIC2IntEnable (see ep93xx user manual)
-    VWRITE(VIC1_BASE + ENABLE_OFFSET, IRQ_MASK(IRQ_TIMER - 32));
-    VWRITE(VIC2_BASE + ENABLE_OFFSET, 0x0);
+    VWRITE(VIC1_BASE + ENABLE_OFFSET, 0x0);
+    VWRITE(VIC2_BASE + ENABLE_OFFSET, IRQ_MASK(IRQ_TIMER - 32));
 #endif
 }
 
@@ -71,6 +72,8 @@ unsigned long long get_irq(void) {
     return (unsigned long long)(*(volatile unsigned*) 0x10140000);
 #else
     // TODO: DTRT
-    return 0xbeefbeef;
+    unsigned lo = *(volatile unsigned*)(VIC1_BASE + STATUS_OFFSET);
+    unsigned hi = *(volatile unsigned*)(VIC2_BASE + STATUS_OFFSET);
+    return (((unsigned long long)hi) << 32) | ((unsigned long long) lo);
 #endif
 }
