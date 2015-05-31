@@ -74,4 +74,10 @@ int reply(int tid, const void *reply, int replylen);
 #define REPLY_UNSOLICITED -3
 #define REPLY_TOO_LONG -4
 
+#define AwaitEvent await
+#define EID_UART_READ (1 << 16)
+#define EID_UART_WRITE(c) ((2 << 16) | (c))
+#define EID_TIMER_TICK (3 << 16)
+int await(unsigned eid);
+
 unsigned rand(void);

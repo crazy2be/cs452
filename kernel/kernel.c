@@ -298,6 +298,10 @@ static inline void reply_handler(struct task_descriptor *current_task) {
 	priority_task_queue_push(&queue, current_task);
 }
 
+void await_handler(struct task_descriptor *current_task) {
+	asssert(0 && "AWAIT NOT IMPLEMENTED");
+}
+
 void rand_handler(struct task_descriptor *current_task) {
     get_task_context(current_task)->r0 = prng_gen(&random_gen);
     priority_task_queue_push(&queue, current_task);
@@ -359,6 +363,9 @@ int boot(void (*init_task)(void), int init_task_priority) {
 			break;
 		case SYSCALL_REPLY:
 			reply_handler(current_task);
+			break;
+		case SYSCALL_AWAIT:
+			await_handler(current_task);
 			break;
         case SYSCALL_RAND:
             rand_handler(current_task);
