@@ -5,9 +5,10 @@
 #define TIME_SECOND 508000 // 508kHz
 #endif
 
-void timer_init();
-void timer_service();
-long long timer_time();
+void timer_init(void);
+long long timer_time(void);
+void timer_clear_interrupt(void);
+
 int time_hours(long long time);
 int time_minutes(long long time);
 int time_seconds(long long time);

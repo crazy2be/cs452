@@ -30,7 +30,7 @@ void setup_irq(void) {
 #ifdef QEMU
     // see http://infocenter.arm.com/help/topic/com.arm.doc.dui0224i/DUI0224I_realview_platform_baseboard_for_arm926ej_s_ug.pdf
     // PICIntEnable
-    VWRITE(0x10140010, 0x0000ffff);
+    VWRITE(0x10140010, IRQ_MASK(IRQ_TIMER));
 #else
     // writing to VIC1IntEnable & VIC2IntEnable (see ep93xx user manual)
     VWRITE(VIC1_BASE + ENABLE_OFFSET, 0xffffffff);
@@ -38,27 +38,27 @@ void setup_irq(void) {
 #endif
 }
 
-void clear_irq(unsigned interrupts_c) {
+void clear_irq(unsigned long long interrupts_c) {
 #ifdef QEMU
-    VWRITE(0x1014001c, interrupts_c);
+    VWRITE(0x1014001c, (unsigned) interrupts_c);
 #else
     VWRITE(VIC1_BASE + SOFTINT_CLEAR_OFFSET, interrupts_c);
     VWRITE(VIC2_BASE + SOFTINT_CLEAR_OFFSET, interrupts_c);
 #endif
 }
 
-void set_irq(unsigned interrupts) {
+void set_irq(unsigned long long interrupts) {
 #ifdef QEMU
-    VWRITE(0x10140018, interrupts);
+    VWRITE(0x10140018, (unsigned) interrupts);
 #else
     VWRITE(VIC1_BASE + SOFTINT_OFFSET, interrupts);
     VWRITE(VIC1_BASE + SOFTINT_OFFSET, interrupts);
 #endif
 }
 
-unsigned get_irq(void) {
+unsigned long long get_irq(void) {
 #ifdef QEMU
-    return *(volatile unsigned*) 0x10140000;
+    return (unsigned long long)(*(volatile unsigned*) 0x10140000);
 #else
     // TODO: DTRT
     return 0xbeefbeef;
