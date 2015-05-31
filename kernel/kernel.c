@@ -141,7 +141,6 @@ struct task_descriptor *create_task(void *entrypoint, int priority, int parent_t
     /* cpsr |= 0x80; // turn interrupts on for this task */
     cpsr &= ~0x80; // deassert the I bit to turn on interrupts
     uc->cpsr = cpsr;
-    printf("CPSR initialized to %x" EOL, cpsr);
 
     task->context = uc;
 
