@@ -47,9 +47,6 @@ void setup_cache(void) {
 }
 
 void setup(void) {
-    setup_cache();
-    setup_irq();
-
     // write to the control registers of the UARTs to properly configure them
     // for transmission
 	uart_configure(COM1, 2400, OFF);
@@ -63,6 +60,11 @@ void setup(void) {
 	while (!uart_canwrite(COM2)) {} uart_write(COM2, 'o');
 	while (!uart_canwrite(COM2)) {} uart_write(COM2, 'o');
 	while (!uart_canwrite(COM2)) {} uart_write(COM2, 't');
+
+    setup_cache();
+	while (!uart_canwrite(COM2)) {} uart_write(COM2, '.');
+    setup_irq();
+	while (!uart_canwrite(COM2)) {} uart_write(COM2, '.');
 
 	// Zero BSS, because we should.
 	extern char __bss_start__, __bss_end__;
