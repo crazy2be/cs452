@@ -314,15 +314,28 @@ static inline void rand_handler(struct task_descriptor *current_task) {
 }
 
 static inline void irq_handler(struct task_descriptor *current_task) {
-    unsigned irq_mask = get_irq();
-    unsigned irq = least_significant_set_bit(irq_mask);
+    unsigned long long irq_mask = get_irq();
+    unsigned irq_mask_lo = irq_mask;
+    unsigned irq_mask_hi = irq_mask >> 32;
+    unsigned irq;
+
+    if (irq_mask_lo) {
+        irq = least_significant_set_bit(irq_mask_lo);
+    } else {
+        irq = 32 + least_significant_set_bit(irq_mask_hi);
+    }
+
+    printf("GOT AN INTERRUPT %d raw = (%x %x)" EOL, irq, irq_mask_hi, irq_mask_lo);
+
     switch (irq) {
     case IRQ_TIMER:
         timer_clear_interrupt();
         break;
+    default:
+        KASSERT(0 && "UNKNOWN INTERRUPT!");
+        break;
     }
     priority_task_queue_push(&queue, current_task);
-    printf("GOT AN INTERRUPT %d" EOL, irq);
 }
 
 #include "../gen/syscalls.h"
