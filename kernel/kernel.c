@@ -166,7 +166,7 @@ static inline void create_handler(struct task_descriptor *current_task) {
         result = new_task->tid;
     }
 
-    syscall_return(uc, result);
+    syscall_set_return(uc, result);
 	priority_task_queue_push(&queue, current_task);
 }
 
@@ -184,7 +184,7 @@ static inline void exit_handler(struct task_descriptor *current_task) {
     struct task_descriptor *td;
     while ((td = task_queue_pop(&current_task->waiting_for_replies))) {
         // signal to the sending task that the send failed
-        syscall_return(td->context, SEND_INCOMPLETE);
+        syscall_set_return(td->context, SEND_INCOMPLETE);
         td->state = READY;
         priority_task_queue_push(&queue, td);
     }
@@ -192,12 +192,12 @@ static inline void exit_handler(struct task_descriptor *current_task) {
 }
 
 static inline void tid_handler(struct task_descriptor *current_task) {
-    syscall_return(current_task->context, current_task->tid);
+    syscall_set_return(current_task->context, current_task->tid);
 	priority_task_queue_push(&queue, current_task);
 }
 
 static inline void parent_tid_handler(struct task_descriptor *current_task) {
-    syscall_return(current_task->context, current_task->parent_tid);
+    syscall_set_return(current_task->context, current_task->parent_tid);
 	priority_task_queue_push(&queue, current_task);
 }
 
@@ -211,7 +211,7 @@ static void dispatch_msg(struct task_descriptor *to, struct task_descriptor *fro
             MIN((int) syscall_arg(to->context, 2), (int) syscall_arg(from->context, 2)));
 
     // return sent msg len to the receiver
-    syscall_return(to->context, syscall_arg(from->context, 2));
+    syscall_set_return(to->context, syscall_arg(from->context, 2));
 
 	from->state = REPLY_BLK;
 	to->state = READY;
@@ -223,7 +223,7 @@ static inline void send_handler(struct task_descriptor *current_task) {
 	int to_tid = syscall_arg(uc, 0);
     // check if the tid exists & is not us
     if (to_tid < 0 || tasks.next_tid <= to_tid || to_tid == current_task->tid) {
-        syscall_return(uc, (to_tid < 0 || MAX_TID <= to_tid) ? SEND_IMPOSSIBLE_TID : SEND_INVALID_TID);
+        syscall_set_return(uc, (to_tid < 0 || MAX_TID <= to_tid) ? SEND_IMPOSSIBLE_TID : SEND_INVALID_TID);
         priority_task_queue_push(&queue, current_task);
         return;
     }
@@ -231,7 +231,7 @@ static inline void send_handler(struct task_descriptor *current_task) {
 
     // check that we're not sending to an exited task
     if (to_td->state == ZOMBIE) {
-        syscall_return(uc, SEND_INVALID_TID);
+        syscall_set_return(uc, SEND_INVALID_TID);
         priority_task_queue_push(&queue, current_task);
         return;
     }
@@ -262,7 +262,7 @@ static inline void reply_handler(struct task_descriptor *current_task) {
 
     // check if the tid exists & is not us
     if (send_tid < 0 || tasks.next_tid <= send_tid || send_tid == current_task->tid) {
-        syscall_return(recv_context,
+        syscall_set_return(recv_context,
             (send_tid < 0 || MAX_TID <= send_tid) ? REPLY_IMPOSSIBLE_TID : REPLY_INVALID_TID);
         priority_task_queue_push(&queue, current_task);
         return;
@@ -272,7 +272,7 @@ static inline void reply_handler(struct task_descriptor *current_task) {
 
     // check that we sending to a task that expects a reply
     if (send_td->state != REPLY_BLK) {
-        syscall_return(recv_context, (send_td->state == ZOMBIE) ? REPLY_INVALID_TID : REPLY_UNSOLICITED);
+        syscall_set_return(recv_context, (send_td->state == ZOMBIE) ? REPLY_INVALID_TID : REPLY_UNSOLICITED);
         priority_task_queue_push(&queue, current_task);
         return;
     }
@@ -284,7 +284,7 @@ static inline void reply_handler(struct task_descriptor *current_task) {
     int recv_len = syscall_arg(recv_context, 2);
 
     if (send_len < recv_len) {
-        syscall_return(recv_context, REPLY_TOO_LONG);
+        syscall_set_return(recv_context, REPLY_TOO_LONG);
         priority_task_queue_push(&queue, current_task);
         return;
     }
@@ -292,8 +292,8 @@ static inline void reply_handler(struct task_descriptor *current_task) {
     memcpy((void*) syscall_arg(send_context, 3), (void*) syscall_arg(recv_context, 1), recv_len);
 
     // return the length of the reply to the sender
-    syscall_return(send_context, recv_len);
-    syscall_return(recv_context, REPLY_SUCCESSFUL);
+    syscall_set_return(send_context, recv_len);
+    syscall_set_return(recv_context, REPLY_SUCCESSFUL);
 
     // queue both the sending and receiving tasks to execute again
 	send_td->state = READY;
