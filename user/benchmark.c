@@ -1,3 +1,4 @@
+#if 0
 #include "benchmark.h"
 #include <kernel.h>
 #include <io.h>
@@ -52,3 +53,4 @@ void benchmark(void) {
     printf("Benchmark took %d time (msg_size = %d, iterations = %d, pdelta = %d)" EOL,
         (unsigned) (end - start), BENCHMARK_MSG_SIZE, ITERATIONS, SEND_PRIORITY - RECV_PRIORITY);
 }
+#endif

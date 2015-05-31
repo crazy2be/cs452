@@ -17,14 +17,30 @@
 #define SOFTINT_CLEAR_OFFSET 0x1c
 #endif
 
+void dump_irq(void) {
+    volatile unsigned* data = (unsigned*) VIC1_BASE;
+    for (unsigned i = 0; i < 32; i++) {
+        printf("%x ", data[i]);
+    }
+    printf(EOL);
+}
+
 void setup_irq(void) {
     // TODO: see A.2.6.8 in the arm manual
 
     // see A.2.5 in the manual
     unsigned cpsr;
     __asm__ ("mrs %0, cpsr" : "=r"(cpsr));
-    cpsr &= ~0x80; // deassert the I bit to turn on interrupts
+    cpsr |= 0xc0; // assert the I & F bits to disable all interrupts (normal & fast)
     __asm__ __volatile__ ("msr cpsr, %0" : : "r"(cpsr));
+
+    // clear any soft interrupts
+#ifdef QEMU
+    VWRITE(0x1014001c, (unsigned) interrupts_c);
+#else
+    VWRITE(VIC1_BASE + SOFTINT_CLEAR_OFFSET, 0xffffffff);
+    VWRITE(VIC2_BASE + SOFTINT_CLEAR_OFFSET, 0xffffffff);
+#endif
 
     // enable all interrupts on the interrupt controller
 #ifdef QEMU
@@ -33,28 +49,19 @@ void setup_irq(void) {
     VWRITE(0x10140010, IRQ_MASK(IRQ_TIMER));
 #else
     // writing to VIC1IntEnable & VIC2IntEnable (see ep93xx user manual)
-    VWRITE(VIC1_BASE + ENABLE_OFFSET, 0xffffffff);
-    VWRITE(VIC2_BASE + ENABLE_OFFSET, 0xffffffff);
+    VWRITE(VIC1_BASE + ENABLE_OFFSET, IRQ_MASK(IRQ_TIMER - 32));
+    VWRITE(VIC2_BASE + ENABLE_OFFSET, 0x0);
 #endif
 }
 
-void clear_irq(unsigned long long interrupts_c) {
-#ifdef QEMU
-    VWRITE(0x1014001c, (unsigned) interrupts_c);
-#else
-    VWRITE(VIC1_BASE + SOFTINT_CLEAR_OFFSET, interrupts_c);
-    VWRITE(VIC2_BASE + SOFTINT_CLEAR_OFFSET, interrupts_c);
-#endif
-}
-
-void set_irq(unsigned long long interrupts) {
-#ifdef QEMU
-    VWRITE(0x10140018, (unsigned) interrupts);
-#else
-    VWRITE(VIC1_BASE + SOFTINT_OFFSET, interrupts);
-    VWRITE(VIC1_BASE + SOFTINT_OFFSET, interrupts);
-#endif
-}
+/* void set_irq(unsigned long long interrupts) { */
+/* #ifdef QEMU */
+/*     VWRITE(0x10140018, (unsigned) interrupts); */
+/* #else */
+/*     VWRITE(VIC1_BASE + SOFTINT_OFFSET, interrupts); */
+/*     VWRITE(VIC1_BASE + SOFTINT_OFFSET, interrupts); */
+/* #endif */
+/* } */
 
 unsigned long long get_irq(void) {
 #ifdef QEMU

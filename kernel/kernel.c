@@ -134,9 +134,14 @@ struct task_descriptor *create_task(void *entrypoint, int priority, int parent_t
     uc->lr = (unsigned) &exitk;
     // leave most everything else uninitialized
     uc->r12 = (unsigned) sp;
+
     unsigned cpsr;
     __asm__ ("mrs %0, cpsr" : "=r" (cpsr));
-    uc->cpsr = cpsr & 0xfffffff0;
+    cpsr &= 0xfffffff0; // set mode to user mode
+    /* cpsr |= 0x80; // turn interrupts on for this task */
+    cpsr &= ~0x80; // deassert the I bit to turn on interrupts
+    uc->cpsr = cpsr;
+    printf("CPSR initialized to %x" EOL, cpsr);
 
     task->context = uc;
 
@@ -346,21 +351,21 @@ int boot(void (*init_task)(void), int init_task_priority) {
         // after responding to the syscall, schedule it for execution
         // on the appropriate queue (unless exit is called, in which
         // case the task is not rescheduled).
-        KASSERT(1 && "TEST ASSERT");
+
 		// TODO: We may be able to/want to gen this. That way we can ensure the
 		// order matches the numeric order of the syscall numbers, ensuring
 		// this is optimized to a jump table.
         switch (sc.syscall_num) {
-        case SYSCALL_CREATE: create_handler(current_task); break;
-        case SYSCALL_PASS: pass_handler(current_task); break;
-		case SYSCALL_EXITK: exit_handler(current_task); break;
-        case SYSCALL_TID: tid_handler(current_task); break;
+        case SYSCALL_CREATE:     create_handler(current_task);     break;
+        case SYSCALL_PASS:       pass_handler(current_task);       break;
+		case SYSCALL_EXITK:      exit_handler(current_task);       break;
+        case SYSCALL_TID:        tid_handler(current_task);        break;
         case SYSCALL_PARENT_TID: parent_tid_handler(current_task); break;
-		case SYSCALL_SEND: send_handler(current_task); break;
-		case SYSCALL_RECEIVE: receive_handler(current_task); break;
-		case SYSCALL_REPLY: reply_handler(current_task); break;
-		case SYSCALL_AWAIT: await_handler(current_task); break;
-        case SYSCALL_RAND: rand_handler(current_task); break;
+		case SYSCALL_SEND:       send_handler(current_task);       break;
+		case SYSCALL_RECEIVE:    receive_handler(current_task);    break;
+		case SYSCALL_REPLY:      reply_handler(current_task);      break;
+		case SYSCALL_AWAIT:      await_handler(current_task);      break;
+        case SYSCALL_RAND:       rand_handler(current_task);       break;
         case 37: irq_handler(current_task); break;
         default:
             KASSERT(0 && "UNKNOWN SYSCALL NUMBER");
