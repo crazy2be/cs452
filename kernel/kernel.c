@@ -7,6 +7,7 @@
 #include "drivers/irq.h"
 #include "context_switch.h"
 #include "prng.h"
+#include "least_significant_set_bit.h"
 
 /** @file */
 
@@ -298,13 +299,25 @@ static inline void reply_handler(struct task_descriptor *current_task) {
 	priority_task_queue_push(&queue, current_task);
 }
 
-void await_handler(struct task_descriptor *current_task) {
-	asssert(0 && "AWAIT NOT IMPLEMENTED");
+static inline void await_handler(struct task_descriptor *current_task) {
+	KASSERT(0 && "AWAIT NOT IMPLEMENTED");
 }
 
-void rand_handler(struct task_descriptor *current_task) {
+static inline void rand_handler(struct task_descriptor *current_task) {
     get_task_context(current_task)->r0 = prng_gen(&random_gen);
     priority_task_queue_push(&queue, current_task);
+}
+
+static inline void irq_handler(struct task_descriptor *current_task) {
+    unsigned irq_mask = get_irq();
+    unsigned irq = least_significant_set_bit(irq_mask);
+    switch (irq) {
+    case IRQ_TIMER:
+        timer_clear_interrupt();
+        break;
+    }
+    priority_task_queue_push(&queue, current_task);
+    printf("GOT AN INTERRUPT %d" EOL, irq);
 }
 
 #include "../gen/syscalls.h"
@@ -371,9 +384,7 @@ int boot(void (*init_task)(void), int init_task_priority) {
             rand_handler(current_task);
             break;
         case 37:
-            printf("GOT AN INTERRUPT %x" EOL, get_irq());
-            clear_irq(0xffffffff);
-            priority_task_queue_push(&queue, current_task);
+            irq_handler(current_task);
             break;
         default:
             KASSERT(0 && "UNKNOWN SYSCALL NUMBER");
