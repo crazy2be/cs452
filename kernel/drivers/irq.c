@@ -18,11 +18,14 @@
 #endif
 
 void dump_irq(void) {
+#ifdef QEMU
+#else
     volatile unsigned* data = (unsigned*) VIC1_BASE;
     for (unsigned i = 0; i < 32; i++) {
         printf("%x ", data[i]);
     }
     printf(EOL);
+#endif
 }
 
 void setup_irq(void) {
@@ -36,7 +39,7 @@ void setup_irq(void) {
 
     // clear any soft interrupts
 #ifdef QEMU
-    VWRITE(0x1014001c, (unsigned) interrupts_c);
+    VWRITE(0x1014001c, 0xffffffff);
 #else
     VWRITE(VIC1_BASE + SOFTINT_CLEAR_OFFSET, 0xffffffff);
     VWRITE(VIC2_BASE + SOFTINT_CLEAR_OFFSET, 0xffffffff);
