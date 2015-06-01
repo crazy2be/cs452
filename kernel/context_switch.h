@@ -45,7 +45,7 @@ static inline unsigned syscall_arg(struct user_context *uc, unsigned n) {
     }
 }
 
-static inline void syscall_return(struct user_context *uc, unsigned r) {
+static inline void syscall_set_return(struct user_context *uc, unsigned r) {
     uc->r0 = r;
 }
 

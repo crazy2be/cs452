@@ -1,5 +1,6 @@
 .text
 .globl enter_kernel
+.globl enter_kernel_irq
 .globl exit_kernel
 .globl pass
 
@@ -20,9 +21,12 @@
 
 @ state save of user task should be 16 registers
 
-@ state save of kernel should be 11 registers (cpsr, r4-r12, r14)
-@ we can save less since we don't care about r0-r3, and r13
+@ state save of kernel should be 11 registers (r0, r4-r12, r14)
+@ we can save less since we don't care about r1-r3, and r13
 @ is preserved for us
+@ we also don't care about cpsr, since the compiler doesn't assume
+@ this is preserved by the call to exit_kernel
+@ r0 is a pointer to the struct returned by exit_kernel
 
 @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 
@@ -35,20 +39,13 @@ exit_kernel:
     @ r0 is where C expects us to write the struct return value
     @ r1 is the user task's stack pointer
 
-    @ save the supervisor psr
-    mrs r2, cpsr
-
-    @ shuffle the struct return pointer around so it can be saved in order with the stmfd
-    mov r3, r0
-
     @ first, save the kernel's state.
     @ this needs to match exactly with how it's loaded back in enter_kernel.
 
     @ save LR since the LR gets overwritten when a user task switches into the kernel
     @ save r4-r12, since these registers are expected to be untouched by this call
-    @ save r3, since this is the address that C expects us to write the return struct into
-    @ save r2 (value of cpsr) to be able to restore the kernel psr (TODO: necessary?)
-    stmfd sp!, {r2-r3, r4-r12, r14}
+    @ save r0, since this is the address that C expects us to write the return struct into
+    stmfd sp!, {r0, r4-r12, r14}
 
     @ Now, restore the user state
     @ Restore the SP and LR while in system mode
@@ -61,9 +58,6 @@ exit_kernel:
 
     @@@@@ SYSTEM MODE @@@@@
 
-    @ TODO: probably should reorder the way we store registers on the stack for efficiency
-    @ let's just get it working first
-
     @ restore the user stack pointer and link register
 
     @ we want the value of the stack pointer after all the values have been popped
@@ -73,7 +67,7 @@ exit_kernel:
     ldmfd r1!, {lr}
 
     @ switch back to supervisor mode
-    and r3, r3, #0x13
+    and r3, r3, #0xfffffff3
     msr cpsr, r3
 
     @@@@@ SUPERVISOR MODE @@@@@
@@ -92,7 +86,7 @@ exit_kernel:
 
     @@@@@ USER MODE @@@@@
 
-enter_kernel:
+.macro enter_kernel_m mode
     @ We have to do a little bit of dancing back and forth to save all
     @ the registers.
     @ We need to r0-r12,r14,r14_svc, and spsr
@@ -100,22 +94,17 @@ enter_kernel:
 
     @ First, we have to switch to system mode, so we can even access the user
     @ stack pointer.
-    @ This requires the use of a register, so we need to save a register to
-    @ the kernel stack, then retrieve it later. We use r0 for this purpose.
-    @ In system mode, we save r1-r12,r14 to the user stack.
+    @ In system mode, we save r0-r12,r14 to the user stack.
     @ We then switch back to supervisor mode to save spsr and r14_svc (the saved
     @ value of pc) to the user stack.
     @ Finally, sp is returned into the kernel.
 
+    @ Target mode is either SVC or IRQ, depending on the \mode argument
+
     @@@@@ SUPERVISOR MODE @@@@@
 
-    @ push a register onto the kernel stack to make room
-    stmfd sp!, {r0}
-
-    @ then load cpsr into r0, and mask in the right bits to go to system mode
-    mrs r0, cpsr
-    orr r0, r0, #0x1f
-    msr cpsr, r0
+    @ then load cpsr into r0, and mask in the right bits to go to system mode, with interrupts off
+    msr cpsr_c, #0xdf
 
     @@@@@ SYSTEM MODE @@@@@
 
@@ -124,51 +113,56 @@ enter_kernel:
     @ in init_task and how it is loaded in exit_kernel
 
     @ save all registers except the stack pointer
-    stmfd sp!, {r1-r12}
+    stmfd sp!, {r0-r12}
 
     @ save the user stack pointer and lr
     mov r1, sp
     mov r2, lr
 
-    @ r0 is on the supervisor stack, so switch back to that
+    @ r0 is on the target stack, so switch back to that
+    @ remember to keep interrupts off
 
-    and r0, r0, #0xfffffff3
-    msr cpsr, r0
+.if \mode
+    msr cpsr_c, #0xd3
+.else
+    msr cpsr_c, #0xd2
+.endif
 
-    @@@@@ SUPERVISOR MODE @@@@@
+    @@@@@ TARGET MODE @@@@@
 
-    @ store user's r0, pc, spsr, and lr on the stack
+    @ store user's pc, spsr, and lr on the stack
     @ note that we've shuffled these around into weird registers so that
     @ stmfd saves them in the correct order
-    @ they are r5, r4, r3, and r2, respectively
-
-    @ put user's initial r0 into r2
-    ldmfd sp!, {r5}
+    @ they are r4, r3, and r2, respectively
 
     @ load the spsr (user's original cpsr)
     mrs r3, spsr
 
-    @ move lr into r4 purely to have the correct save order
-    mov r4, lr
+.ifeq \mode
+    @ with IRQ interrupts, the link register points to the instruction *after*
+    @ the one we should return to
+    sub lr, lr, #4
+.endif
 
-    stmfd r1!, {r2-r5}
+    stmfd r1!, {r2-r3, lr}
 
-    @ restore the kernel registers
-    @ this must correspond to what is being saved in exit_kernel
-    @ load the kernel's original psr
-    @ TODO: is this even necessary?
-    ldmfd sp!, {r0}
-    msr cpsr, r0
-
+.if \mode
     @ get the syscall number
     ldr r0, [lr, #-4]
     @ the least-significant byte of the swi instruction is the syscall number
     and r0, r0, #0xff
+.else
+    @ go to SVC mode
+    msr cpsr_c, #0xd3
 
-    @ now, restore the rest of the registers
+    @ dummy value to return as syscall code
+    mov r0, #37
+.endif
+
+    @ restore the kernel registers
+    @ this must correspond to what is being saved in exit_kernel
     @ note: what was r0 in the original context is now r3
     ldmfd sp!, {r3-r12,lr}
-
 
     @ return the user stack pointer
     @ strangely, because we are returning to the point saved by the lr,
@@ -178,3 +172,10 @@ enter_kernel:
     @ this is apparently how c returns a struct value
 	stmia r3, {r0, r1}
     bx lr
+.endm
+
+enter_kernel:
+    enter_kernel_m 1
+
+enter_kernel_irq:
+   enter_kernel_m 0

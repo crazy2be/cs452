@@ -169,17 +169,38 @@ void rps_server(void) {
 }
 
 
+#include "../kernel/drivers/timer.h"
+
 void init_task(void) {
-    create(PRIORITY_MAX, nameserver);
-    create(PRIORITY_MIN, rps_server);
-    for (int i = MIN_CLIENT_TID; i <= MAX_CLIENT_TID; i++) {
-        int tid = create(PRIORITY_MIN, rps_client);
-        ASSERT(i == tid);
+    unsigned i = 0;
+    unsigned j = 0;
+    for (;;) {
+        if ((++i & 0x3ffff) == 0) {
+            printf("Iteration %d, time %d" EOL, i, (unsigned) timer_time());
+            if (++j > 30) {
+                return;
+            }
+        }
     }
+    /* *(volatile unsigned*) 0x10140018 = 0xdeadbeef; */
+    /* printf("After interrupt generated" EOL); */
+    /* *(volatile unsigned*) 0x10140018 = 0xdeadbeef; */
+    /* printf("After interrupt generated" EOL); */
+    /* int tid; */
+    /* tid = create(PRIORITY_MAX, nameserver); */
+    /* printf("Got %d as TID for name server" EOL, tid); */
+    /* tid = create(PRIORITY_MIN, rps_server); */
+    /* printf("Got %d as TID for rps server" EOL, tid); */
+    /* for (int i = MIN_CLIENT_TID; i <= MAX_CLIENT_TID; i++) { */
+    /*     tid = create(PRIORITY_MIN, rps_client); */
+    /*     printf("Got %d as TID for client %d" EOL, tid, i); */
+    /*     ASSERT(i == tid); */
+    /* } */
 }
 
 #include "benchmark.h"
 int main(int argc, char *argv[]) {
     /* boot(benchmark, 0); */
+	boot(init_task, 0);
 	boot(init_task, 0);
 }

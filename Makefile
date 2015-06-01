@@ -183,6 +183,17 @@ all: $(KERNEL_ELF)
 TEST_OUTPUT=test_output
 TEST_EXPECTED=test_expected
 
+test-run: $(TEST_BIN)
+	@echo "Press Ctrl+A x to quit"
+	qemu-system-arm -M versatilepb -m 32M -nographic -kernel $(TEST_BIN)
+
+test-start: $(TEST_BIN)
+	@echo "Starting tests in suspended mode for debugging... Press Ctrl+A x to quit."
+	qemu-system-arm -M versatilepb -m 32M -nographic -s -S -kernel $(TEST_BIN)
+
+test-debug: $(TEST_ELF)
+	arm-none-eabi-gdb -ex "target remote localhost:1234" $(TEST_ELF)
+
 test: $(TEST_BIN)
 	./qemu_capture $(TEST_BIN) $(TEST_ELF) $(TEST_OUTPUT)
 	diff -y $(TEST_EXPECTED) $(TEST_OUTPUT)
