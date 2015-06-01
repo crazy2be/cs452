@@ -1,4 +1,3 @@
-#if 0
 #include "benchmark.h"
 #include <kernel.h>
 #include <io.h>
@@ -42,15 +41,14 @@ void benchmark(void) {
     unsigned dummy;
     int tid;
 
-    long long start = timer_time();
+    long long start = 0xffffffff - timer_time();
 
     create(SEND_PRIORITY, sender);
     create(RECV_PRIORITY, receiver);
     receive(&tid, &dummy, sizeof(dummy));
 
-    long long end = timer_time();
+    long long end = 0xffffffff - timer_time();
 
     printf("Benchmark took %d time (msg_size = %d, iterations = %d, pdelta = %d)" EOL,
         (unsigned) (end - start), BENCHMARK_MSG_SIZE, ITERATIONS, SEND_PRIORITY - RECV_PRIORITY);
 }
-#endif
