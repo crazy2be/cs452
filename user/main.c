@@ -196,22 +196,20 @@ void init_task(void) {
 }
 
 void await_task(void) {
-	printf("About to await\n");
-	await(EID_TIMER_TICK);
-	printf("Finished await.\n");
+	printf("About to await" EOL);
+	int t = await(EID_TIMER_TICK);
+	printf("Finished await: %d" EOL, t);
 }
 void await_init_task(void) {
 	for (int i = 0; i < 10; i++) {
 		create(PRIORITY_MAX, await_task);
 	}
-	printf("Created 10\n");
+	printf("Created 10" EOL);
 }
 
 #include "benchmark.h"
 int main(int argc, char *argv[]) {
 	/* boot(benchmark, 0); */
 	boot(await_init_task, 0);
-	boot(await_init_task, 0);
-	//boot(init_task, 0);
 	//boot(init_task, 0);
 }
