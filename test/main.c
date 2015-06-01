@@ -194,13 +194,38 @@ void message_suite(void) {
     for (int i = 0; i < producers; i++) {
         create(PRIORITY_MIN, sending_task);
     }
-
     misbehaving_receiving_tid = create(PRIORITY_MIN - 1, misbehaving_receiving_task);
     nop_tid = create(PRIORITY_MIN, nop);
     create(PRIORITY_MIN - 1, misbehaving_sending_task);
 }
 
+static int messages_basic_reply10_tid = -1;
+void messages_basic_send10(void) {
+	for (int i = 0; i < 10; i++) {
+		char msg[10] = "Hello ";
+		char rpl[10];
+		send(messages_basic_reply10_tid, &msg, sizeof(msg), rpl, sizeof(rpl));
+		printf("Completed round %i, sent %s, got %s.\n", i, msg, rpl);
+	}
+}
+void messages_basic_reply10(void) {
+	static char msg_reply[10] = "World!";
+	for (int i = 0; i < 10; i++) {
+		char msg[10];
+		int tid;
+		receive(&tid, &msg, sizeof(msg));
+		printf("Round %d: recieved %s, sending reply...", i, msg);
+		reply(tid, &msg_reply, sizeof(msg_reply));
+	}
+}
+void messages_basic(void) {
+	create(PRIORITY_MIN, messages_basic_send10);
+	messages_basic_reply10_tid = create(PRIORITY_MIN, messages_basic_reply10);
+	printf("Created child tasks, exiting...");
+}
+
 int main(int argc, char *argv[]) {
     boot(init_task, PRIORITY_MAX);
+	//boot(messages_basic, PRIORITY_MAX);
     boot(message_suite, PRIORITY_MAX);
 }
