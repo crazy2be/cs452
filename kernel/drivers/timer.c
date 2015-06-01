@@ -23,7 +23,8 @@
 #define TIMER_VALUE_OFFSET   0x4
 #define TIMER_CONTROL_OFFSET 0x8
 #define TIMER_INTCLR_OFFSET  0xC
-#define TIMER_TICK_LEN 0x800
+
+#define TIMER_TICK_LEN (TIME_SECOND / 100)
 
 // these definitions are dependent on the hardware, but the two SOCs we support
 // are similar enough that we just have to provide different constants
