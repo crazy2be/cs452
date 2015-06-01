@@ -11,11 +11,13 @@
 @     return dst;
 @ }
 
+@ TODO: we may want to try copying multiple words at once, if possible
+
 memcpy:
-    @ deal with the zero-len case immediately,
+    @ deal with the zero/negative len case immediately,
     @ since this allows us to write do-loops
-    movs r3, r0
-    bxeq lr
+    movs r3, r2
+    bxle lr
 
     @ save the destination pointer, as required by the spec
     stmfd sp!, {r0}
@@ -27,8 +29,6 @@ memcpy:
     orr r3, r3, r2
     ands r3, r3, #0x3
     bne memcpy_byte_aligned
-@ implement 8 word case later
-memcpy_8_word_aligned:
 memcpy_word_aligned:
     ldr r3, [r1], #4
     subs r2, r2, #4
@@ -38,9 +38,9 @@ memcpy_word_aligned:
     bx lr
 
 memcpy_byte_aligned:
-    ldrsb r3, [r1], #1
+    ldrb r3, [r1], #1
     subs r2, r2, #1
-    strsb r3, [r0], #1
+    strb r3, [r0], #1
     bne memcpy_byte_aligned
     ldmfd sp!, {r0}
     bx lr
