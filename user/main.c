@@ -178,14 +178,10 @@ void rps_server(void) {
 #endif
 
 void init_task(void) {
-    unsigned i = 0;
-    unsigned j = 0;
     for (;;) {
-        if ((++i & WAIT_MASK) == 0) {
-            printf("Iteration %d, time %d" EOL, i, (unsigned) timer_time());
-            if (++j > 30) {
-                return;
-            }
+        unsigned t = timer_time();
+        if (t % TIMER_SECOND == 0) {
+            printf("%d seconds passed" EOL, time_seconds(t));
         }
     }
     /* *(volatile unsigned*) 0x10140018 = 0xdeadbeef; */
@@ -206,6 +202,6 @@ void init_task(void) {
 
 #include "benchmark.h"
 int main(int argc, char *argv[]) {
-    boot(benchmark, 0);
-	/* boot(init_task, 0); */
+    /* boot(benchmark, 0); */
+	boot(init_task, 0);
 }

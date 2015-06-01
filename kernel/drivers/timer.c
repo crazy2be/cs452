@@ -34,7 +34,7 @@ void timer_init(void) {
     *reg = TIMER_INIT_MASK;
 }
 
-long long timer_time(void) {
+unsigned timer_time(void) {
 	return *(volatile unsigned*)(TIMER_BASE + TIMER_VALUE_OFFSET);
 }
 

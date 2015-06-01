@@ -6,7 +6,7 @@
 #endif
 
 void timer_init(void);
-long long timer_time(void);
+unsigned timer_time(void);
 void timer_clear_interrupt(void);
 
 int time_hours(long long time);
