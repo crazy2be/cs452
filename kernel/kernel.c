@@ -17,7 +17,7 @@ static struct prng random_gen;
 void setup_cache(void) {
     unsigned flags;
     __asm__("mrc p15, 0, %0, c1, c0, 0" : "=r"(flags));
-#define FLAG_BITS 0x10c
+#define FLAG_BITS 0x1004
 #if BENCHMARK_CACHE
     flags |= FLAG_BITS;
 #else
