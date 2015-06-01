@@ -152,6 +152,8 @@ static inline void rand_handler(struct task_descriptor *current_task) {
 	task_schedule(current_task);
 }
 
+static unsigned clock_ticks = 0;
+
 static inline void irq_handler(struct task_descriptor *current_task) {
 	unsigned long long irq_mask = get_irq();
 	unsigned irq_mask_lo = irq_mask;
@@ -164,19 +166,16 @@ static inline void irq_handler(struct task_descriptor *current_task) {
 		irq = 32 + least_significant_set_bit(irq_mask_hi);
 	}
 
-	printf("GOT AN INTERRUPT %d raw = (%x %x)" EOL, irq, irq_mask_hi, irq_mask_lo);
-
 	switch (irq) {
 	case IRQ_TIMER:
 		timer_clear_interrupt();
-		await_event_occurred(EID_TIMER_TICK, irq);
+		await_event_occurred(EID_TIMER_TICK, ++clock_ticks & 0x7fffffff);
 		break;
 	default:
 		KASSERT(0 && "UNKNOWN INTERRUPT!");
 		break;
 	}
 	task_schedule(current_task);
-	printf("GOT AN INTERRUPT %d" EOL, irq);
 }
 
 void idle_task(void) {
