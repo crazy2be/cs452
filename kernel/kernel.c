@@ -8,6 +8,7 @@
 #include "prng.h"
 #include "tasks.h"
 #include "msg.h"
+#include "await.h"
 #include "least_significant_set_bit.h"
 
 /** @file */
@@ -17,7 +18,7 @@ static struct prng random_gen;
 void setup_cache(void) {
     unsigned flags;
     __asm__("mrc p15, 0, %0, c1, c0, 0" : "=r"(flags));
-#define FLAG_BITS 0x10c
+#define FLAG_BITS 0x1004
 #if BENCHMARK_CACHE
     flags |= FLAG_BITS;
 #else
@@ -146,10 +147,6 @@ static inline void parent_tid_handler(struct task_descriptor *current_task) {
 	task_schedule(current_task);
 }
 
-static inline void await_handler(struct task_descriptor *current_task) {
-	KASSERT(0 && "AWAIT NOT IMPLEMENTED");
-}
-
 static inline void rand_handler(struct task_descriptor *current_task) {
     current_task->context->r0 = prng_gen(&random_gen);
     task_schedule(current_task);
@@ -172,6 +169,7 @@ static inline void irq_handler(struct task_descriptor *current_task) {
     switch (irq) {
     case IRQ_TIMER:
         timer_clear_interrupt();
+		await_event_occurred(EID_TIMER_TICK, irq);
         break;
     default:
         KASSERT(0 && "UNKNOWN INTERRUPT!");
@@ -181,10 +179,18 @@ static inline void irq_handler(struct task_descriptor *current_task) {
     printf("GOT AN INTERRUPT %d" EOL, irq);
 }
 
+void idle_task(void) {
+	for (;;) {
+		for (volatile int i = 0; i < 1000; i++) {}
+		if (kernel_shutting_down()) break;
+	}
+}
+
 #include "../gen/syscalls.h"
 int boot(void (*init_task)(void), int init_task_priority) {
     setup();
 
+	task_schedule(task_create(idle_task, PRIORITY_IDLE, 0));
     struct task_descriptor *current_task = task_create(init_task, init_task_priority, 0);
     do {
         KASSERT(current_task->state == READY);
@@ -212,6 +218,10 @@ int boot(void (*init_task)(void), int init_task_priority) {
 		case SYSCALL_REPLY:      reply_handler(current_task);      break;
 		case SYSCALL_AWAIT:      await_handler(current_task);      break;
         case SYSCALL_RAND:       rand_handler(current_task);       break;
+		case SYSCALL_KERNEL_SHUTTING_DOWN:
+			syscall_set_return(current_task->context, !await_tasks_waiting());
+			task_schedule(current_task);
+			break;
         case 37: irq_handler(current_task); break;
         default:
             KASSERT(0 && "UNKNOWN SYSCALL NUMBER");
@@ -220,6 +230,7 @@ int boot(void (*init_task)(void), int init_task_priority) {
         current_task = task_next_scheduled();
     } while (current_task);
 
+	printf("Exiting kernel...\n");
     return 0;
 }
 
