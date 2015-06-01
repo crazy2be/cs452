@@ -215,7 +215,6 @@ void await_init_task(void) {
 		create(PRIORITY_MAX, await_task);
 	}
 	printf("Created 10\n");
-	for (;;) {}
 }
 
 #include "benchmark.h"

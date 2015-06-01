@@ -55,8 +55,9 @@ int tid(void);
 int parent_tid(void);
 
 #define PRIORITY_MAX 0
-#define PRIORITY_MIN 31
-#define PRIORITY_COUNT (PRIORITY_MIN + 1)
+#define PRIORITY_MIN 30
+#define PRIORITY_IDLE 31
+#define PRIORITY_COUNT (PRIORITY_IDLE + 1)
 
 #define Send send
 int send(int tid, const void *msg, int msglen, void *reply, int replylen);
@@ -83,3 +84,5 @@ int reply(int tid, const void *reply, int replylen);
 int await(unsigned eid);
 
 unsigned rand(void);
+
+int kernel_shutting_down(void); // Just for the idle task.

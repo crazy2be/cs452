@@ -179,10 +179,18 @@ static inline void irq_handler(struct task_descriptor *current_task) {
     printf("GOT AN INTERRUPT %d" EOL, irq);
 }
 
+void idle_task(void) {
+	for (;;) {
+		for (volatile int i = 0; i < 1000; i++) {}
+		if (kernel_shutting_down()) break;
+	}
+}
+
 #include "../gen/syscalls.h"
 int boot(void (*init_task)(void), int init_task_priority) {
     setup();
 
+	task_schedule(task_create(idle_task, PRIORITY_IDLE, 0));
     struct task_descriptor *current_task = task_create(init_task, init_task_priority, 0);
     do {
         KASSERT(current_task->state == READY);
@@ -210,14 +218,16 @@ int boot(void (*init_task)(void), int init_task_priority) {
 		case SYSCALL_REPLY:      reply_handler(current_task);      break;
 		case SYSCALL_AWAIT:      await_handler(current_task);      break;
         case SYSCALL_RAND:       rand_handler(current_task);       break;
+		case SYSCALL_KERNEL_SHUTTING_DOWN:
+			syscall_set_return(current_task->context, !await_tasks_waiting());
+			task_schedule(current_task);
+			break;
         case 37: irq_handler(current_task); break;
         default:
             KASSERT(0 && "UNKNOWN SYSCALL NUMBER");
             break;
         }
-//         do {
-			current_task = task_next_scheduled();
-// 		} while (!current_task && await_tasks_waiting());
+        current_task = task_next_scheduled();
     } while (current_task);
 
 	printf("Exiting kernel...\n");
