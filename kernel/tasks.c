@@ -44,7 +44,10 @@ struct task_descriptor *task_create(void *entrypoint, int priority, int parent_t
     uc->r12 = (unsigned) sp;
     unsigned cpsr;
     __asm__ ("mrs %0, cpsr" : "=r" (cpsr));
-    uc->cpsr = cpsr & 0xfffffff0;
+    cpsr &= 0xfffffff0; // set mode to user mode
+    /* cpsr |= 0x80; // turn interrupts on for this task */
+    cpsr &= ~0x80; // deassert the I bit to turn on interrupts
+	uc->cpsr = cpsr;
 
     task->context = uc;
 

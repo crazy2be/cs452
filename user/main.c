@@ -172,7 +172,15 @@ void rps_server(void) {
 #include "../kernel/drivers/timer.h"
 
 void init_task(void) {
+    unsigned i = 0;
+    unsigned j = 0;
     for (;;) {
+        if ((++i & 0x3ffff) == 0) {
+            printf("Iteration %d, time %d" EOL, i, (unsigned) timer_time());
+            if (++j > 30) {
+                return;
+            }
+        }
     }
     /* *(volatile unsigned*) 0x10140018 = 0xdeadbeef; */
     /* printf("After interrupt generated" EOL); */
@@ -193,5 +201,6 @@ void init_task(void) {
 #include "benchmark.h"
 int main(int argc, char *argv[]) {
     /* boot(benchmark, 0); */
+	boot(init_task, 0);
 	boot(init_task, 0);
 }

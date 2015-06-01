@@ -32,3 +32,15 @@ If something goes wrong and you want to investigate deeper, you can run
 state), and then `make ENV=qemu qemu-debug` in another. You can then set
 breakpoints, step, inspect memory, etc- anything you can normally do with gdb.
 
+Useful links:
+-------------
+
+### General
+
+ - [ARMv4 Manual](http://www.cgl.uwaterloo.ca/~wmcowan/teaching/cs452/pdf/arm-architecture.pdf)
+
+### For Versatile PB hardware emulated by QEMU
+
+ - [SOC manual](http://infocenter.arm.com/help/topic/com.arm.doc.dui0224i/DUI0224I_realview_platform_baseboard_for_arm926ej_s_ug.pdf)
+ - [Interrupt controller manual](http://infocenter.arm.com/help/topic/com.arm.doc.ddi0181e/DDI0181.pdf)
+ - [Timer manual](http://infocenter.arm.com/help/topic/com.arm.doc.ddi0271d/DDI0271.pdf)

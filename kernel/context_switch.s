@@ -86,7 +86,7 @@ exit_kernel:
 
     @@@@@ USER MODE @@@@@
 
-enter_kernel:
+.macro enter_kernel_m mode
     @ We have to do a little bit of dancing back and forth to save all
     @ the registers.
     @ We need to r0-r12,r14,r14_svc, and spsr
@@ -94,22 +94,17 @@ enter_kernel:
 
     @ First, we have to switch to system mode, so we can even access the user
     @ stack pointer.
-    @ This requires the use of a register, so we need to save a register to
-    @ the kernel stack, then retrieve it later. We use r0 for this purpose.
-    @ In system mode, we save r1-r12,r14 to the user stack.
+    @ In system mode, we save r0-r12,r14 to the user stack.
     @ We then switch back to supervisor mode to save spsr and r14_svc (the saved
     @ value of pc) to the user stack.
     @ Finally, sp is returned into the kernel.
 
+    @ Target mode is either SVC or IRQ, depending on the \mode argument
+
     @@@@@ SUPERVISOR MODE @@@@@
 
-    @ push a register onto the kernel stack to make room
-    stmfd sp!, {r0}
-
-    @ then load cpsr into r0, and mask in the right bits to go to system mode
-    mrs r0, cpsr
-    orr r0, r0, #0x1f
-    msr cpsr, r0
+    @ then load cpsr into r0, and mask in the right bits to go to system mode, with interrupts off
+    msr cpsr_c, #0xdf
 
     @@@@@ SYSTEM MODE @@@@@
 
@@ -118,42 +113,52 @@ enter_kernel:
     @ in init_task and how it is loaded in exit_kernel
 
     @ save all registers except the stack pointer
-    stmfd sp!, {r1-r12}
+    stmfd sp!, {r0-r12}
 
     @ save the user stack pointer and lr
     mov r1, sp
     mov r2, lr
 
-    @ r0 is on the supervisor stack, so switch back to that
+    @ r0 is on the target stack, so switch back to that
+    @ remember to keep interrupts off
 
-    and r0, r0, #0xfffffff3
-    msr cpsr, r0
+.if \mode
+    msr cpsr_c, #0xd3
+.else
+    msr cpsr_c, #0xd2
+.endif
 
-    @@@@@ SUPERVISOR MODE @@@@@
+    @@@@@ TARGET MODE @@@@@
 
-    @ store user's r0, pc, spsr, and lr on the stack
+    @ store user's pc, spsr, and lr on the stack
     @ note that we've shuffled these around into weird registers so that
     @ stmfd saves them in the correct order
-    @ they are r5, r4, r3, and r2, respectively
-
-    @ put user's initial r0 into r5
-    ldmfd sp!, {r5}
+    @ they are r4, r3, and r2, respectively
 
     @ load the spsr (user's original cpsr)
     mrs r3, spsr
 
-    @ move lr into r4 purely to have the correct save order
-    mov r4, lr
+.ifeq \mode
+    @ with IRQ interrupts, the link register points to the instruction *after*
+    @ the one we should return to
+    sub lr, lr, #4
+.endif
 
-    stmfd r1!, {r2-r5}
+    stmfd r1!, {r2-r3, lr}
 
+.if \mode
     @ get the syscall number
     ldr r0, [lr, #-4]
     @ the least-significant byte of the swi instruction is the syscall number
     and r0, r0, #0xff
+.else
+    @ go to SVC mode
+    msr cpsr_c, #0xd3
 
-    @ this code is reused by enter_kernel_irq
-.macro restore_kernel_state
+    @ dummy value to return as syscall code
+    mov r0, #37
+.endif
+
     @ restore the kernel registers
     @ this must correspond to what is being saved in exit_kernel
     @ note: what was r0 in the original context is now r3
@@ -168,50 +173,9 @@ enter_kernel:
 	stmia r3, {r0, r1}
     bx lr
 .endm
-    restore_kernel_state
 
-@ This is quite similar to enter_kernel, but there are a few key differences
-@  - There is no IRQ stack, so we abuse sp_irq as a temporary (whereas in
-@    enter_kernel we free up r0 by saving it on the kernel stack). This changes
-@    the location order in which we store r0
-@  - The SPSR and LR are stored in IRQ mode, not SVC mode, so we have to switch
-@    back to that before going to SVC mode.
-@  - The LR points to a location 1 instruction after where we want to return to,
-@    so we fix it before saving it on the user stack
+enter_kernel:
+    enter_kernel_m 1
+
 enter_kernel_irq:
-    @ Abuse sp_irq to store cpsr temp
-    mrs sp, cpsr
-    orr sp, sp, #0x1f
-    msr cpsr, sp
-
-    @@@@@ SYSTEM MODE @@@@@
-
-    stmfd sp!, {r0-r12}
-
-    @ save user sp and lr before returning to IRQ mode
-    mov r1, sp
-    mov r2, lr
-
-    mrs r0, cpsr
-    and r0, r0, #0xfffffff2
-    msr cpsr, r0
-
-    @@@@@ IRQ MODE @@@@@
-
-    @ store user pc, cpsr, and user lr (in that order)
-    @ the link register points to the instruction *after* the one we should
-    @ return to
-    sub lr, lr, #4
-    mrs r3, spsr
-    stmfd r1!, {r2, r3, lr}
-
-    orr r0, r0, #0x13
-    msr cpsr, r0
-
-    @@@@@ SVC MODE @@@@@
-
-    @ dummy value to return as syscall code
-    mov r0, #37
-
-    restore_kernel_state
-.endm
+   enter_kernel_m 0

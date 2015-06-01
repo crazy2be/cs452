@@ -150,11 +150,25 @@ static inline void rand_handler(struct task_descriptor *current_task) {
 }
 
 static inline void irq_handler(struct task_descriptor *current_task) {
-    unsigned irq_mask = get_irq();
-    unsigned irq = least_significant_set_bit(irq_mask);
+    unsigned long long irq_mask = get_irq();
+    unsigned irq_mask_lo = irq_mask;
+    unsigned irq_mask_hi = irq_mask >> 32;
+    unsigned irq;
+
+    if (irq_mask_lo) {
+        irq = least_significant_set_bit(irq_mask_lo);
+    } else {
+        irq = 32 + least_significant_set_bit(irq_mask_hi);
+    }
+
+    printf("GOT AN INTERRUPT %d raw = (%x %x)" EOL, irq, irq_mask_hi, irq_mask_lo);
+
     switch (irq) {
     case IRQ_TIMER:
         timer_clear_interrupt();
+        break;
+    default:
+        KASSERT(0 && "UNKNOWN INTERRUPT!");
         break;
     }
     task_schedule(current_task);
@@ -181,18 +195,17 @@ int boot(void (*init_task)(void), int init_task_priority) {
         // after responding to the syscall, schedule it for execution
         // on the appropriate queue (unless exit is called, in which
         // case the task is not rescheduled).
-        KASSERT(1 && "TEST ASSERT");
         switch (sc.syscall_num) {
-        case SYSCALL_CREATE: create_handler(current_task); break;
-        case SYSCALL_PASS: pass_handler(current_task); break;
-		case SYSCALL_EXITK: exit_handler(current_task); break;
-        case SYSCALL_TID: tid_handler(current_task); break;
+        case SYSCALL_CREATE:     create_handler(current_task);     break;
+        case SYSCALL_PASS:       pass_handler(current_task);       break;
+		case SYSCALL_EXITK:      exit_handler(current_task);       break;
+        case SYSCALL_TID:        tid_handler(current_task);        break;
         case SYSCALL_PARENT_TID: parent_tid_handler(current_task); break;
-		case SYSCALL_SEND: send_handler(current_task); break;
-		case SYSCALL_RECEIVE: receive_handler(current_task); break;
-		case SYSCALL_REPLY: reply_handler(current_task); break;
-		case SYSCALL_AWAIT: await_handler(current_task); break;
-        case SYSCALL_RAND: rand_handler(current_task); break;
+		case SYSCALL_SEND:       send_handler(current_task);       break;
+		case SYSCALL_RECEIVE:    receive_handler(current_task);    break;
+		case SYSCALL_REPLY:      reply_handler(current_task);      break;
+		case SYSCALL_AWAIT:      await_handler(current_task);      break;
+        case SYSCALL_RAND:       rand_handler(current_task);       break;
         case 37: irq_handler(current_task); break;
         default:
             KASSERT(0 && "UNKNOWN SYSCALL NUMBER");
