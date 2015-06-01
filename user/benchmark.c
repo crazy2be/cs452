@@ -56,14 +56,14 @@ void benchmark(void) {
     unsigned dummy;
     int tid;
 
-    long long start = 0xffffffff - timer_time();
+    unsigned start = 0xffffffff - timer_time();
 
     create(SEND_PRIORITY, sender);
     create(RECV_PRIORITY, receiver);
     receive(&tid, &dummy, sizeof(dummy));
 
-    long long end = 0xffffffff - timer_time();
+    unsigned end = 0xffffffff - timer_time();
 
-    printf("Benchmark took %d time (msg_size = %d, iterations = %d, pdelta = %d)" EOL,
-        (unsigned) (end - start), BENCHMARK_MSG_SIZE, ITERATIONS, SEND_PRIORITY - RECV_PRIORITY);
+    printf("Benchmark took %d us (msg_size = %d, iterations = %d, pdelta = %d)" EOL,
+        (unsigned) (end - start) / ITERATIONS, BENCHMARK_MSG_SIZE, ITERATIONS, SEND_PRIORITY - RECV_PRIORITY);
 }
