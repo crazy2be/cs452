@@ -1,5 +1,6 @@
 #pragma once
 
+#include <kernel.h>
 #include <io.h>
 
 #define STRINGIFY2(STR) #STR

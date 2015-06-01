@@ -1,31 +1,31 @@
 #pragma once
-
-#include "task_descriptor.h"
-
 // neither of these should be directly manipulated by
 // callers - they are only here so callers know how to allocate
-// space for a priority queue
+// space for a priority min_heap
 
-#define PRIORITY_QUEUE_SIZE 256
+// YOLO: This could be renamed to more natually group as min-heap SIZE not
+// min heap-size.
+#define MIN_HEAP_SIZE 256
 
-struct priority_queue_element {
-	int priority;
-	struct task_descriptor* task;
+struct min_heap_node {
+	int key;
+	int value;
 };
 
-struct priority_queue {
-	struct priority_queue_element buf[PRIORITY_QUEUE_SIZE];
-	unsigned size;
+struct min_heap {
+	struct min_heap_node buf[MIN_HEAP_SIZE];
+	int size;
 };
 
-void queue_init(struct priority_queue *q);
+void min_heap_init(struct min_heap *q);
 
-// push a value into the queue with the given prority
-// if there is insufficient space, 1 is returned.
-// otherwise, the insertion is completed successfully, and 0 is returned
-int queue_push(struct priority_queue *q, struct task_descriptor *task, int priority);
+// push a value into the min_heap with the given prority
+void min_heap_push(struct min_heap *q, int key, int value);
 
-// if the queue is non-empty, pop the highest priority element out of the queue
+
+int min_heap_top_key(struct min_heap *q);
+
+// if the min_heap is non-empty, pop the highest priority element out of the min_heap
 // the value is written to the given pointer, and 0 is returned.
 // else, 1 is returned
-struct task_descriptor *queue_pop(struct priority_queue *q);
+int min_heap_pop(struct min_heap *q);
