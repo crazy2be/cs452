@@ -13,14 +13,6 @@ void *memset(void *ptr, int value, int num) {
 	return ptr;
 }
 
-void* memcpy(void *dst, const void *src, size_t len) {
-    unsigned char *p = (unsigned char*) dst;
-    while (len--) {
-        *p++ = *(unsigned char*)src++;
-    }
-    return dst;
-}
-
 int modi(int a, int b) {
 	return ((a % b) + b) % b;
 }

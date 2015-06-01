@@ -1,6 +1,7 @@
 #include "benchmark.h"
 #include <kernel.h>
 #include <io.h>
+#include <assert.h>
 #include "../kernel/drivers/timer.h"
 
 // we expect the build script to provide BENCHMARK_SEND_FIRST, BENCHMARK_CACHE,
@@ -21,20 +22,34 @@
 
 
 static void sender(void) {
-    unsigned char buf[BENCHMARK_MSG_SIZE];
+    unsigned char send_buf[BENCHMARK_MSG_SIZE];
+    unsigned char recv_buf[BENCHMARK_MSG_SIZE];
+    for (unsigned j = 0; j < BENCHMARK_MSG_SIZE; j++) {
+        send_buf[j] = 0xcd;
+    }
     for (unsigned i = 0; i < ITERATIONS; i++) {
-        send(RECEIVER_TID, buf, BENCHMARK_MSG_SIZE, buf, BENCHMARK_MSG_SIZE);
+        send(RECEIVER_TID, send_buf, BENCHMARK_MSG_SIZE, recv_buf, BENCHMARK_MSG_SIZE);
+        /* for (unsigned j = 0; j < BENCHMARK_MSG_SIZE; j++) { */
+        /*     ASSERT(recv_buf[j] == 0xab); */
+        /* } */
     }
 }
 
 static void receiver(void) {
     int tid;
-    unsigned char buf[BENCHMARK_MSG_SIZE];
-    for (unsigned i = 0; i < ITERATIONS; i++) {
-        receive(&tid, buf, BENCHMARK_MSG_SIZE);
-        reply(tid, buf, BENCHMARK_MSG_SIZE);
+    unsigned char recv_buf[BENCHMARK_MSG_SIZE];
+    unsigned char repl_buf[BENCHMARK_MSG_SIZE];
+    for (unsigned j = 0; j < BENCHMARK_MSG_SIZE; j++) {
+        repl_buf[j] = 0xab;
     }
-    send(parent_tid(), 0, 0, buf, BENCHMARK_MSG_SIZE);
+    for (unsigned i = 0; i < ITERATIONS; i++) {
+        receive(&tid, recv_buf, BENCHMARK_MSG_SIZE);
+        /* for (unsigned j = 0; j < BENCHMARK_MSG_SIZE; j++) { */
+        /*     ASSERT(recv_buf[j] == 0xcd); */
+        /* } */
+        reply(tid, repl_buf, BENCHMARK_MSG_SIZE);
+    }
+    send(parent_tid(), 0, 0, recv_buf, BENCHMARK_MSG_SIZE);
 }
 
 void benchmark(void) {
