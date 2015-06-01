@@ -80,7 +80,7 @@ int reply(int tid, const void *reply, int replylen);
 #define EID_TIMER_TICK 0
 #define EID_UART_READ 1
 #define EID_UART_WRITE 2
-#define NUM_AWAIT_EVENTS 3
+#define EID_NUM_EVENTS 3
 int await(unsigned eid);
 
 unsigned rand(void);

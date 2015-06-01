@@ -4,12 +4,15 @@
 #include "kernel.h"
 #include "util.h"
 
-static struct task_queue await_queues[NUM_AWAIT_EVENTS] = {};
+static struct task_queue await_queues[EID_NUM_EVENTS] = {};
 static int num_tasks_waiting = 0;
 
 void await_handler(struct task_descriptor *current_task) {
-	// TODO: ERRROR CHEKCING
 	int eid = syscall_arg(current_task->context, 0);
+	if (eid < 0 || eid >= EID_NUM_EVENTS) {
+		syscall_set_return(current_task->context, -1);
+		return;
+	}
 	task_queue_push(&await_queues[eid], current_task);
 	num_tasks_waiting++;
 }
