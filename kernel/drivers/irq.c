@@ -21,40 +21,40 @@
 void dump_irq(void) {
 #ifdef QEMU
 #else
-    volatile unsigned* data = (unsigned*) VIC1_BASE;
-    for (unsigned i = 0; i < 32; i++) {
-        printf("%x ", data[i]);
-    }
-    printf(EOL);
+	volatile unsigned* data = (unsigned*) VIC1_BASE;
+	for (unsigned i = 0; i < 32; i++) {
+		printf("%x ", data[i]);
+	}
+	printf(EOL);
 #endif
 }
 
 void setup_irq(void) {
-    // TODO: see A.2.6.8 in the arm manual
+	// TODO: see A.2.6.8 in the arm manual
 
-    // see A.2.5 in the manual
-    unsigned cpsr;
-    __asm__ ("mrs %0, cpsr" : "=r"(cpsr));
-    cpsr |= 0xc0; // assert the I & F bits to disable all interrupts (normal & fast)
-    __asm__ __volatile__ ("msr cpsr, %0" : : "r"(cpsr));
+	// see A.2.5 in the manual
+	unsigned cpsr;
+	__asm__ ("mrs %0, cpsr" : "=r"(cpsr));
+	cpsr |= 0xc0; // assert the I & F bits to disable all interrupts (normal & fast)
+	__asm__ __volatile__ ("msr cpsr, %0" : : "r"(cpsr));
 
-    // clear any soft interrupts
+	// clear any soft interrupts
 #ifdef QEMU
-    VWRITE(0x1014001c, 0xffffffff);
+	VWRITE(0x1014001c, 0xffffffff);
 #else
-    VWRITE(VIC1_BASE + SOFTINT_CLEAR_OFFSET, 0xffffffff);
-    VWRITE(VIC2_BASE + SOFTINT_CLEAR_OFFSET, 0xffffffff);
+	VWRITE(VIC1_BASE + SOFTINT_CLEAR_OFFSET, 0xffffffff);
+	VWRITE(VIC2_BASE + SOFTINT_CLEAR_OFFSET, 0xffffffff);
 #endif
 
-    // enable all interrupts on the interrupt controller
+	// enable all interrupts on the interrupt controller
 #ifdef QEMU
-    // see http://infocenter.arm.com/help/topic/com.arm.doc.dui0224i/DUI0224I_realview_platform_baseboard_for_arm926ej_s_ug.pdf
-    // PICIntEnable
-    VWRITE(0x10140010, IRQ_MASK(IRQ_TIMER));
+	// see http://infocenter.arm.com/help/topic/com.arm.doc.dui0224i/DUI0224I_realview_platform_baseboard_for_arm926ej_s_ug.pdf
+	// PICIntEnable
+	VWRITE(0x10140010, IRQ_MASK(IRQ_TIMER));
 #else
-    // writing to VIC1IntEnable & VIC2IntEnable (see ep93xx user manual)
-    VWRITE(VIC1_BASE + ENABLE_OFFSET, 0x0);
-    VWRITE(VIC2_BASE + ENABLE_OFFSET, IRQ_MASK(IRQ_TIMER - 32));
+	// writing to VIC1IntEnable & VIC2IntEnable (see ep93xx user manual)
+	VWRITE(VIC1_BASE + ENABLE_OFFSET, 0x0);
+	VWRITE(VIC2_BASE + ENABLE_OFFSET, IRQ_MASK(IRQ_TIMER - 32));
 #endif
 }
 
@@ -69,11 +69,11 @@ void setup_irq(void) {
 
 unsigned long long get_irq(void) {
 #ifdef QEMU
-    return (unsigned long long)(*(volatile unsigned*) 0x10140000);
+	return (unsigned long long)(*(volatile unsigned*) 0x10140000);
 #else
-    // TODO: DTRT
-    unsigned lo = *(volatile unsigned*)(VIC1_BASE + STATUS_OFFSET);
-    unsigned hi = *(volatile unsigned*)(VIC2_BASE + STATUS_OFFSET);
-    return (((unsigned long long)hi) << 32) | ((unsigned long long) lo);
+	// TODO: DTRT
+	unsigned lo = *(volatile unsigned*)(VIC1_BASE + STATUS_OFFSET);
+	unsigned hi = *(volatile unsigned*)(VIC2_BASE + STATUS_OFFSET);
+	return (((unsigned long long)hi) << 32) | ((unsigned long long) lo);
 #endif
 }

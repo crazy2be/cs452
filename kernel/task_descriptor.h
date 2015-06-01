@@ -21,7 +21,7 @@
  */
 struct task_descriptor;
 struct task_queue {
-    struct task_descriptor *first, *last;
+	struct task_descriptor *first, *last;
 };
 
 /**
@@ -44,19 +44,19 @@ void task_queue_push(struct task_queue *q, struct task_descriptor *d);
 
 enum task_state { READY, SEND_BLK, RECV_BLK, REPLY_BLK, ZOMBIE };
 struct task_descriptor {
-    int tid;
-    int parent_tid;
-    int priority;
+	int tid;
+	int parent_tid;
+	int priority;
 
-    enum task_state state;
+	enum task_state state;
 	struct task_queue waiting_for_replies;
 
-    // We don't have any use for this now, but we probably will later
-    /* void *memory_segment; */
+	// We don't have any use for this now, but we probably will later
+	/* void *memory_segment; */
 
-    struct user_context *context;
+	struct user_context *context;
 
-    struct task_descriptor *next, *prev;
+	struct task_descriptor *next, *prev;
 };
 
 /**
@@ -69,21 +69,21 @@ struct task_descriptor {
  * the queue.
  */
 struct priority_task_queue {
-    /**
-     * A bit mask to make it very cheap to find the priority of the next
-     * task to be popped out.
-     * If there is a task of priority i in the queue, the i'th bit of
-     * the mask will be set (counting bits from least to most significant).
-     * This just caches state about whether each sub-queue is empty or not,
-     * and is purely an optimization.
-     */
-    unsigned priority_queue_mask;
+	/**
+	 * A bit mask to make it very cheap to find the priority of the next
+	 * task to be popped out.
+	 * If there is a task of priority i in the queue, the i'th bit of
+	 * the mask will be set (counting bits from least to most significant).
+	 * This just caches state about whether each sub-queue is empty or not,
+	 * and is purely an optimization.
+	 */
+	unsigned priority_queue_mask;
 
-    /**
-     * Each priority level has a sub-queue within the priority queue, indexed
-     * by the priority number.
-     */
-    struct task_queue queues[PRIORITY_COUNT];
+	/**
+	 * Each priority level has a sub-queue within the priority queue, indexed
+	 * by the priority number.
+	 */
+	struct task_queue queues[PRIORITY_COUNT];
 };
 
 /**

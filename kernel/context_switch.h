@@ -9,44 +9,44 @@
  * stack pointer.
  */
 struct user_context {
-    unsigned lr;
-    unsigned cpsr;
-    unsigned pc;
-    unsigned r0;
-    unsigned r1;
-    unsigned r2;
-    unsigned r3;
-    unsigned r4;
-    unsigned r5;
-    unsigned r6;
-    unsigned r7;
-    unsigned r8;
-    unsigned r9;
-    unsigned r10;
-    unsigned r11;
-    unsigned r12;
+	unsigned lr;
+	unsigned cpsr;
+	unsigned pc;
+	unsigned r0;
+	unsigned r1;
+	unsigned r2;
+	unsigned r3;
+	unsigned r4;
+	unsigned r5;
+	unsigned r6;
+	unsigned r7;
+	unsigned r8;
+	unsigned r9;
+	unsigned r10;
+	unsigned r11;
+	unsigned r12;
 };
 
 // Sugaring to access arguments, agnostic to where they're stored
 // This abstraction is zero-cost, since we instruct the compiler to inline this.
 // The switch disappears if n is a constant.
 static inline unsigned syscall_arg(struct user_context *uc, unsigned n) {
-    switch (n) {
-    case 0:
-        return uc->r0;
-    case 1:
-        return uc->r1;
-    case 2:
-        return uc->r2;
-    case 3:
-        return uc->r3;
-    default:
-        return ((unsigned*)(uc + 1))[n - 4];
-    }
+	switch (n) {
+	case 0:
+		return uc->r0;
+	case 1:
+		return uc->r1;
+	case 2:
+		return uc->r2;
+	case 3:
+		return uc->r3;
+	default:
+		return ((unsigned*)(uc + 1))[n - 4];
+	}
 }
 
 static inline void syscall_set_return(struct user_context *uc, unsigned r) {
-    uc->r0 = r;
+	uc->r0 = r;
 }
 
 /**
@@ -55,8 +55,8 @@ static inline void syscall_set_return(struct user_context *uc, unsigned r) {
  * described by the stack pointer).
  */
 struct syscall_context {
-    unsigned syscall_num;
-    struct user_context *context;
+	unsigned syscall_num;
+	struct user_context *context;
 };
 
 /**

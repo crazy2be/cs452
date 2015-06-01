@@ -20,48 +20,48 @@
 
 
 static void sender(void) {
-    unsigned char send_buf[BENCHMARK_MSG_SIZE];
-    unsigned char recv_buf[BENCHMARK_MSG_SIZE];
-    for (unsigned j = 0; j < BENCHMARK_MSG_SIZE; j++) {
-        send_buf[j] = 0xcd;
-    }
-    for (unsigned i = 0; i < ITERATIONS; i++) {
-        send(RECEIVER_TID, send_buf, BENCHMARK_MSG_SIZE, recv_buf, BENCHMARK_MSG_SIZE);
-        /* for (unsigned j = 0; j < BENCHMARK_MSG_SIZE; j++) { */
-        /*     ASSERT(recv_buf[j] == 0xab); */
-        /* } */
-    }
+	unsigned char send_buf[BENCHMARK_MSG_SIZE];
+	unsigned char recv_buf[BENCHMARK_MSG_SIZE];
+	for (unsigned j = 0; j < BENCHMARK_MSG_SIZE; j++) {
+		send_buf[j] = 0xcd;
+	}
+	for (unsigned i = 0; i < ITERATIONS; i++) {
+		send(RECEIVER_TID, send_buf, BENCHMARK_MSG_SIZE, recv_buf, BENCHMARK_MSG_SIZE);
+		/* for (unsigned j = 0; j < BENCHMARK_MSG_SIZE; j++) { */
+		/*     ASSERT(recv_buf[j] == 0xab); */
+		/* } */
+	}
 }
 
 static void receiver(void) {
-    int tid;
-    unsigned char recv_buf[BENCHMARK_MSG_SIZE];
-    unsigned char repl_buf[BENCHMARK_MSG_SIZE];
-    for (unsigned j = 0; j < BENCHMARK_MSG_SIZE; j++) {
-        repl_buf[j] = 0xab;
-    }
-    for (unsigned i = 0; i < ITERATIONS; i++) {
-        receive(&tid, recv_buf, BENCHMARK_MSG_SIZE);
-        /* for (unsigned j = 0; j < BENCHMARK_MSG_SIZE; j++) { */
-        /*     ASSERT(recv_buf[j] == 0xcd); */
-        /* } */
-        reply(tid, repl_buf, BENCHMARK_MSG_SIZE);
-    }
-    send(parent_tid(), 0, 0, recv_buf, BENCHMARK_MSG_SIZE);
+	int tid;
+	unsigned char recv_buf[BENCHMARK_MSG_SIZE];
+	unsigned char repl_buf[BENCHMARK_MSG_SIZE];
+	for (unsigned j = 0; j < BENCHMARK_MSG_SIZE; j++) {
+		repl_buf[j] = 0xab;
+	}
+	for (unsigned i = 0; i < ITERATIONS; i++) {
+		receive(&tid, recv_buf, BENCHMARK_MSG_SIZE);
+		/* for (unsigned j = 0; j < BENCHMARK_MSG_SIZE; j++) { */
+		/*     ASSERT(recv_buf[j] == 0xcd); */
+		/* } */
+		reply(tid, repl_buf, BENCHMARK_MSG_SIZE);
+	}
+	send(parent_tid(), 0, 0, recv_buf, BENCHMARK_MSG_SIZE);
 }
 
 void benchmark(void) {
-    unsigned dummy;
-    int tid;
+	unsigned dummy;
+	int tid;
 
-    unsigned start = 0xffffffff - timer_time();
+	unsigned start = 0xffffffff - timer_time();
 
-    create(SEND_PRIORITY, sender);
-    create(RECV_PRIORITY, receiver);
-    receive(&tid, &dummy, sizeof(dummy));
+	create(SEND_PRIORITY, sender);
+	create(RECV_PRIORITY, receiver);
+	receive(&tid, &dummy, sizeof(dummy));
 
-    unsigned end = 0xffffffff - timer_time();
+	unsigned end = 0xffffffff - timer_time();
 
-    printf("Benchmark took %d ns (msg_size = %d, iterations = %d, pdelta = %d)" EOL,
-        (unsigned) (end - start) * 1000 / ITERATIONS, BENCHMARK_MSG_SIZE, ITERATIONS, SEND_PRIORITY - RECV_PRIORITY);
+	printf("Benchmark took %d ns (msg_size = %d, iterations = %d, pdelta = %d)" EOL,
+	       (unsigned) (end - start) * 1000 / ITERATIONS, BENCHMARK_MSG_SIZE, ITERATIONS, SEND_PRIORITY - RECV_PRIORITY);
 }

@@ -26,4 +26,6 @@ void await_event_occurred(int eid, int data) {
 	}
 }
 
-int await_tasks_waiting() { return num_tasks_waiting; }
+int await_tasks_waiting() {
+	return num_tasks_waiting;
+}

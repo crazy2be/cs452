@@ -1,7 +1,9 @@
 #include "util.h"
 #include "io.h"
 
-static void bwputc(int channel, char c) { io_putc(channel, c); }
+static void bwputc(int channel, char c) {
+	io_putc(channel, c);
+}
 
 static void bwputw(int channel, int n, char fc, char *bf) {
 	char ch;

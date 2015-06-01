@@ -19,17 +19,17 @@
 #define HASHTABLE_TOO_MANY_ENTRIES -2
 
 struct hashtable_entry {
-    char key[MAX_KEYLEN + 1];
-    int val;
-    struct hashtable_entry *next;
+	char key[MAX_KEYLEN + 1];
+	int val;
+	struct hashtable_entry *next;
 };
 
 struct hashtable {
-    struct hashtable_entry entry_pool[MAX_ENTRIES];
-    int entry_pool_i;
-    struct hashtable_entry *freelist;
+	struct hashtable_entry entry_pool[MAX_ENTRIES];
+	int entry_pool_i;
+	struct hashtable_entry *freelist;
 
-    struct hashtable_entry *buckets[BUCKET_COUNT];
+	struct hashtable_entry *buckets[BUCKET_COUNT];
 };
 
 void hashtable_init(struct hashtable *ht);

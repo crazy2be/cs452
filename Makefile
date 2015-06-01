@@ -198,6 +198,11 @@ test: $(TEST_BIN)
 	./qemu_capture $(TEST_BIN) $(TEST_ELF) $(TEST_OUTPUT)
 	diff -y $(TEST_EXPECTED) $(TEST_OUTPUT)
 
-.PHONY: clean qemu-run qemu-debug default install
+format:
+	astyle -R --style=java --keep-one-line-statements --suffix=none \
+		--indent=tab \
+		'kernel/*.c' 'kernel/*.h' 'user/*.c' 'user/*.h' 'test/*.c'
+
+.PHONY: clean qemu-run qemu-debug default install format
 
 -include $(DEPENDS)

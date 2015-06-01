@@ -29,9 +29,9 @@
 // are similar enough that we just have to provide different constants
 void timer_init(void) {
 	volatile unsigned int* value = (unsigned*)(TIMER_BASE + TIMER_LOAD_OFFSET);
-    *value = TIMER_TICK_LEN;
+	*value = TIMER_TICK_LEN;
 	volatile unsigned int* reg = (unsigned*)(TIMER_BASE + TIMER_CONTROL_OFFSET);
-    *reg = TIMER_INIT_MASK;
+	*reg = TIMER_INIT_MASK;
 }
 
 unsigned timer_time(void) {
@@ -39,8 +39,8 @@ unsigned timer_time(void) {
 }
 
 void timer_clear_interrupt(void) {
-    volatile unsigned *clr = (unsigned*)(TIMER_BASE + TIMER_INTCLR_OFFSET);
-    *clr = 0; // data is arbitrary; any write clears the interrupt
+	volatile unsigned *clr = (unsigned*)(TIMER_BASE + TIMER_INTCLR_OFFSET);
+	*clr = 0; // data is arbitrary; any write clears the interrupt
 }
 
 // generic, architecture independant definitions

@@ -6,11 +6,11 @@ static struct task_collection tasks;
 static struct priority_task_queue queue;
 
 void tasks_init(void) {
-    tasks.next_tid = 0;
+	tasks.next_tid = 0;
 	extern int stack_top;
-    tasks.memory_alloc = (void*) &stack_top + USER_STACK_SIZE;
+	tasks.memory_alloc = (void*) &stack_top + USER_STACK_SIZE;
 
-    priority_task_queue_init(&queue);
+	priority_task_queue_init(&queue);
 }
 
 /**
@@ -27,31 +27,31 @@ void tasks_init(void) {
  * Notedly, this does *not* schedule the newly created task for execution.
  */
 struct task_descriptor *task_create(void *entrypoint, int priority, int parent_tid) {
-    void *sp = tasks.memory_alloc;
-    tasks.memory_alloc += USER_STACK_SIZE;
-    struct task_descriptor *task = &tasks.task_buf[tasks.next_tid];
-	*task = (struct task_descriptor){
+	void *sp = tasks.memory_alloc;
+	tasks.memory_alloc += USER_STACK_SIZE;
+	struct task_descriptor *task = &tasks.task_buf[tasks.next_tid];
+	*task = (struct task_descriptor) {
 		.tid = tasks.next_tid++,
-		.parent_tid = parent_tid,
-		.priority = priority,
-		.state = READY,
+		 .parent_tid = parent_tid,
+		  .priority = priority,
+		   .state = READY,
 	};
 
-    struct user_context *uc = ((struct user_context*) sp) - 1;
-    uc->pc = (unsigned) entrypoint;
-    uc->lr = (unsigned) &exitk;
-    // leave most everything else uninitialized
-    uc->r12 = (unsigned) sp;
-    unsigned cpsr;
-    __asm__ ("mrs %0, cpsr" : "=r" (cpsr));
-    cpsr &= 0xfffffff0; // set mode to user mode
-    /* cpsr |= 0x80; // turn interrupts on for this task */
-    cpsr &= ~0x80; // deassert the I bit to turn on interrupts
+	struct user_context *uc = ((struct user_context*) sp) - 1;
+	uc->pc = (unsigned) entrypoint;
+	uc->lr = (unsigned) &exitk;
+	// leave most everything else uninitialized
+	uc->r12 = (unsigned) sp;
+	unsigned cpsr;
+	__asm__ ("mrs %0, cpsr" : "=r" (cpsr));
+	cpsr &= 0xfffffff0; // set mode to user mode
+	/* cpsr |= 0x80; // turn interrupts on for this task */
+	cpsr &= ~0x80; // deassert the I bit to turn on interrupts
 	uc->cpsr = cpsr;
 
-    task->context = uc;
+	task->context = uc;
 
-    return task;
+	return task;
 }
 
 int tasks_full() {
@@ -72,6 +72,8 @@ struct task_descriptor *task_next_scheduled() {
 
 int tid_valid(int tid) {
 	return tid >= 0 && tid < tasks.next_tid
-		&& tasks.task_buf[tid].state != ZOMBIE;
+	       && tasks.task_buf[tid].state != ZOMBIE;
 }
-int tid_possible(int tid) { return tid >= 0 && tid <= MAX_TID; }
+int tid_possible(int tid) {
+	return tid >= 0 && tid <= MAX_TID;
+}

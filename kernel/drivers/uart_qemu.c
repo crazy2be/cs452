@@ -15,11 +15,11 @@
 
 static volatile int* reg(int channel, int off) {
 	switch (channel) {
-		// Intentionally reversed- in ts7200, COM2 is stdout, and COM1 is
-		// the train controller, but in QEMU, UART0 is stdout.
-		case COM1: return (int*)(UART1 + off);
-		case COM2: return (int*)(UART0 + off);
-		default: KASSERT(0 && "Invalid channel"); return (int*)-1;
+	// Intentionally reversed- in ts7200, COM2 is stdout, and COM1 is
+	// the train controller, but in QEMU, UART0 is stdout.
+	case COM1: return (int*)(UART1 + off);
+	case COM2: return (int*)(UART0 + off);
+	default: KASSERT(0 && "Invalid channel"); return (int*)-1;
 	}
 }
 

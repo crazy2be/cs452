@@ -3,8 +3,8 @@
 #define PRNG_BUFSZ 624
 
 struct prng {
-    unsigned buf[PRNG_BUFSZ];
-    unsigned index;
+	unsigned buf[PRNG_BUFSZ];
+	unsigned index;
 };
 
 void prng_init(struct prng *g, unsigned seed);

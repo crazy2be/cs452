@@ -6,12 +6,12 @@
 #define USER_STACK_SIZE 0x10000 // 64K stack
 
 struct task_collection {
-    // for now, a TID is just an index into this array
-    // eventually, this will no longer scale
-    struct task_descriptor task_buf[MAX_TID + 1];
-    // next tid to allocate
-    int next_tid;
-    void *memory_alloc;
+	// for now, a TID is just an index into this array
+	// eventually, this will no longer scale
+	struct task_descriptor task_buf[MAX_TID + 1];
+	// next tid to allocate
+	int next_tid;
+	void *memory_alloc;
 };
 
 void tasks_init(void);

@@ -10,11 +10,11 @@ static struct RBuf rbuf[4];
 static long long send_next_train_byte_at = 0;
 
 static inline struct RBuf* output_buffer(int channel) {
-    return &rbuf[output_buffer_number(channel)];
+	return &rbuf[output_buffer_number(channel)];
 }
 
 static inline struct RBuf* input_buffer(int channel) {
-    return &rbuf[input_buffer_number(channel)];
+	return &rbuf[input_buffer_number(channel)];
 }
 
 void io_init() {
@@ -38,7 +38,7 @@ char io_getc(int channel) {
 }
 
 void io_flush(int channel) {
-    struct RBuf *buf = output_buffer(channel);
+	struct RBuf *buf = output_buffer(channel);
 	while (buf->l > 0) {
 		while (!uart_canwrite(channel)) {}
 		uart_write(channel, rbuf_take(buf));
@@ -78,7 +78,7 @@ void io_init(void) {
 
 void io_putc(int channel, char c) {
 	while(!uart_canwrite(channel));
-    uart_write(channel, c);
+	uart_write(channel, c);
 }
 
 int io_hasc(int channel) {
@@ -98,7 +98,10 @@ void io_flush(int channel) {
 // with the primitives defined above
 
 void io_puts(int channel, const char* s) {
-	while (*s) { io_putc(channel, *s); s++; }
+	while (*s) {
+		io_putc(channel, *s);
+		s++;
+	}
 }
 
 void io_putll(int channel, long long n) {
