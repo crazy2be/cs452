@@ -15,8 +15,6 @@
 #define RECV_PRIORITY 14
 #endif
 
-#define BENCHMARK_MSG_SIZE 64
-
 #define RECEIVER_TID 2
 #define ITERATIONS 2000
 
@@ -64,6 +62,6 @@ void benchmark(void) {
 
     unsigned end = 0xffffffff - timer_time();
 
-    printf("Benchmark took %d us (msg_size = %d, iterations = %d, pdelta = %d)" EOL,
-        (unsigned) (end - start) / ITERATIONS, BENCHMARK_MSG_SIZE, ITERATIONS, SEND_PRIORITY - RECV_PRIORITY);
+    printf("Benchmark took %d ns (msg_size = %d, iterations = %d, pdelta = %d)" EOL,
+        (unsigned) (end - start) * 1000 / ITERATIONS, BENCHMARK_MSG_SIZE, ITERATIONS, SEND_PRIORITY - RECV_PRIORITY);
 }
