@@ -13,18 +13,17 @@
 
 #define TIMER_INIT_MASK (TIMER_ENABLE_MASK | TIMER_32BIT_MASK | \
     TIMER_256PRE_MASK | TIMER_PERIODIC_MASK | TIMER_INT_MASK)
-#define TIMER_TICK_LEN 800 // arbitrary
 #else
 #include "ts7200.h"
 #define TIMER_BASE           TIMER3_BASE
 #define TIMER_INIT_MASK (ENABLE_MASK | MODE_MASK | CLKSEL_MASK)
-#define TIMER_TICK_LEN 80000
 #endif
 
 #define TIMER_LOAD_OFFSET    0x0
 #define TIMER_VALUE_OFFSET   0x4
 #define TIMER_CONTROL_OFFSET 0x8
 #define TIMER_INTCLR_OFFSET  0xC
+#define TIMER_TICK_LEN 0xffffffff
 
 // these definitions are dependent on the hardware, but the two SOCs we support
 // are similar enough that we just have to provide different constants
@@ -35,7 +34,7 @@ void timer_init(void) {
     *reg = TIMER_INIT_MASK;
 }
 
-long long timer_time(void) {
+unsigned timer_time(void) {
 	return *(volatile unsigned*)(TIMER_BASE + TIMER_VALUE_OFFSET);
 }
 

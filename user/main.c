@@ -172,21 +172,13 @@ void rps_server(void) {
 
 #include "../kernel/drivers/timer.h"
 
-#ifdef QEMU
-#define WAIT_MASK 0x3ffffff
-#else
-#define WAIT_MASK 0x3ffff
-#endif
-
 void init_task(void) {
-    unsigned i = 0;
-    unsigned j = 0;
+    unsigned t_next = timer_time() - TIME_SECOND;
     for (;;) {
-        if ((++i & WAIT_MASK) == 0) {
-            printf("Iteration %d, time %d" EOL, i, (unsigned) timer_time());
-            if (++j > 10) {
-                return;
-            }
+        unsigned t = timer_time();
+        if (t < t_next) {
+            t_next -= TIME_SECOND;
+            printf("%d seconds passed" EOL, time_seconds(t));
         }
     }
     /* *(volatile unsigned*) 0x10140018 = 0xdeadbeef; */

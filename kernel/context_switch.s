@@ -52,9 +52,7 @@ exit_kernel:
     @ Then return to supervisor mode and restore r0-r12
     @ Then restore PC and PSR atomically
 
-    mrs r3, cpsr
-    orr r3, r3, #0x1f
-    msr cpsr, r3
+    msr cpsr_c, #0xdf
 
     @@@@@ SYSTEM MODE @@@@@
 
@@ -67,8 +65,7 @@ exit_kernel:
     ldmfd r1!, {lr}
 
     @ switch back to supervisor mode
-    and r3, r3, #0xfffffff3
-    msr cpsr, r3
+    msr cpsr_c, #0xd3
 
     @@@@@ SUPERVISOR MODE @@@@@
 
