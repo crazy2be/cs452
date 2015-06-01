@@ -2,6 +2,7 @@
 #include <io.h>
 #include <assert.h>
 #include "nameserver.h"
+#include "../kernel/util.h"
 
 enum rps_req { CONNECT, MOVE_ROCK, MOVE_PAPER, MOVE_SCISSORS, QUIT };
 
@@ -183,7 +184,7 @@ void init_task(void) {
     for (;;) {
         if ((++i & WAIT_MASK) == 0) {
             printf("Iteration %d, time %d" EOL, i, (unsigned) timer_time());
-            if (++j > 30) {
+            if (++j > 10) {
                 return;
             }
         }
@@ -204,9 +205,24 @@ void init_task(void) {
     /* } */
 }
 
+void await_task(void) {
+	printf("About to await\n");
+	await(EID_TIMER_TICK);
+	printf("Finished await.\n");
+}
+void await_init_task(void) {
+	for (int i = 0; i < 10; i++) {
+		create(PRIORITY_MAX, await_task);
+	}
+	printf("Created 10\n");
+	for (;;) {}
+}
+
 #include "benchmark.h"
 int main(int argc, char *argv[]) {
     /* boot(benchmark, 0); */
-	boot(init_task, 0);
-	boot(init_task, 0);
+	boot(await_init_task, 0);
+	boot(await_init_task, 0);
+	//boot(init_task, 0);
+	//boot(init_task, 0);
 }

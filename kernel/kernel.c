@@ -8,6 +8,7 @@
 #include "prng.h"
 #include "tasks.h"
 #include "msg.h"
+#include "await.h"
 #include "least_significant_set_bit.h"
 
 /** @file */
@@ -17,7 +18,7 @@ static struct prng random_gen;
 void setup_cache(void) {
     unsigned flags;
     __asm__("mrc p15, 0, %0, c1, c0, 0" : "=r"(flags));
-#define FLAG_BITS 0x10c
+#define FLAG_BITS 0x1004
 #if BENCHMARK_CACHE
     flags |= FLAG_BITS;
 #else
@@ -146,10 +147,6 @@ static inline void parent_tid_handler(struct task_descriptor *current_task) {
 	task_schedule(current_task);
 }
 
-static inline void await_handler(struct task_descriptor *current_task) {
-	KASSERT(0 && "AWAIT NOT IMPLEMENTED");
-}
-
 static inline void rand_handler(struct task_descriptor *current_task) {
     current_task->context->r0 = prng_gen(&random_gen);
     task_schedule(current_task);
@@ -172,6 +169,7 @@ static inline void irq_handler(struct task_descriptor *current_task) {
     switch (irq) {
     case IRQ_TIMER:
         timer_clear_interrupt();
+		await_event_occurred(EID_TIMER_TICK, irq);
         break;
     default:
         KASSERT(0 && "UNKNOWN INTERRUPT!");
@@ -217,9 +215,12 @@ int boot(void (*init_task)(void), int init_task_priority) {
             KASSERT(0 && "UNKNOWN SYSCALL NUMBER");
             break;
         }
-        current_task = task_next_scheduled();
+//         do {
+			current_task = task_next_scheduled();
+// 		} while (!current_task && await_tasks_waiting());
     } while (current_task);
 
+	printf("Exiting kernel...\n");
     return 0;
 }
 
