@@ -8,6 +8,8 @@
 #include "../kernel/prng.h"
 #include "../kernel/util.h"
 
+#include "priority_test.h"
+
 void child(void) {
 	io_printf(COM2, "Child task %d" EOL, tid());
 	io_flush(COM2);
@@ -173,6 +175,7 @@ void init_task(void) {
 	lssb_tests();
 	hashtable_tests();
 	memcpy_tests();
+	min_heap_tests();
 	ASSERT(1);
 	ASSERT(create(-1, child) == CREATE_INVALID_PRIORITY);
 	ASSERT(create(32, child) == CREATE_INVALID_PRIORITY);

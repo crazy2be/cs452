@@ -16,7 +16,7 @@ void min_heap_push(struct min_heap *mh, int key, int value) {
 		// put the parent in this spot, and try to insert in the parent's spot
 
 		parent = (i - 1) / 2;
-		if (mh->buf[parent].key >= key) break;
+		if (mh->buf[parent].key <= key) break;
 		mh->buf[i] = mh->buf[parent];
 	}
 
@@ -50,11 +50,11 @@ int min_heap_pop(struct min_heap *mh) {
 		if (child >= mh->size) break;
 
 		if (child + 1 < mh->size &&
-		        mh->buf[child].key < mh->buf[child+1].key) {
+		        mh->buf[child].key > mh->buf[child+1].key) {
 			child++;
 		}
 
-		if (mh->buf[child].key <= e.key) break;
+		if (mh->buf[child].key >= e.key) break;
 		mh->buf[i] = mh->buf[child];
 	}
 
