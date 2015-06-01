@@ -9,13 +9,13 @@
 #define PRIORITY_QUEUE_SIZE 256
 
 struct priority_queue_element {
-    int priority;
-    struct task_descriptor* task;
+	int priority;
+	struct task_descriptor* task;
 };
 
 struct priority_queue {
-    struct priority_queue_element buf[PRIORITY_QUEUE_SIZE];
-    unsigned size;
+	struct priority_queue_element buf[PRIORITY_QUEUE_SIZE];
+	unsigned size;
 };
 
 void queue_init(struct priority_queue *q);

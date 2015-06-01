@@ -32,8 +32,8 @@ void uart_configure(int channel, int speed, int fifo) {
 	int *low = reg(channel, UART_LCRL_OFFSET);
 	switch (speed) {
 	case 115200: *high = 0x0; *low = 0x3; break;
-	// Was: 128. Calculated by (7372800 / (16 * 2400)) - 1
-	// BAUDDIV = (FUARTCLK / (16 * Baud rate)) - 1 p.543 of ep93xx
+		// Was: 128. Calculated by (7372800 / (16 * 2400)) - 1
+		// BAUDDIV = (FUARTCLK / (16 * Baud rate)) - 1 p.543 of ep93xx
 	case 2400: *high = 0x0; *low = 191; break;
 	default: KASSERT(0 && "Unsupported baud");
 	}
