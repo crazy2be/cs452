@@ -26,6 +26,28 @@ void setup_cache(void) {
     __asm__ __volatile__ ("mcr p15, 0, %0, c1, c0, 0" : : "r"(flags));
 }
 
+void setup_irq_table(void) {
+	// Copy exception vector from where it's linked/loaded to the start of
+	// memory, where ARM expects to find it. Assumes all instructions in the
+	// exception vector are branch instructions.
+	// http://www.ryanday.net/2010/09/08/arm-programming-part-1/
+	extern volatile int exception_vector_table_src_begin;
+	volatile int* exception_vector_table_src = &exception_vector_table_src_begin;
+	volatile int* exception_vector_table_dst = (volatile int*)0x0;
+	// Note this is automatically divided by 4 because pointers.
+	unsigned exception_vector_branch_adjustment =
+		exception_vector_table_src - exception_vector_table_dst;
+	for (int i = 0; i < 8; i++) {
+		exception_vector_table_dst[i] = exception_vector_table_src[i]
+			+ exception_vector_branch_adjustment;
+	}
+}
+
+void clear_bss(void) {
+	extern char __bss_start__, __bss_end__;
+	memset(&__bss_start__, 0, &__bss_end__ - &__bss_start__);
+}
+
 void setup(void) {
     // write to the control registers of the UARTs to properly configure them
     // for transmission
@@ -41,14 +63,13 @@ void setup(void) {
 	while (!uart_canwrite(COM2)) {} uart_write(COM2, 'o');
 	while (!uart_canwrite(COM2)) {} uart_write(COM2, 't');
 
-	// Zero BSS, because we should.
-	extern char __bss_start__, __bss_end__;
-	memset(&__bss_start__, 0, &__bss_end__ - &__bss_start__);
+	clear_bss();
 	while (!uart_canwrite(COM2)) {} uart_write(COM2, '.');
-
-    setup_cache();
+    setup_irq_table();
 	while (!uart_canwrite(COM2)) {} uart_write(COM2, '.');
     setup_irq();
+	while (!uart_canwrite(COM2)) {} uart_write(COM2, '.');
+    setup_cache();
 	while (!uart_canwrite(COM2)) {} uart_write(COM2, '.');
 	timer_init();
 	while (!uart_canwrite(COM2)) {} uart_write(COM2, '.');
@@ -61,21 +82,6 @@ void setup(void) {
 	printf("e1:%x" EOL, uart_err(COM1));
 	printf("e2:%x" EOL, uart_err(COM2));
 	io_flush(COM2);
-
-	// Copy exception vector from where it's linked/loaded to the start of
-	// memory, where ARM expects to find it. Assumes all instructions in the
-	// exception vector are branch instructions.
-	// http://www.ryanday.net/2010/09/08/arm-programming-part-1/
-	extern volatile int exception_vector_table_src_begin;
-	volatile int* exception_vector_table_src = &exception_vector_table_src_begin;
-	volatile int* exception_vector_table_dst = (volatile int*)0x0;
-	// Note this is automatically divided by 4 because pointers.
-	unsigned exception_vector_branch_adjustment =
-		exception_vector_table_src - exception_vector_table_dst;
-	for (int i = 0; i < 8; i++) {
-		exception_vector_table_dst[i] = exception_vector_table_src[i]
-			+ exception_vector_branch_adjustment;
-	}
 
     prng_init(&random_gen, 0xdeadbeef);
 
