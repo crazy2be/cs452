@@ -178,9 +178,11 @@ void rps_server(void) {
 #endif
 
 void init_task(void) {
+    unsigned t_next = timer_time() - TIME_SECOND;
     for (;;) {
         unsigned t = timer_time();
-        if (t % TIMER_SECOND == 0) {
+        if (t < t_next) {
+            t_next -= TIME_SECOND;
             printf("%d seconds passed" EOL, time_seconds(t));
         }
     }
@@ -202,6 +204,6 @@ void init_task(void) {
 
 #include "benchmark.h"
 int main(int argc, char *argv[]) {
-    /* boot(benchmark, 0); */
-	boot(init_task, 0);
+    boot(benchmark, 0);
+	/* boot(init_task, 0); */
 }

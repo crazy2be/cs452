@@ -17,7 +17,7 @@
 #define BENCHMARK_MSG_SIZE 64
 
 #define RECEIVER_TID 2
-#define ITERATIONS 200
+#define ITERATIONS 2000
 
 
 static void sender(void) {
