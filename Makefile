@@ -93,8 +93,9 @@ UNITY_DEPEND = $(UNITY_SOURCE:.c=.d)
 $(KERNEL_BIN) $(TEST_BIN): %.bin : %.elf
 	arm-none-eabi-objcopy -O binary $< $@
 
-$(TEST_ELF): $(KERNEL_COMMON_OBJECTS) $(TEST_COMMON_OBJECTS)
-	$(LD) $(LDFLAGS) -o $@ $(KERNEL_COMMON_OBJECTS) $(TEST_COMMON_OBJECTS) -lgcc
+TEST_ALL_OBJECTS = $(KERNEL_COMMON_OBJECTS) $(TEST_COMMON_OBJECTS) $(BUILD_DIR)/user/min_heap.o
+$(TEST_ELF): $(TEST_ALL_OBJECTS)
+	$(LD) $(LDFLAGS) -o $@ $(TEST_ALL_OBJECTS) -lgcc
 
 # optionally perform a unity build for better optimization
 ifdef UNITY
