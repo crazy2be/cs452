@@ -34,23 +34,23 @@
 // these definitions are dependent on the hardware, but the two SOCs we support
 // are similar enough that we just have to provide different constants
 void timer_init(void) {
-    // enable the interrupt-generating timer (tick timer)
+	// enable the interrupt-generating timer (tick timer)
 	volatile unsigned int* value = (unsigned*)(TIMER_BASE + TIMER_LOAD_OFFSET);
 	*value = TIMER_TICK_LEN;
 	volatile unsigned int* reg = (unsigned*)(TIMER_BASE + TIMER_CONTROL_OFFSET);
 	*reg = TIMER_INIT_MASK;
 
-    // enable the debug timer
+	// enable the debug timer
 #ifdef QEMU
-    // use a normal timer on the versatilepb
-    value = (unsigned*)(DEBUG_TIMER_BASE + TIMER_LOAD_OFFSET);
-    *value = 0xffffffff;
+	// use a normal timer on the versatilepb
+	value = (unsigned*)(DEBUG_TIMER_BASE + TIMER_LOAD_OFFSET);
+	*value = 0xffffffff;
 	reg = (unsigned*)(DEBUG_TIMER_BASE + TIMER_CONTROL_OFFSET);
 	*reg = TIMER_ENABLE_MASK | TIMER_32BIT_MASK | TIMER_ONE_SHOT_MASK;
 #else
-    // use the 40-bit debug timer on the TS7200
-    reg = (unsigned*)(DEBUG_TIMER_BASE + DEBUG_TIMER_HI_OFFSET);
-    *reg = DEBUG_TIMER_ENABLE_MASK;
+	// use the 40-bit debug timer on the TS7200
+	reg = (unsigned*)(DEBUG_TIMER_BASE + DEBUG_TIMER_HI_OFFSET);
+	*reg = DEBUG_TIMER_ENABLE_MASK;
 #endif
 }
 
@@ -64,16 +64,16 @@ void tick_timer_clear_interrupt(void) {
 }
 
 unsigned debug_timer_useconds(void) {
-    volatile unsigned int* value;
+	volatile unsigned int* value;
 #ifdef QEMU
 	value = (unsigned*)(DEBUG_TIMER_BASE + TIMER_VALUE_OFFSET);
-    // the counter counts down from 0xffffffff, so we have to subtract its value
-    return 0xffffffff - *value;
+	// the counter counts down from 0xffffffff, so we have to subtract its value
+	return 0xffffffff - *value;
 #else
 	value = (unsigned*)(DEBUG_TIMER_BASE + DEBUG_TIMER_LO_OFFSET);
-    // the debug timer has a 983 KHz clock, so we need to upscale slightly
-    unsigned ticks = *value;
-    // do a little bit of strangeness in order to not overflow
-    return ticks + ticks / 983 * 17;
+	// the debug timer has a 983 KHz clock, so we need to upscale slightly
+	unsigned ticks = *value;
+	// do a little bit of strangeness in order to not overflow
+	return ticks + ticks / 983 * 17;
 #endif
 }

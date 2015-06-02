@@ -174,7 +174,7 @@ void rps_server(void) {
 void init_task(void) {
 	unsigned t_next = 1000000;
 	for (;;) {
-        unsigned t = debug_timer_useconds();
+		unsigned t = debug_timer_useconds();
 		if (t >= t_next) {
 			t_next += 1000000;
 			printf("%d useconds passed" EOL, t);
@@ -205,8 +205,8 @@ void await_task(void) {
 }
 
 void await_init_task(void) {
-    create(PRIORITY_MAX + 2, nameserver);
-    create(PRIORITY_MAX + 1, clockserver);
+	create(PRIORITY_MAX + 2, nameserver);
+	create(PRIORITY_MAX + 1, clockserver);
 
 	for (int i = 0; i < 10; i++) {
 		create(PRIORITY_MAX + 3, await_task);
