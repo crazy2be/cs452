@@ -57,6 +57,10 @@ struct task_descriptor {
 	struct user_context *context;
 
 	struct task_descriptor *next, *prev;
+
+	// amount of time in useconds spent in this task (includes time for context
+	// switching)
+	unsigned user_time_useconds;
 };
 
 /**

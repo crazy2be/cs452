@@ -51,6 +51,8 @@ struct task_descriptor *task_create(void *entrypoint, int priority, int parent_t
 
 	task->context = uc;
 
+	task->user_time_useconds = 0;
+
 	return task;
 }
 
@@ -76,4 +78,8 @@ int tid_valid(int tid) {
 }
 int tid_possible(int tid) {
 	return tid >= 0 && tid <= MAX_TID;
+}
+
+int tid_next(void) {
+	return tasks.next_tid;
 }
