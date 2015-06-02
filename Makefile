@@ -93,7 +93,7 @@ UNITY_DEPEND = $(UNITY_SOURCE:.c=.d)
 $(KERNEL_BIN) $(TEST_BIN): %.bin : %.elf
 	arm-none-eabi-objcopy -O binary $< $@
 
-TEST_ALL_OBJECTS = $(KERNEL_COMMON_OBJECTS) $(TEST_COMMON_OBJECTS) $(BUILD_DIR)/user/priority.o
+TEST_ALL_OBJECTS = $(KERNEL_COMMON_OBJECTS) $(TEST_COMMON_OBJECTS) $(BUILD_DIR)/user/min_heap.o
 $(TEST_ELF): $(TEST_ALL_OBJECTS)
 	$(LD) $(LDFLAGS) -o $@ $(TEST_ALL_OBJECTS) -lgcc
 

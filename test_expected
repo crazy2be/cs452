@@ -1,6 +1,7 @@
-Boot.....IO...
+Boot......IO...
 e1:0
 e2:0
+Child task 11
 Child task 10
 Child task 9
 Child task 8
@@ -10,10 +11,11 @@ Child task 5
 Child task 4
 Child task 3
 Child task 2
-Child task 1
-Boot.....IO...
+Exiting kernel...
+Boot......IO...
 e1:0
 e2:0
 Misbehaving receive done
 Misbehaving send done
 Receive done
+Exiting kernel...

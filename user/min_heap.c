@@ -1,4 +1,4 @@
-#include "priority.h"
+#include "min_heap.h"
 
 #include <assert.h>
 

@@ -8,7 +8,7 @@
 #include "../kernel/prng.h"
 #include "../kernel/util.h"
 
-#include "priority_test.h"
+#include "min_heap.h"
 
 void child(void) {
 	io_printf(COM2, "Child task %d" EOL, tid());
