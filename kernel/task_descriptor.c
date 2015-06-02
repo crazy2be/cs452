@@ -3,33 +3,37 @@
 #include "least_significant_set_bit.h"
 
 void task_queue_init(struct task_queue *q) {
-	q->first = q->last = 0;
+	q->tail = q->head = 0;
+}
+
+static inline int task_queue_empty(struct task_queue *q) {
+	return !q->head;
 }
 
 struct task_descriptor *task_queue_pop(struct task_queue *q) {
-	struct task_descriptor *d = q->last;
+	struct task_descriptor *d = q->head;
 	if (d) {
-		KASSERT(q->first != 0 && "q->first was null, but not q->last");
+		KASSERT(q->tail != 0 && "q->tail was null, but not q->head");
 		// if the element existed, remove it from the queue
-		q->last = d->prev;
-		if (!q->last) {
-			q->first = 0;
+		q->head = d->queue_next;
+		if (!q->head) {
+			q->tail = 0;
 		}
 	}
 	return d;
 }
 
 void task_queue_push(struct task_queue *q, struct task_descriptor *d) {
-	d->prev = 0;
+	d->queue_next = 0;
 
-	if (q->first) {
-		KASSERT(!q->first->prev && "q->first->prev was not null");
-		q->first->prev = d;
+	if (q->tail) {
+		KASSERT(!q->tail->queue_next && "q->tail->queue_next was not null");
+		q->tail->queue_next = d;
 	} else {
-		KASSERT(q->last == 0 && "q->last was null, but not q->first");
-		q->last = d;
+		KASSERT(q->head == 0 && "q->head was null, but not q->tail");
+		q->head = d;
 	}
-	q->first = d;
+	q->tail = d;
 }
 
 void priority_task_queue_init(struct priority_task_queue *q) {
@@ -45,7 +49,7 @@ struct task_descriptor *priority_task_queue_pop(struct priority_task_queue *q) {
 		int priority = least_significant_set_bit(q->priority_queue_mask);
 		struct task_queue *pri_queue = &q->queues[priority];
 		struct task_descriptor *d = task_queue_pop(pri_queue);
-		if (!pri_queue->first) {
+		if (task_queue_empty(pri_queue)) {
 			q->priority_queue_mask &= ~(0x1 << priority);
 		}
 		return d;
@@ -58,7 +62,7 @@ void priority_task_queue_push(struct priority_task_queue *q, struct task_descrip
 	int priority = d->priority;
 	struct task_queue *pri_queue = &q->queues[priority];
 
-	if (!pri_queue->first) {
+	if (task_queue_empty(pri_queue)) {
 		// need to set the bit on the mask from zero to one
 		q->priority_queue_mask |= 0x1 << priority;
 	}

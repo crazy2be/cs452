@@ -20,8 +20,10 @@
  * Insertion and deletion from the queue is constant time.
  */
 struct task_descriptor;
+
+// we enqueue onto the tail of the list, and dequeue from the head
 struct task_queue {
-	struct task_descriptor *first, *last;
+	struct task_descriptor *tail, *head;
 };
 
 /**
@@ -56,7 +58,7 @@ struct task_descriptor {
 
 	struct user_context *context;
 
-	struct task_descriptor *prev;
+	struct task_descriptor *queue_next;
 };
 
 /**
