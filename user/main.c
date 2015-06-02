@@ -2,6 +2,7 @@
 #include <io.h>
 #include <assert.h>
 #include "nameserver.h"
+#include "clockserver.h"
 #include "../kernel/util.h"
 
 enum rps_req { CONNECT, MOVE_ROCK, MOVE_PAPER, MOVE_SCISSORS, QUIT };
@@ -171,12 +172,12 @@ void rps_server(void) {
 #include "../kernel/drivers/timer.h"
 
 void init_task(void) {
-	unsigned t_next = timer_time() - TIME_SECOND;
+	unsigned t_next = 1000000;
 	for (;;) {
-		unsigned t = timer_time();
-		if (t < t_next) {
-			t_next -= TIME_SECOND;
-			printf("%d seconds passed" EOL, time_seconds(t));
+		unsigned t = debug_timer_useconds();
+		if (t >= t_next) {
+			t_next += 1000000;
+			printf("%d useconds passed" EOL, t);
 		}
 	}
 	/* *(volatile unsigned*) 0x10140018 = 0xdeadbeef; */
@@ -197,19 +198,25 @@ void init_task(void) {
 
 void await_task(void) {
 	printf("About to await" EOL);
-	int t = await(EID_TIMER_TICK);
-	printf("Finished await: %d" EOL, t);
+	unsigned start = debug_timer_useconds();
+	delay(100);
+	unsigned end = debug_timer_useconds();
+	printf("Finished await: %d" EOL, end - start);
 }
+
 void await_init_task(void) {
+	create(PRIORITY_MAX + 2, nameserver);
+	create(PRIORITY_MAX + 1, clockserver);
+
 	for (int i = 0; i < 10; i++) {
-		create(PRIORITY_MAX, await_task);
+		create(PRIORITY_MAX + 3, await_task);
 	}
 	printf("Created 10" EOL);
 }
 
 #include "benchmark.h"
 int main(int argc, char *argv[]) {
-	/* boot(benchmark, 0); */
-	boot(await_init_task, 0);
-	//boot(init_task, 0);
+	boot(benchmark, 0);
+	/* boot(await_init_task, 0); */
+	/* boot(init_task, 0); */
 }

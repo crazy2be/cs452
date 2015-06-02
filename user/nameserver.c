@@ -3,12 +3,11 @@
 // TODO: these deps should not live in the kernel dir
 #include "../kernel/hashtable.h"
 #include "../kernel/util.h"
+#include "request_type.h"
 
 #include <kernel.h>
 
-#define NAMESERVER_TID 1
-
-enum request_type { WHOIS, REGISTER_AS };
+#define NAMESERVER_TID 2
 
 struct request {
 	enum request_type type;

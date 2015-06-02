@@ -29,3 +29,4 @@ struct task_descriptor *task_next_scheduled();
 
 int tid_valid(int tid); // Does TID refer to a living task?
 int tid_possible(int tid);
+int tid_next(void);

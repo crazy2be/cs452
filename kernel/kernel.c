@@ -168,7 +168,7 @@ static inline void irq_handler(struct task_descriptor *current_task) {
 
 	switch (irq) {
 	case IRQ_TIMER:
-		timer_clear_interrupt();
+		tick_timer_clear_interrupt();
 		await_event_occurred(EID_TIMER_TICK, ++clock_ticks & 0x7fffffff);
 		break;
 	default:
@@ -180,14 +180,15 @@ static inline void irq_handler(struct task_descriptor *current_task) {
 
 void idle_task(void) {
 	for (;;) {
-		for (volatile int i = 0; i < 1000; i++) {}
 		if (kernel_shutting_down()) break;
+		for (volatile int i = 0; i < 1000; i++) {}
 	}
 }
 
 #include "../gen/syscalls.h"
 int boot(void (*init_task)(void), int init_task_priority) {
 	setup();
+	unsigned ts_start = debug_timer_useconds();
 
 	task_schedule(task_create(idle_task, PRIORITY_IDLE, 0));
 	struct task_descriptor *current_task = task_create(init_task, init_task_priority, 0);
@@ -195,8 +196,12 @@ int boot(void (*init_task)(void), int init_task_priority) {
 		KASSERT(current_task->state == READY);
 		struct syscall_context sc;
 
+		unsigned ts_before = debug_timer_useconds();
 		// context switch to the next task to be run
 		sc = exit_kernel(current_task->context);
+		unsigned ts_after = debug_timer_useconds();
+
+		current_task->user_time_useconds += ts_after - ts_before;
 
 		// after returning from that task, save it's place in the task's
 		// task descriptor
@@ -229,7 +234,20 @@ int boot(void (*init_task)(void), int init_task_priority) {
 		current_task = task_next_scheduled();
 	} while (current_task);
 
-	printf("Exiting kernel...\n");
+	unsigned ts_end = debug_timer_useconds();
+	unsigned total_time_useconds = ts_end - ts_start;
+
+	printf("Exiting kernel..." EOL);
+
+	int max = tid_next();
+	unsigned kernel_runtime = total_time_useconds;
+	for (int i = 0; i < max; i++) {
+		unsigned runtime = task_from_tid(i)->user_time_useconds;
+		printf("Task %d ran for %d us" EOL, i, runtime);
+		kernel_runtime -= runtime;
+	}
+	printf("Kernel ran for %d us" EOL, kernel_runtime);
+	printf("Ran for %d us total" EOL, total_time_useconds);
 	return 0;
 }
 
