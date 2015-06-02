@@ -17,17 +17,17 @@ struct min_heap {
 	int size;
 };
 
-void min_heap_init(struct min_heap *q);
+void min_heap_init(struct min_heap *mh);
 
 int min_heap_empty(struct min_heap *mh);
 
 // push a value into the min_heap with the given prority
-void min_heap_push(struct min_heap *q, int key, int value);
+void min_heap_push(struct min_heap *mh, int key, int value);
 
 
-int min_heap_top_key(struct min_heap *q);
+int min_heap_top_key(struct min_heap *mh);
 
 // if the min_heap is non-empty, pop the highest priority element out of the min_heap
 // the value is written to the given pointer, and 0 is returned.
 // else, 1 is returned
-int min_heap_pop(struct min_heap *q);
+int min_heap_pop(struct min_heap *mh);

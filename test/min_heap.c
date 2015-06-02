@@ -4,7 +4,7 @@
 #include <io.h>
 
 void min_heap_valid(struct min_heap *h) {
-	unsigned i, child, offset;
+	int i, child, offset;
 	for (i = 0; i < h->size; i++) {
 		child = i * 2 + 1;
 		for (offset = 0; offset < 2; offset++) {
