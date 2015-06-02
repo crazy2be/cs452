@@ -12,9 +12,7 @@ struct task_descriptor *task_queue_pop(struct task_queue *q) {
 		KASSERT(q->first != 0 && "q->first was null, but not q->last");
 		// if the element existed, remove it from the queue
 		q->last = d->prev;
-		if (q->last) {
-			q->last->next = 0;
-		} else {
+		if (!q->last) {
 			q->first = 0;
 		}
 	}
@@ -22,7 +20,6 @@ struct task_descriptor *task_queue_pop(struct task_queue *q) {
 }
 
 void task_queue_push(struct task_queue *q, struct task_descriptor *d) {
-	d->next = q->first;
 	d->prev = 0;
 
 	if (q->first) {

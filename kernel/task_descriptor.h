@@ -6,7 +6,7 @@
 #include "context_switch.h"
 
 /**
- * FIFO queue of task descriptors implemented as a doubly-linked list.
+ * FIFO queue of task descriptors implemented as a singly-linked list.
  *
  * The task descriptors themselves contain the prev/next pointers, which
  * allows us to not allocate memory when inserting tasks into the list.
@@ -56,7 +56,7 @@ struct task_descriptor {
 
 	struct user_context *context;
 
-	struct task_descriptor *next, *prev;
+	struct task_descriptor *prev;
 };
 
 /**
