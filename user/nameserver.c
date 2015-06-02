@@ -7,7 +7,7 @@
 
 #include <kernel.h>
 
-#define NAMESERVER_TID 1
+#define NAMESERVER_TID 2
 
 struct request {
 	enum request_type type;

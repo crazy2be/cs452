@@ -2,6 +2,7 @@
 #include <io.h>
 #include <assert.h>
 #include "nameserver.h"
+#include "clockserver.h"
 #include "../kernel/util.h"
 
 enum rps_req { CONNECT, MOVE_ROCK, MOVE_PAPER, MOVE_SCISSORS, QUIT };
@@ -197,12 +198,16 @@ void init_task(void) {
 
 void await_task(void) {
 	printf("About to await" EOL);
-	int t = await(EID_TIMER_TICK);
+	int t = delay(100);
 	printf("Finished await: %d" EOL, t);
 }
+
 void await_init_task(void) {
+    create(PRIORITY_MAX + 2, nameserver);
+    create(PRIORITY_MAX + 1, clockserver);
+
 	for (int i = 0; i < 10; i++) {
-		create(PRIORITY_MAX, await_task);
+		create(PRIORITY_MAX + 3, await_task);
 	}
 	printf("Created 10" EOL);
 }

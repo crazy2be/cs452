@@ -19,6 +19,8 @@ struct min_heap {
 
 void min_heap_init(struct min_heap *q);
 
+int min_heap_empty(struct min_heap *mh);
+
 // push a value into the min_heap with the given prority
 void min_heap_push(struct min_heap *q, int key, int value);
 
