@@ -83,34 +83,32 @@ static int clockserver_tid(void) {
 	return cs_tid;
 }
 
-int delay(int ticks) {
+static int clockserver_send(struct request *req) {
 	int rpy;
+	int l = send(clockserver_tid(), req, sizeof(*req), &rpy, sizeof(rpy));
+	if (l != sizeof(rpy)) return l;
+	return rpy;
+}
+
+int delay(int ticks) {
 	struct request req = (struct request) {
 		.type = DELAY,
 		 .ticks = ticks,
 	};
-	int l = send(clockserver_tid(), &req, sizeof(req), &rpy, sizeof(rpy));
-	if (l != sizeof(rpy)) return l;
-	return rpy;
+	return clockserver_send(&req);
 }
 
 int time() {
-	int rpy;
 	struct request req = (struct request) {
 		.type = TIME,
 	};
-	int l = send(clockserver_tid(), &req, sizeof(req), &rpy, sizeof(rpy));
-	if (l != sizeof(rpy)) return l;
-	return rpy;
+	return clockserver_send(&req);
 }
 
 int delay_until(int ticks) {
-	int rpy;
 	struct request req = (struct request) {
 		.type = DELAY_UNTIL,
 		 .ticks = ticks,
 	};
-	int l = send(clockserver_tid(), &req, sizeof(req), &rpy, sizeof(rpy));
-	if (l != sizeof(rpy)) return l;
-	return rpy;
+	return clockserver_send(&req);
 }
