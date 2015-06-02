@@ -15,7 +15,7 @@
 #define RECV_PRIORITY 14
 #endif
 
-#define RECEIVER_TID 2
+#define RECEIVER_TID 3
 #define ITERATIONS 2000
 
 
@@ -54,14 +54,14 @@ void benchmark(void) {
 	unsigned dummy;
 	int tid;
 
-	unsigned start = 0xffffffff - timer_time();
+	unsigned start = debug_timer_useconds();
 
 	create(SEND_PRIORITY, sender);
 	create(RECV_PRIORITY, receiver);
 	receive(&tid, &dummy, sizeof(dummy));
 
-	unsigned end = 0xffffffff - timer_time();
+	unsigned end = debug_timer_useconds();
 
 	printf("Benchmark took %d ns (msg_size = %d, iterations = %d, pdelta = %d)" EOL,
-	       (unsigned) (end - start) * 1000 / ITERATIONS, BENCHMARK_MSG_SIZE, ITERATIONS, SEND_PRIORITY - RECV_PRIORITY);
+	       (end - start) * 1000 / ITERATIONS, BENCHMARK_MSG_SIZE, ITERATIONS, SEND_PRIORITY - RECV_PRIORITY);
 }

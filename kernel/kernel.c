@@ -168,7 +168,7 @@ static inline void irq_handler(struct task_descriptor *current_task) {
 
 	switch (irq) {
 	case IRQ_TIMER:
-		timer_clear_interrupt();
+		tick_timer_clear_interrupt();
 		await_event_occurred(EID_TIMER_TICK, ++clock_ticks & 0x7fffffff);
 		break;
 	default:

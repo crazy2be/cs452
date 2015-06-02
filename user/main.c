@@ -172,12 +172,12 @@ void rps_server(void) {
 #include "../kernel/drivers/timer.h"
 
 void init_task(void) {
-	unsigned t_next = timer_time() - TIME_SECOND;
+	unsigned t_next = 1000000;
 	for (;;) {
-		unsigned t = timer_time();
-		if (t < t_next) {
-			t_next -= TIME_SECOND;
-			printf("%d seconds passed" EOL, time_seconds(t));
+        unsigned t = debug_timer_useconds();
+		if (t >= t_next) {
+			t_next += 1000000;
+			printf("%d useconds passed" EOL, t);
 		}
 	}
 	/* *(volatile unsigned*) 0x10140018 = 0xdeadbeef; */
@@ -215,6 +215,6 @@ void await_init_task(void) {
 #include "benchmark.h"
 int main(int argc, char *argv[]) {
 	/* boot(benchmark, 0); */
-	boot(await_init_task, 0);
-	//boot(init_task, 0);
+	/* boot(await_init_task, 0); */
+	boot(init_task, 0);
 }
