@@ -3,6 +3,7 @@
 #include <assert.h>
 #include "nameserver.h"
 #include "clockserver.h"
+#include "rps.h"
 #include "../kernel/util.h"
 #include "../kernel/drivers/timer.h"
 
@@ -36,6 +37,6 @@ void init(void) {
 #include "benchmark.h"
 int main(int argc, char *argv[]) {
 	boot(init, 0);
-	/* boot(await_init_task, 0); */
+	/* boot(rps_init_task, 0); */
 	/* boot(init_task, 0); */
 }

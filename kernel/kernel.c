@@ -180,12 +180,13 @@ static inline void irq_handler(struct task_descriptor *current_task) {
 
 void idle_task(void) {
 	for (;;) {
-		if (kernel_shutting_down()) break;
+		if (!should_idle()) break;
 		for (volatile int i = 0; i < 1000; i++) {}
 	}
 }
 
 #include "../gen/syscalls.h"
+#define SYSCALL_IRQ 37
 int boot(void (*init_task)(void), int init_task_priority) {
 	setup();
 	unsigned ts_start = debug_timer_useconds();
@@ -212,21 +213,18 @@ int boot(void (*init_task)(void), int init_task_priority) {
 		// on the appropriate queue (unless exit is called, in which
 		// case the task is not rescheduled).
 		switch (sc.syscall_num) {
-		case SYSCALL_CREATE:     create_handler(current_task);     break;
-		case SYSCALL_PASS:       pass_handler(current_task);       break;
-		case SYSCALL_EXITK:      exit_handler(current_task);       break;
-		case SYSCALL_TID:        tid_handler(current_task);        break;
-		case SYSCALL_PARENT_TID: parent_tid_handler(current_task); break;
-		case SYSCALL_SEND:       send_handler(current_task);       break;
-		case SYSCALL_RECEIVE:    receive_handler(current_task);    break;
-		case SYSCALL_REPLY:      reply_handler(current_task);      break;
-		case SYSCALL_AWAIT:      await_handler(current_task);      break;
-		case SYSCALL_RAND:       rand_handler(current_task);       break;
-		case SYSCALL_KERNEL_SHUTTING_DOWN:
-			syscall_set_return(current_task->context, !await_tasks_waiting());
-			task_schedule(current_task);
-			break;
-		case 37: irq_handler(current_task); break;
+		case SYSCALL_CREATE:      create_handler(current_task);      break;
+		case SYSCALL_PASS:        pass_handler(current_task);        break;
+		case SYSCALL_EXITK:       exit_handler(current_task);        break;
+		case SYSCALL_TID:         tid_handler(current_task);         break;
+		case SYSCALL_PARENT_TID:  parent_tid_handler(current_task);  break;
+		case SYSCALL_SEND:        send_handler(current_task);        break;
+		case SYSCALL_RECEIVE:     receive_handler(current_task);     break;
+		case SYSCALL_REPLY:       reply_handler(current_task);       break;
+		case SYSCALL_AWAIT:       await_handler(current_task);       break;
+		case SYSCALL_RAND:        rand_handler(current_task);        break;
+		case SYSCALL_SHOULD_IDLE: should_idle_handler(current_task); break;
+		case SYSCALL_IRQ:         irq_handler(current_task);         break;
 		default:
 			KASSERT(0 && "UNKNOWN SYSCALL NUMBER");
 			break;

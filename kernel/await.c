@@ -26,6 +26,14 @@ void await_event_occurred(int eid, int data) {
 	}
 }
 
-int await_tasks_waiting() {
-	return num_tasks_waiting;
+void should_idle_handler(struct task_descriptor *current_task) {
+	// Really, the condition for the idle task to exit (and for the kernel to
+	// exit) should be "no ready tasks & no await-blocked tasks".
+	// However, this is somewhat optimized, since it will only ever be called
+	// by the idle task.
+	// This means that we already know the ready queue is otherwise empty, so
+	// we only need to check for await-blocked tasks.
+	int should_idle = num_tasks_waiting;
+	syscall_set_return(current_task->context, should_idle);
+	task_schedule(current_task);
 }
