@@ -236,6 +236,20 @@ int boot(void (*init_task)(void), int init_task_priority) {
 	unsigned total_time_useconds = ts_end - ts_start;
 
 	printf("Exiting kernel..." EOL);
+	// If we don't deinit the timer, the second time our kernel boots up, we
+	// end up crashing immediately (or, at least, before printing anything to
+	// the screen). Deiniting the timer fixes this, but it seems like it's
+	// probably the wrong solution. Our current most likely hypothesis is that
+	// this is caused because leaving the timer enabled causes us to have an
+	// interrupt pending immediately upon entering the kernel on bootup, and
+	// we aren't handling this casse correctly. Disabling the timer when
+	// shutting down works around this issue, but doesn't seem like it will
+	// work properly once we have other types of interrupts as well (i.e. UART).
+	//
+	// On pgrabound-experimental, we have some code to disable interrupts again
+	// on kernel shutdown, but, curiously, that code doesn't seem to fix this
+	// problem. More investigation is needed...
+	timer_deinit();
 
 	int max = tid_next();
 	unsigned kernel_runtime = total_time_useconds;

@@ -16,6 +16,7 @@
 #endif
 
 void timer_init(void);
+void timer_deinit(void);
 
 /* unsigned timer_time(void); */
 void tick_timer_clear_interrupt(void);

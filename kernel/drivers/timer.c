@@ -54,6 +54,11 @@ void timer_init(void) {
 #endif
 }
 
+void timer_deinit(void) {
+	volatile unsigned int* reg = (unsigned*)(TIMER_BASE + TIMER_CONTROL_OFFSET);
+	*reg = 0;
+}
+
 /* unsigned timer_time(void) { */
 /* 	return *(volatile unsigned*)(TIMER_BASE + TIMER_VALUE_OFFSET); */
 /* } */
