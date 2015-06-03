@@ -11,8 +11,8 @@
 enum rps_req { CONNECT, MOVE_ROCK, MOVE_PAPER, MOVE_SCISSORS, QUIT };
 
 // there should be an even number of clients
-#define MIN_CLIENT_TID 3
-#define MAX_CLIENT_TID 6
+#define MIN_CLIENT_TID 4
+#define MAX_CLIENT_TID 7
 
 // pick arbitrary magic numbers to sanity check responses
 #define RESP_CONNECTED 17
