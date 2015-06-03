@@ -89,6 +89,6 @@ int await(unsigned eid);
 
 unsigned rand(void);
 
-int kernel_shutting_down(void); // Just for the idle task.
+int should_idle(void); // Just for the idle task.
 
 #define NULL (void*)0
