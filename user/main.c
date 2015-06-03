@@ -16,7 +16,7 @@ void client_task(void) {
 	send(1, NULL, 0, &rpy, sizeof(rpy));
 	for (int i = 0; i < rpy.delay_count; i++) {
 		delay(rpy.delay_time);
-		printf("tid: %d, interval: %d, delay: %d\n", tid(), rpy.delay_time, i);
+		printf("tid: %d, interval: %d, round: %d\n", tid(), rpy.delay_time, i);
 	}
 }
 
@@ -28,11 +28,9 @@ void init(void) {
 		create(LOWER(PRIORITY_MAX, i + 3), client_task);
 	}
 	struct init_reply rpys[4] = {{10, 20}, {23, 9}, {33, 6}, {71, 3}};
-	for (int i = 0; i < 4; i++) {
-		int tid = -1;
-		receive(&tid, NULL, 0);
-		reply(tid, &rpys[i], sizeof(rpys[i]));
-	}
+	int tids[4] = {};
+	for (int i = 0; i < 4; i++) receive(&tids[i], NULL, 0);
+	for (int i = 0; i < 4; i++) reply(tids[i], &rpys[i], sizeof(rpys[i]));
 }
 
 #include "benchmark.h"
