@@ -29,19 +29,32 @@ void await_task(void) {
 	printf("Finished await: %d" EOL, end - start);
 }
 
-void await_init_task(void) {
-	create(PRIORITY_MAX + 2, nameserver);
-	create(PRIORITY_MAX + 1, clockserver);
+struct init_reply {
+	int delay_time;
+	int delay_count;
+};
 
-	for (int i = 0; i < 10; i++) {
-		create(PRIORITY_MAX + 3, await_task);
+void client_task(void) {
+	struct init_reply rpy;
+	send(0, NULL, 0, &rpy, sizeof(rpy));
+	for (int i = 0; i < rpy.delay_count; i++) {
+		delay(rpy.delay_time);
+		printf("tid: %d, interval: %d, delay: %d\n", tid(), rpy.delay_time, i);
 	}
-	printf("Created 10" EOL);
+}
+
+void init(void) {
+	create(LOWER(PRIORITY_MAX, 2), nameserver);
+	create(LOWER(PRIORITY_MAX, 1), clockserver);
+
+	for (int i = 0; i < 4; i++) {
+		create(LOWER(PRIORITY_MAX, 3), client_task);
+	}
 }
 
 #include "benchmark.h"
 int main(int argc, char *argv[]) {
-	boot(benchmark, 0);
+	boot(init, 0);
 	/* boot(await_init_task, 0); */
 	/* boot(init_task, 0); */
 }

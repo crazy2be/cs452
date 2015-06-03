@@ -58,6 +58,10 @@ int parent_tid(void);
 #define PRIORITY_MIN 30
 #define PRIORITY_IDLE 31
 #define PRIORITY_COUNT (PRIORITY_IDLE + 1)
+// Process priorities are reversed from what you might expect based on normal
+// number systems. Use macros to be less confusing, maybe?
+#define HIGHER(priority, amount) ((priority) - (amount))
+#define LOWER(priority, amount) ((priority) + (amount))
 
 #define Send send
 int send(int tid, const void *msg, int msglen, void *reply, int replylen);
