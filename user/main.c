@@ -6,29 +6,6 @@
 #include "../kernel/util.h"
 #include "../kernel/drivers/timer.h"
 
-void init_task(void) {
-	unsigned t_next = 1000000;
-	for (;;) {
-		unsigned t = debug_timer_useconds();
-		if (t >= t_next) {
-			t_next += 1000000;
-			printf("%d useconds passed" EOL, t);
-		}
-	}
-	/* *(volatile unsigned*) 0x10140018 = 0xdeadbeef; */
-	/* printf("After interrupt generated" EOL); */
-	/* *(volatile unsigned*) 0x10140018 = 0xdeadbeef; */
-	/* printf("After interrupt generated" EOL); */
-}
-
-void await_task(void) {
-	printf("About to await" EOL);
-	unsigned start = debug_timer_useconds();
-	delay(100);
-	unsigned end = debug_timer_useconds();
-	printf("Finished await: %d" EOL, end - start);
-}
-
 struct init_reply {
 	int delay_time;
 	int delay_count;
@@ -36,7 +13,7 @@ struct init_reply {
 
 void client_task(void) {
 	struct init_reply rpy;
-	send(0, NULL, 0, &rpy, sizeof(rpy));
+	send(1, NULL, 0, &rpy, sizeof(rpy));
 	for (int i = 0; i < rpy.delay_count; i++) {
 		delay(rpy.delay_time);
 		printf("tid: %d, interval: %d, delay: %d\n", tid(), rpy.delay_time, i);
@@ -48,7 +25,13 @@ void init(void) {
 	create(LOWER(PRIORITY_MAX, 1), clockserver);
 
 	for (int i = 0; i < 4; i++) {
-		create(LOWER(PRIORITY_MAX, 3), client_task);
+		create(LOWER(PRIORITY_MAX, i + 3), client_task);
+	}
+	struct init_reply rpys[4] = {{10, 20}, {23, 9}, {33, 6}, {71, 3}};
+	for (int i = 0; i < 4; i++) {
+		int tid = -1;
+		receive(&tid, NULL, 0);
+		reply(tid, &rpys[i], sizeof(rpys[i]));
 	}
 }
 
