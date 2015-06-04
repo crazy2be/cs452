@@ -29,7 +29,7 @@ void dump_irq(void) {
 #endif
 }
 
-void setup_irq(void) {
+void irq_setup(void) {
 	// TODO: see A.2.6.8 in the arm manual
 
 	// see A.2.5 in the manual
@@ -58,16 +58,18 @@ void setup_irq(void) {
 #endif
 }
 
-/* void set_irq(unsigned long long interrupts) { */
-/* #ifdef QEMU */
-/*     VWRITE(0x10140018, (unsigned) interrupts); */
-/* #else */
-/*     VWRITE(VIC1_BASE + SOFTINT_OFFSET, interrupts); */
-/*     VWRITE(VIC1_BASE + SOFTINT_OFFSET, interrupts); */
-/* #endif */
-/* } */
+// intended to be called after the shutdown of the kernel, so as not to mess with redboot
+void irq_cleanup(void) {
+#ifndef QEMU
+    VWRITE(VIC1_BASE + ENABLE_OFFSET, 0);
+    VWRITE(VIC2_BASE + ENABLE_OFFSET, 0);
+#else
+    VWRITE(0x10140010, 0);
+#endif
+    __asm__ __volatile__ ("msr cpsr_c, #0x13");
+}
 
-unsigned long long get_irq(void) {
+unsigned long long irq_get_interrupt(void) {
 #ifdef QEMU
 	return (unsigned long long)(*(volatile unsigned*) 0x10140000);
 #else

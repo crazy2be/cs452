@@ -1,7 +1,8 @@
 #pragma once
 
-void setup_irq(void);
-unsigned long long get_irq(void);
+void irq_setup(void);
+unsigned long long irq_get_interrupt(void);
+void irq_cleanup(void);
 
 // each of these is a bit index, so the mask for IRQ_X is (0x1 << IRQ_X)
 #define IRQ_MASK(x) (0x1 << (x))
