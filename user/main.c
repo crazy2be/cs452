@@ -18,7 +18,7 @@ void client_task(void) {
 	send(1, NULL, 0, &rpy, sizeof(rpy));
 	for (int i = 0; i < rpy.delay_count; i++) {
 		delay(rpy.delay_time);
-		printf("tid: %d, interval: %d, round: %d\n", tid(), rpy.delay_time, i);
+		printf("tid: %d, interval: %d, round: %d" EOL, tid(), rpy.delay_time, i);
 	}
 	signal_send(parent_tid());
 }
