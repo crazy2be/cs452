@@ -20,10 +20,14 @@ static void clocknotifier(void) {
 		int ticks = await(EID_TIMER_TICK);
 		if (ticks >= 0) {
 			req.ticks = ticks;
-			send(clockserver_tid, &req, sizeof(req), NULL, 0);
+			if (send(clockserver_tid, &req, sizeof(req), NULL, 0) != 0) {
+				// the server shut down, so simply exit
+				return;
+			}
 		} else {
 			printf("Got error response %d from await()" EOL, ticks);
 			ASSERT(0);
+			break;
 		}
 	}
 }
@@ -65,6 +69,13 @@ void clockserver(void) {
 			resp = num_ticks;
 			reply(tid, &resp, sizeof(resp));
 			break;
+		case SHUTDOWN:
+			// after shutdown request, keep serving requests until the notifier
+			// signals us, and we can tell the notifier to shut down
+			resp = 0;
+			reply(tid, &resp, sizeof(resp));
+			printf("Shutting down clockserver" EOL);
+			return;
 		default:
 			resp = -1;
 			printf("UNKNOWN REQ" EOL);
@@ -109,6 +120,13 @@ int delay_until(int ticks) {
 	struct request req = (struct request) {
 		.type = DELAY_UNTIL,
 		 .ticks = ticks,
+	};
+	return clockserver_send(&req);
+}
+
+int shutdown_clockserver(void) {
+	struct request req = (struct request) {
+		.type = SHUTDOWN,
 	};
 	return clockserver_send(&req);
 }

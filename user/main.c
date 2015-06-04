@@ -4,6 +4,7 @@
 #include "nameserver.h"
 #include "clockserver.h"
 #include "rps.h"
+#include "signal.h"
 #include "../kernel/util.h"
 #include "../kernel/drivers/timer.h"
 
@@ -19,6 +20,7 @@ void client_task(void) {
 		delay(rpy.delay_time);
 		printf("tid: %d, interval: %d, round: %d\n", tid(), rpy.delay_time, i);
 	}
+	signal_send(parent_tid());
 }
 
 void init(void) {
@@ -32,6 +34,11 @@ void init(void) {
 	int tids[4] = {};
 	for (int i = 0; i < 4; i++) receive(&tids[i], NULL, 0);
 	for (int i = 0; i < 4; i++) reply(tids[i], &rpys[i], sizeof(rpys[i]));
+
+	printf("All spawned!" EOL);
+	for (int i = 0; i < 4; i++) signal_recv();
+	printf("All done!" EOL);
+	shutdown_clockserver();
 }
 
 #include "benchmark.h"
