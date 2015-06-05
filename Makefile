@@ -1,15 +1,16 @@
 MAKEFILE_NAME = ${firstword ${MAKEFILE_LIST}} # makefile name
 
 BUILD_DIR=build
-KERNEL_SRC_DIR=kernel
-GEN_SRC_DIR=gen
-TEST_SRC_DIR=test
-USER_SRC_DIR=user
-LIB_SRC_DIR=lib
+SRC_DIR=src
+KERNEL_SRC_DIR=$(SRC_DIR)/kernel
+GEN_SRC_DIR=$(SRC_DIR)/gen
+TEST_SRC_DIR=$(SRC_DIR)/test
+USER_SRC_DIR=$(SRC_DIR)/user
+LIB_SRC_DIR=$(SRC_DIR)/lib
 
 BENCHMARK_FLAGS = -DBENCHMARK_CACHE -DBENCHMARK_SEND_FIRST -DBENCHMARK_MSG_SIZE=64
 
-CFLAGS  = -g -fPIC -Wall -Werror -Iinclude -Ilib -std=c99 -O2 $(BENCHMARK_FLAGS)
+CFLAGS  = -g -fPIC -Wall -Werror -Iinclude -I$(SRC_DIR)/lib -std=c99 -O2 $(BENCHMARK_FLAGS)
 ARCH_CFLAGS = -mcpu=arm920t -msoft-float
 # -g: include hooks for gdb
 # -mcpu=arm920t: generate code for the 920t architecture
@@ -57,7 +58,7 @@ default: install
 endif
 
 # macro to turn source names into object names
-objectify=$(addprefix $(BUILD_DIR)/, $(addsuffix .o, $(basename $(1))))
+objectify=$(subst $(SRC_DIR)/, $(BUILD_DIR)/, $(addsuffix .o, $(basename $(1))))
 
 GENERATED_SOURCES = $(GEN_SRC_DIR)/syscalls.s $(GEN_SRC_DIR)/syscalls.h
 
@@ -120,11 +121,11 @@ $(KERNEL_ELF) $(TEST_ELF): $(LINKER_SCRIPT)
 # actual build script for arm parts
 
 # assemble hand-written assembly
-$(ASM_OBJECTS): $(BUILD_DIR)/%.o : %.s
+$(ASM_OBJECTS): $(BUILD_DIR)/%.o : $(SRC_DIR)/%.s
 	$(AS) $(ASFLAGS) -o $@ $<
 
 # compile c to assembly, and leave assembly around for inspection
-$(GENERATED_ASSEMBLY): $(BUILD_DIR)/%.s : %.c
+$(GENERATED_ASSEMBLY): $(BUILD_DIR)/%.s : $(SRC_DIR)/%.c
 	$(CC) $(CFLAGS) $(ARCH_CFLAGS) -S -MD -MT $@ -o $@ $<
 
 # assemble the generated assembly
@@ -136,9 +137,9 @@ $(C_OBJECTS) $(GENERATED_ASSEMBLY) $(UNITY_SOURCE): | $(DIRS)
 
 $(GENERATED_ASSEMBLY): $(GENERATED_SOURCES)
 
-$(GENERATED_SOURCES): kernel/syscall.py
+$(GENERATED_SOURCES): $(KERNEL_SRC_DIR)/syscall.py
 	mkdir -p $(GEN_SRC_DIR)
-	python $<
+	python $< $(GEN_SRC_DIR)
 
 $(DIRS):
 	@mkdir -p $@

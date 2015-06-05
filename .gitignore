@@ -1,5 +1,5 @@
 /build
-/gen
+/src/gen
 /test_output
 /docs
 /writeup/*/*.aux
