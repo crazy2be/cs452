@@ -34,7 +34,6 @@ static void clocknotifier(void) {
 
 void clockserver(void) {
 	struct min_heap delayed;
-	printf("clock server starting up with tid = %d" EOL, tid());
 	min_heap_init(&delayed);
 	register_as("clockserver");
 
@@ -74,7 +73,6 @@ void clockserver(void) {
 			// signals us, and we can tell the notifier to shut down
 			resp = 0;
 			reply(tid, &resp, sizeof(resp));
-			printf("Shutting down clockserver" EOL);
 			return;
 		default:
 			resp = -1;

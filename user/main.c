@@ -35,9 +35,7 @@ void init(void) {
 	for (int i = 0; i < 4; i++) receive(&tids[i], NULL, 0);
 	for (int i = 0; i < 4; i++) reply(tids[i], &rpys[i], sizeof(rpys[i]));
 
-	printf("All spawned!" EOL);
 	for (int i = 0; i < 4; i++) signal_recv();
-	printf("All done!" EOL);
 	shutdown_clockserver();
 }
 

@@ -1,0 +1,111 @@
+\documentclass[titlepage]{article}
+\usepackage{listings}
+\usepackage{hyperref}
+
+\lstset{basicstyle=\footnotesize\ttfamily,breaklines=true}
+
+\begin{document}
+\title{Kernel 3}
+\author{Justin McGirr (\#20413625), Peter Raboud (\#20437716)}
+\maketitle
+
+\section{Instructions}
+\input{"../k1/README.tex"}
+\section{Design Decisions}
+
+% Things we should probably talk about (not a complete list, just a brain dump
+% of some things I think we should include)
+% - how we queue tasks awaiting events
+% - how we chose our await_event() signature
+% - the clockserver implementation (choice of min heap to maintain the list of waiting tasks)
+% - how the context switch works in the new world order (and why we chose to
+%   have 2 separate context switches)
+
+\section{Questions}
+
+The output produced by running the kernel is reproduced below:
+
+\begin{verbatim}
+Boot......IO...
+tid: 4, interval: 10, round: 0
+tid: 4, interval: 10, round: 1
+tid: 5, interval: 23, round: 0
+tid: 4, interval: 10, round: 2
+tid: 6, interval: 33, round: 0
+tid: 4, interval: 10, round: 3
+tid: 5, interval: 23, round: 1
+tid: 4, interval: 10, round: 4
+tid: 4, interval: 10, round: 5
+tid: 6, interval: 33, round: 1
+tid: 5, interval: 23, round: 2
+tid: 4, interval: 10, round: 6
+tid: 7, interval: 71, round: 0
+tid: 4, interval: 10, round: 7
+tid: 4, interval: 10, round: 8
+tid: 5, interval: 23, round: 3
+tid: 6, interval: 33, round: 2
+tid: 4, interval: 10, round: 9
+tid: 4, interval: 10, round: 10
+tid: 5, interval: 23, round: 4
+tid: 4, interval: 10, round: 11
+tid: 4, interval: 10, round: 12
+tid: 6, interval: 33, round: 3
+tid: 5, interval: 23, round: 5
+tid: 4, interval: 10, round: 13
+tid: 7, interval: 71, round: 1
+tid: 4, interval: 10, round: 14
+tid: 4, interval: 10, round: 15
+tid: 5, interval: 23, round: 6
+tid: 6, interval: 33, round: 4
+tid: 4, interval: 10, round: 16
+tid: 4, interval: 10, round: 17
+tid: 5, interval: 23, round: 7
+tid: 4, interval: 10, round: 18
+tid: 6, interval: 33, round: 5
+tid: 4, interval: 10, round: 19
+tid: 5, interval: 23, round: 8
+tid: 7, interval: 71, round: 2
+Exiting kernel...
+Task 0 ran for 1981447 us
+Task 1 ran for 338 us
+Task 2 ran for 310 us
+Task 3 ran for 1205 us
+Task 4 ran for 3266 us
+Task 5 ran for 1379 us
+Task 6 ran for 928 us
+Task 7 ran for 438 us
+Task 8 ran for 528 us
+Kernel ran for 146629 us
+Ran for 2136468 us total
+\end{verbatim}
+
+The first line is output produced as the kernel loads up, to provide feedback in the case that it breaks,
+and is not significant here.
+
+The following lines (until \texttt{Exiting kernel...}) are printed by the client tasks, after every delay.
+Because each message is printed out after a delay, output is not produced immediately by each task.
+This causes the tasks with the smallest delays to print out several times tasks with longer delays wake up.
+
+At the moment, the tasks print in a stable / predictable order.
+This is because the tasks have different delay periods which aren't multiples of each other.
+If the resume and wait process was instantaenous, this would mean that the tasks would wake up at $d, 2d, 3d, \ldots$,
+and since the GCD of any two $d$'s of the tasks is bigger than the amount of time the program runs, these
+numbers never collide.
+Since our resume and wait process never takes more than a single clock tick (10ms), it is sufficiently close to instantaenous
+that clock ticks aren't dropped by the client tasks.
+(i.e.: a clock is supposed to be resumed at time $t$, but goes back to sleep at $t + \delta$.
+When it requests \texttt{delay(d)}, it will be woken back up at $t + \delta + d$, when it would ideally
+be woken up at $t + d$.)
+Therefore, because our kernel and user tasks are sufficiently fast (at least for now), and because
+none of the wakeup periods align with each other, there is a predictable order for waking up the tasks again.
+
+\section{Source Code}
+The source code is hosted on git, at \url{git.uwaterloo.ca/pgraboud/cs452-kernel}.
+The version we wish to submit is on the \texttt{k3} branch, specifically
+the commit:
+\input{|"git rev-parse HEAD | ./../verbatim"}
+We are submitting the following files:
+\input{|"cat ../file-list | ./../verbatim"}
+\input{|"./../file-list | ./../verbatim"}
+
+\end{document}

@@ -80,8 +80,8 @@ void setup(void) {
 	io_puts(COM2, "IO..." EOL);
 	io_flush(COM2);
 
-	printf("e1:%x" EOL, uart_err(COM1));
-	printf("e2:%x" EOL, uart_err(COM2));
+	/* printf("e1:%x" EOL, uart_err(COM1)); */
+	/* printf("e2:%x" EOL, uart_err(COM2)); */
 	io_flush(COM2);
 
 	prng_init(&random_gen, 0xdeadbeef);
