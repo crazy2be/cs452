@@ -1,8 +1,7 @@
 #include "nameserver.h"
 
-// TODO: these deps should not live in the kernel dir
-#include "../kernel/hashtable.h"
-#include "../kernel/util.h"
+#include <hashtable.h>
+#include <util.h>
 #include "request_type.h"
 
 #include <kernel.h>

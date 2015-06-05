@@ -1,6 +1,10 @@
 #include "rbuf.h"
 #include "util.h"
 
+// TODO: it's a code smell that data structures asserting in a user task can cause
+// the kernel to panic
+#include "../kernel/kassert.h"
+
 void rbuf_init(struct RBuf *rbuf) {
 	rbuf->i = 0;
 	rbuf->l = 0;

@@ -1,6 +1,8 @@
 #include "task_descriptor.h"
+
 #include "util.h"
-#include "least_significant_set_bit.h"
+#include <least_significant_set_bit.h>
+#include "kassert.h"
 
 void task_queue_init(struct task_queue *q) {
 	q->tail = q->head = 0;

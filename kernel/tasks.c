@@ -1,6 +1,7 @@
 #include "tasks.h"
 
-#include "util.h"
+#include <util.h>
+#include "kassert.h"
 
 static struct task_collection tasks;
 static struct priority_task_queue queue;

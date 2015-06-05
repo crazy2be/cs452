@@ -1,7 +1,8 @@
 #ifdef QEMU
 #include "uart.h"
 #include <io.h>
-#include "../util.h"
+#include <util.h>
+#include "../kassert.h"
 
 // included here since this defines a bunch of UART flags which are the same
 // in the qemu pbversatile arch

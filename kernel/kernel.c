@@ -1,5 +1,8 @@
 #include <kernel.h>
-#include "util.h"
+
+#include <util.h>
+#include <least_significant_set_bit.h>
+
 #include "io.h"
 #include "drivers/timer.h"
 #include "drivers/uart.h"
@@ -9,7 +12,7 @@
 #include "tasks.h"
 #include "msg.h"
 #include "await.h"
-#include "least_significant_set_bit.h"
+#include "kassert.h"
 
 /** @file */
 

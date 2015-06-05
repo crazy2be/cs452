@@ -5,10 +5,11 @@ KERNEL_SRC_DIR=kernel
 GEN_SRC_DIR=gen
 TEST_SRC_DIR=test
 USER_SRC_DIR=user
+LIB_SRC_DIR=lib
 
 BENCHMARK_FLAGS = -DBENCHMARK_CACHE -DBENCHMARK_SEND_FIRST -DBENCHMARK_MSG_SIZE=64
 
-CFLAGS  = -g -fPIC -Wall -Werror -Iinclude -std=c99 -O2 $(BENCHMARK_FLAGS)
+CFLAGS  = -g -fPIC -Wall -Werror -Iinclude -Ilib -std=c99 -O2 $(BENCHMARK_FLAGS)
 ARCH_CFLAGS = -mcpu=arm920t -msoft-float
 # -g: include hooks for gdb
 # -mcpu=arm920t: generate code for the 920t architecture
@@ -58,34 +59,43 @@ endif
 # macro to turn source names into object names
 objectify=$(addprefix $(BUILD_DIR)/, $(addsuffix .o, $(basename $(1))))
 
+GENERATED_SOURCES = $(GEN_SRC_DIR)/syscalls.s $(GEN_SRC_DIR)/syscalls.h
+
 # find sources for each subproject independantly,
 # since it's not easy to split them back up again with make
 KERNEL_SOURCES=$(shell find $(KERNEL_SRC_DIR) -name *.c)
 USER_SOURCES=$(shell find $(USER_SRC_DIR) -name *.c)
 TEST_SOURCES=$(shell find $(TEST_SRC_DIR) -name *.c)
+LIB_SOURCES=$(shell find $(LIB_SRC_DIR) -name *.c)
 
 KERNEL_ASM_SOURCES=$(shell find $(KERNEL_SRC_DIR) -name *.s) $(GEN_SRC_DIR)/syscalls.s
 USER_ASM_SOURCES=$(shell find $(USER_SRC_DIR) -name *.s)
 TEST_ASM_SOURCES=$(shell find $(TEST_SRC_DIR) -name *.s)
+LIB_ASM_SOURCES=$(shell find $(LIB_SRC_DIR) -name *.s)
 
 # definitions for compiling C source code
-SOURCES=$(KERNEL_SOURCES) $(USER_SOURCES) $(TEST_SOURCES)
+SOURCES=$(KERNEL_SOURCES) $(USER_SOURCES) $(TEST_SOURCES) $(LIB_SOURCES)
 OBJECTS=$(call objectify, $(SOURCES))
 GENERATED_ASSEMBLY=${OBJECTS:.o=.s}
 DEPENDS=${OBJECTS:.o=.d}
 
 # definitions for assembling handwritten assembly
-ASM_SOURCES=$(KERNEL_ASM_SOURCES) $(USER_ASM_SOURCES) $(TEST_ASM_SOURCES)
+ASM_SOURCES=$(KERNEL_ASM_SOURCES) $(USER_ASM_SOURCES) $(TEST_ASM_SOURCES) $(LIB_ASM_SOURCES)
 ASM_OBJECTS=$(call objectify, $(ASM_SOURCES))
 
 DIRS=$(sort $(dir $(OBJECTS) $(ASM_OBJECTS)))
 
 # definitions used for linker recipe
+# "common" objects refers the fact that these come from both C and ASM files
 KERNEL_COMMON_OBJECTS = $(call objectify, $(KERNEL_SOURCES) $(KERNEL_ASM_SOURCES))
 USER_COMMON_OBJECTS = $(call objectify, $(USER_SOURCES) $(USER_ASM_SOURCES))
 TEST_COMMON_OBJECTS = $(call objectify, $(TEST_SOURCES) $(TEST_ASM_SOURCES))
-GENERATED_SOURCES = $(GEN_SRC_DIR)/syscalls.s $(GEN_SRC_DIR)/syscalls.h
+LIB_COMMON_OBJECTS = $(call objectify, $(LIB_SOURCES) $(LIB_ASM_SOURCES))
 
+TEST_ALL_OBJECTS = $(KERNEL_COMMON_OBJECTS) $(LIB_COMMON_OBJECTS) $(TEST_COMMON_OBJECTS) $(BUILD_DIR)/user/min_heap.o
+USER_ALL_OBJECTS = $(KERNEL_COMMON_OBJECTS) $(LIB_COMMON_OBJECTS) $(USER_COMMON_OBJECTS)
+
+# unity build definitions
 UNITY_SOURCE = $(BUILD_DIR)/unity.c
 UNITY_OBJ = $(UNITY_SOURCE:.c=.o)
 UNITY_DEPEND = $(UNITY_SOURCE:.c=.d)
@@ -93,7 +103,6 @@ UNITY_DEPEND = $(UNITY_SOURCE:.c=.d)
 $(KERNEL_BIN) $(TEST_BIN): %.bin : %.elf
 	arm-none-eabi-objcopy -O binary $< $@
 
-TEST_ALL_OBJECTS = $(KERNEL_COMMON_OBJECTS) $(TEST_COMMON_OBJECTS) $(BUILD_DIR)/user/min_heap.o
 $(TEST_ELF): $(TEST_ALL_OBJECTS)
 	$(LD) $(LDFLAGS) -o $@ $(TEST_ALL_OBJECTS) -lgcc
 
@@ -102,8 +111,8 @@ ifdef UNITY
 $(KERNEL_ELF): $(UNITY_OBJ) $(ASM_OBJECTS)
 	$(LD) $(LDFLAGS) -o $@ $(UNITY_OBJ) $(ASM_OBJECTS) -lgcc
 else
-$(KERNEL_ELF): $(KERNEL_COMMON_OBJECTS) $(USER_COMMON_OBJECTS)
-	$(LD) $(LDFLAGS) -o $@ $(KERNEL_COMMON_OBJECTS) $(USER_COMMON_OBJECTS) -lgcc
+$(KERNEL_ELF): $(USER_ALL_OBJECTS)
+	$(LD) $(LDFLAGS) -o $@ $(USER_ALL_OBJECTS) -lgcc
 endif
 
 $(KERNEL_ELF) $(TEST_ELF): $(LINKER_SCRIPT)
@@ -139,8 +148,8 @@ $(ASM_OBJECTS) $(GENERATED_ASSEMBLY): $(MAKEFILE_NAME)
 
 # this generates a "unity compile" for the main kernel/user program
 # this is admittedly pretty gross, but helps the compiler optimize things better
-$(UNITY_SOURCE): $(MAKEFILE_NAME) $(KERNEL_SOURCES) $(USER_SOURCES)
-	./unity.sh $(KERNEL_SOURCES) $(USER_SOURCES) > $@
+$(UNITY_SOURCE): $(MAKEFILE_NAME) $(KERNEL_SOURCES) $(USER_SOURCES) $(LIB_SOURCES)
+	./unity.sh $(KERNEL_SOURCES) $(USER_SOURCES) $(LIB_SOURCES) > $@
 
 $(UNITY_OBJ): $(UNITY_SOURCE) $(GENERATED_SOURCES)
 	$(CC) $(CFLAGS) $(ARCH_CFLAGS) -c -MD -MT $@ -o $@ $<

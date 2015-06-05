@@ -2,11 +2,10 @@
 #include <io.h>
 #include <assert.h>
 
-// lurky, but we have to include these to test stuff
-#include "../kernel/least_significant_set_bit.h"
-#include "../kernel/hashtable.h"
-#include "../kernel/prng.h"
-#include "../kernel/util.h"
+#include <least_significant_set_bit.h>
+#include <hashtable.h>
+#include <prng.h>
+#include <util.h>
 
 #include "min_heap.h"
 

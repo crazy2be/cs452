@@ -6,7 +6,7 @@
 #include <assert.h>
 #include "nameserver.h"
 #include "clockserver.h"
-#include "../kernel/util.h"
+#include <util.h>
 
 enum rps_req { CONNECT, MOVE_ROCK, MOVE_PAPER, MOVE_SCISSORS, QUIT };
 

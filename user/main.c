@@ -5,7 +5,7 @@
 #include "clockserver.h"
 #include "rps.h"
 #include "signal.h"
-#include "../kernel/util.h"
+#include <util.h>
 #include "../kernel/drivers/timer.h"
 
 struct init_reply {
