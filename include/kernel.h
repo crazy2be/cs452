@@ -5,7 +5,7 @@
 /**
  * Main entrypoint into the kernel
  */
-int boot(void (*init_task)(void), int init_task_priority);
+int boot(void (*init_task)(void), int init_task_priority, int debug);
 
 /**
  * Make a new task with the given priority and code.

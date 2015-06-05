@@ -41,7 +41,7 @@ void init(void) {
 
 #include "benchmark.h"
 int main(int argc, char *argv[]) {
-	boot(init, 0);
+	boot(init, 0, 1);
 // 	extern void rps_init_task(void);
 // 	boot(rps_init_task, 0);
 	/* boot(await_init_task, 0); */
