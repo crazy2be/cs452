@@ -11,8 +11,28 @@
 
 \section{Instructions}
 \input{"../k1/README.tex"}
-\section{Design Decisions}
 
+\section{Design Decisions}
+\subsection{Await}
+The implementation of await was something that we debated for quite some time,
+because we were given multiple choices in implementation, and because there is
+a lot of literature on the different approaches to device driver isolation.
+Given that we are writing a microkernel, we want, for various reasons, the
+kernel itself to be as small as possible. This allows isolation of failures,
+easy prioritization of tasks, and more. However, given that we are, in our toy
+kernel, only writing device drivers for a \emph{very} small number of
+peripherals, creating all the primatives to allow safe and race-free access
+to peripherals from driver tasks seemed like it would likely end up being
+bigger and more complex than just implementing a HAL in the kernel. For
+example, if the user task is responsible for asking the device to deassert
+its interrupt, then you need to make sure that you don't enable interrupts
+when switching back to the user task, or else the user task will just get
+immediately interrupted again, leading to an infinite loop. However, if you
+don't enable interrupts, then you can't preempt the user task, losing a
+significant advantage of implementing that portion of the device communication
+in userland. Thus, at least for this iteration of the kernel, we have chosen
+to have the kernel read the data from the device, deassert the interrupt,
+and return the relevant data back to the userland await() call.
 % Things we should probably talk about (not a complete list, just a brain dump
 % of some things I think we should include)
 % - how we queue tasks awaiting events
