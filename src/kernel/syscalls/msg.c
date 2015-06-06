@@ -1,7 +1,7 @@
 #include "msg.h"
 
-#include "util.h"
-#include "tasks.h"
+#include <util.h>
+#include "../tasks.h"
 
 static void dispatch_msg(struct task_descriptor *to, struct task_descriptor *from) {
 	// write tid of sender to pointer provided by receiver
