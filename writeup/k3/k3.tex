@@ -50,6 +50,26 @@ cause some performance problems if many tasks are queued up at once, because
 a single interrupt would have to deque all of them. However, this is not
 currently a problem, because we only ever have a single task at a time
 awaiting an event.
+
+\subsection{Clockserver}
+As part of this assignment, we implemented a clock server as a user task, which
+allows other user tasks to request the current time, schedule themselves to run
+at some point at least \emph{n} ticks in the future, or schedule themselves to
+run at some particular point in the future. I assume this will be very useful
+when we start having trains going aronud the track, and we will start having
+tasks which care about real-world values like time and distance.
+
+To keep track of tasks which requested future wakeup, we chose to use a
+min-heap. This allows lg(n) time insertion and removal of elements, with
+constant-time querying of the smallest element. The latter is the most
+important property, assuming the data structure isn't crazy stupid in other
+ways, because we have to check the top element of this queue against the
+number of ticks which have passed, \emph{every single tick}. An additional
+reason for the choice of this data structure was that we coincidentally
+happened to have one lying around from k1, because we thought we might end up
+using it for our priority queues (although we ended up going with an
+alternative data structure for that assignment).
+
 % Things we should probably talk about (not a complete list, just a brain dump
 % of some things I think we should include)
 % - how we queue tasks awaiting events
