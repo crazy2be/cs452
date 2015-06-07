@@ -13,7 +13,7 @@
 \input{"../k1/README.tex"}
 
 \section{Design Decisions}
-\subsection{Await}
+\subsection{Await Interface}
 The implementation of await was something that we debated for quite some time,
 because we were given multiple choices in implementation, and because there is
 a lot of literature on the different approaches to device driver isolation.
@@ -33,6 +33,23 @@ significant advantage of implementing that portion of the device communication
 in userland. Thus, at least for this iteration of the kernel, we have chosen
 to have the kernel read the data from the device, deassert the interrupt,
 and return the relevant data back to the userland await() call.
+
+\subsection{Await Data Structures}
+For keeping track of tasks that are blocked awaiting external events, we used
+a array of queues, one queue for each different possible event. This allows
+constant-time removal and addition of tasks from waiting queues. The latter
+is particularilly important, as tasks are currently dequed immediately in the
+interrupt handler, where speed is particularilly important, because it can
+directly impact the worst-case latency of a response. Had a linear scan been
+used instead, this could  yield quite bad latency if many tasks were stacked
+up waiting for interrupts, particularilly if many were stacked up at the same
+time.
+
+We currently deque all of the waiting tasks when an event occurs. This could
+cause some performance problems if many tasks are queued up at once, because
+a single interrupt would have to deque all of them. However, this is not
+currently a problem, because we only ever have a single task at a time
+awaiting an event.
 % Things we should probably talk about (not a complete list, just a brain dump
 % of some things I think we should include)
 % - how we queue tasks awaiting events
