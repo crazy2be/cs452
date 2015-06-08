@@ -97,7 +97,7 @@ We chose to implement this as a context switch into the kernel, where the interf
 like an SVC call, but with a \texttt{SYSCALL\_IRQ} syscall number, where the kernel then
 handles the interrupt just as it would a regular syscall. We considered having
 an extra pseudo-task to handle interrupts, with it's own stack, which would
-automatically get "scheduled" whenever an interrupt was triggered, but decided
+automatically get ``scheduled'' whenever an interrupt was triggered, but decided
 that the additional complexity would not be worth the benefits, and additionally
 such a design would waste some space --- the IRQ stack would only be used when
 IRQs are triggered, and is unlikely to hold much of anything useful the rest
@@ -195,7 +195,7 @@ GCD of any two $d$'s of the tasks is bigger than the amount of time the program
 runs, these numbers never collide.
 
 In this ideal world, a task is supposed to resume at time $t$, and go back to
-sleep immediately. However, in reality, it takes $t + \delta$ time to "call"
+sleep immediately. However, in reality, it takes $t + \delta$ time to ``call''
 \texttt{delay()} again, where $\delta$ includes time to execute the printing,
 context switch into the kernel, and context switch into the clock server. This
 makes the total time taken $t + \delta + d$, when it would ideally be just
