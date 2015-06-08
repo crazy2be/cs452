@@ -34,11 +34,20 @@ in userland. Thus, at least for this iteration of the kernel, we have chosen
 to have the kernel read the data from the device, deassert the interrupt,
 and return the relevant data back to the userland \texttt{await()} call.
 
+For now, the interface to \texttt{await()} is \texttt{int await(int evt);}.
+However, this will need to be changed to accommodate passing in additional data
+to the kernel, in order to to support UART write events.
+We considered masking this data into \texttt{evt}.
+Since \texttt{evt} is 32 bits wide, and we only need 3 to represent 5 distinct events,
+we could stuff an 8-bit character into the upper bits of the \texttt{int}.
+However, if we have control over the signature of \texttt{await()}, it's easier to just
+add an extra parameter to contain this data.
+
 \subsection{Await Data Structures}
 For keeping track of tasks that are blocked awaiting external events, we used
 a array of queues, one queue for each different possible event. This allows
 constant-time removal and addition of tasks from waiting queues. The latter
-is particularly important, as tasks are currently dequed immediately in the
+is particularly important, as tasks are currently dequeued immediately in the
 interrupt handler, where speed is particularly important, because it can
 directly impact the worst-case latency of a response. Had a linear scan been
 used instead, this could  yield quite bad latency if many tasks were stacked
@@ -53,33 +62,44 @@ awaiting an event.
 
 \subsection{Clockserver}
 As part of this assignment, we implemented a clock server as a user task, which
-allows other user tasks to request the current time, schedule themselves to run
-at some point at least $n$ ticks in the future, or schedule themselves to
-run at some absolute tick $m$ in the future. I assume this will be very useful
+allows other user tasks to request the current time, or schedule themselves to run
+after some delay.
+I assume this will be very useful
 when we start having trains going around the track, and we will start having
 tasks which care about real-world values like time and distance.
 
-To keep track of tasks which requested future wakeup, we chose to use a
-min-heap. This allows $lg(n)$ time insertion and removal of elements, with
-constant-time querying of the smallest element. The latter is the most
-important property, assuming the data structure isn't crazy stupid in other
-ways, because we have to check the top element of this queue against the
-number of ticks which have passed, \emph{every single tick}. An additional
-reason for the choice of this data structure was that we coincidentally
-happened to have one lying around from K1, because we thought we might end up
-using it for our priority queues (although we ended up going with an
-alternative data structure for that assignment).
+To keep track of tasks which requested future wakeup, we need a prority queue
+of tasks, ordered by the time at which they need to be woken up.
+We chose to use a min-heap for this purpose.
+A min heap is reasonably suitable, since there aren't hard bounds on
+the keys which the tasks are sorted by in the priority queue.
+This made the priority-queue implementation used for the ready queue inappropriate,
+since it relies on the priorities being integers in a very small range.
+
+A min-heap allows $\log(n)$ time insertion and removal of elements, with
+constant-time querying of the smallest element.
+The latter is the most important property, because we have to check the top
+element of this queue against the number of ticks which have passed after each tick.
+The $\log(n)$ cost to add and remove elements is probably more expensive than it
+sounds, since $n$ is relatively small.
+However, since this is not currently a performance bottleneck, we chose not to spend
+additional time optimizing for a problem which doesn't currently exist.
+
+An additional reason for the choice of this data structure was that we coincidentally
+had one from K1.
+We had initially thought we might use it for the priority queue,
+but instead chose an alternative data structure for that assignment.
 
 \subsection{Interrupt-Triggered Context Switch}
-As part of this assignment, we had to figure out and write a context switching
-routine to be run when an interrupt was triggered. We chose to implement this as
-a context switch into the kernel, where the interface to the kernel just looks
+As part of this assignment, we had to write a context switching
+routine to be run when an interrupt was triggered.
+We chose to implement this as a context switch into the kernel, where the interface to the kernel just looks
 like an SVC call, but with a \texttt{SYSCALL\_IRQ} syscall number, where the kernel then
 handles the interrupt just as it would a regular syscall. We considered having
 an extra pseudo-task to handle interrupts, with it's own stack, which would
 automatically get "scheduled" whenever an interrupt was triggered, but decided
 that the additional complexity would not be worth the benefits, and additionally
-such a design would waste some space- the IRQ stack would only be used when
+such a design would waste some space --- the IRQ stack would only be used when
 IRQs are triggered, and is unlikely to hold much of anything useful the rest
 of the time.
 
