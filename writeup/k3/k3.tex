@@ -184,8 +184,8 @@ and is not significant here.
 The lines between the bootup sequence until \texttt{Exiting kernel...} are
 printed by the client tasks, as expected.  Because each message is printed out
 following a delay, each task doesn't output until $n$ ticks have passed,
-allowing the tasks with the smallest delays to print out several lines before
-the tasks with the largest delays get a chance to print any line.
+this allows the tasks with the smallest delays to print out several lines before
+the tasks with the largest delays get a chance to print any lines.
 
 At the moment, the tasks print in a stable / predictable order.
 This is because the tasks have different delay periods which aren't multiples
