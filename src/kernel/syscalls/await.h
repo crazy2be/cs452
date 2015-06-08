@@ -1,3 +1,4 @@
+#pragma once
 #include "../task_descriptor.h"
 
 void irq_handler(struct task_descriptor *current_task);

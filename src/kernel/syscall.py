@@ -7,6 +7,7 @@ gen_dir = sys.argv[1]
 
 asm = open(path.join(gen_dir, "syscalls.s"), 'w')
 header = open(path.join(gen_dir, "syscalls.h"), 'w')
+header.write("#pragma once\n")
 for i, syscall in enumerate(syscalls):
 	asm.write(".equ SYSCALL_{0}, {1}\n".format(syscall.upper(), i))
 	asm.write(".globl {0}\n".format(syscall))
