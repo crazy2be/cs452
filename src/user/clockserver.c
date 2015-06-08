@@ -7,13 +7,13 @@
 #include <io.h>
 #include <assert.h>
 
-struct request {
+struct clockserver_request {
 	enum request_type type;
 	int ticks;
 };
 
 static void clocknotifier(void) {
-	struct request req;
+	struct clockserver_request req;
 	int clockserver_tid = parent_tid();
 	req.type = TICK_HAPPENED;
 	for (;;) {
@@ -42,7 +42,7 @@ void clockserver(void) {
 
 	for (;;) {
 		int tid, resp;
-		struct request req;
+		struct clockserver_request req;
 		receive(&tid, &req, sizeof(req));
 
 		switch (req.type) {
@@ -92,7 +92,7 @@ static int clockserver_tid(void) {
 	return cs_tid;
 }
 
-static int clockserver_send(struct request *req) {
+static int clockserver_send(struct clockserver_request *req) {
 	int rpy;
 	int l = send(clockserver_tid(), req, sizeof(*req), &rpy, sizeof(rpy));
 	if (l != sizeof(rpy)) return l;
@@ -100,7 +100,7 @@ static int clockserver_send(struct request *req) {
 }
 
 int delay(int ticks) {
-	struct request req = (struct request) {
+	struct clockserver_request req = (struct clockserver_request) {
 		.type = DELAY,
 		 .ticks = ticks,
 	};
@@ -108,14 +108,14 @@ int delay(int ticks) {
 }
 
 int time() {
-	struct request req = (struct request) {
+	struct clockserver_request req = (struct clockserver_request) {
 		.type = TIME,
 	};
 	return clockserver_send(&req);
 }
 
 int delay_until(int ticks) {
-	struct request req = (struct request) {
+	struct clockserver_request req = (struct clockserver_request) {
 		.type = DELAY_UNTIL,
 		 .ticks = ticks,
 	};
@@ -123,7 +123,7 @@ int delay_until(int ticks) {
 }
 
 int shutdown_clockserver(void) {
-	struct request req = (struct request) {
+	struct clockserver_request req = (struct clockserver_request) {
 		.type = SHUTDOWN,
 	};
 	return clockserver_send(&req);

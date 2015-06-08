@@ -2,7 +2,8 @@
 #include "uart.h"
 #include <io.h>
 #include "ts7200.h"
-#include "../util.h"
+#include <util.h>
+#include "../kassert.h"
 
 static int* reg(int channel, int off) {
 	switch (channel) {

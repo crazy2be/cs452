@@ -8,7 +8,7 @@
 
 #define NAMESERVER_TID 2
 
-struct request {
+struct nameserver_request {
 	enum request_type type;
 	char name[MAX_KEYLEN + 1];
 };
@@ -20,7 +20,7 @@ void nameserver(void) {
 
 	for (;;) {
 		int tid, resp, err;
-		struct request req;
+		struct nameserver_request req;
 		receive(&tid, &req, sizeof(req));
 
 		switch (req.type) {
@@ -47,7 +47,7 @@ void nameserver(void) {
 
 int whois(const char *name) {
 	int tid, resp, name_len;
-	struct request req;
+	struct nameserver_request req;
 
 	name_len = strlen(name);
 	if (name_len > MAX_KEYLEN) {
@@ -69,7 +69,7 @@ int whois(const char *name) {
 
 int register_as(const char *name) {
 	int success, resp, name_len;
-	struct request req;
+	struct nameserver_request req;
 
 	name_len = strlen(name);
 	if (name_len > MAX_KEYLEN) {

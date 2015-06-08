@@ -1,3 +1,4 @@
+#pragma once
 #include "task_descriptor.h"
 
 #define MAX_TID 255
