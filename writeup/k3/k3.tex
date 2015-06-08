@@ -21,7 +21,7 @@ Given that we are writing a microkernel, we want, for various reasons, the
 kernel itself to be as small as possible. This allows isolation of failures,
 easy prioritization of tasks, and more. However, given that we are, in our toy
 kernel, only writing device drivers for a \emph{very} small number of
-peripherals, creating all the primatives to allow safe and race-free access
+peripherals, creating all the primitives to allow safe and race-free access
 to peripherals from driver tasks seemed like it would likely end up being
 bigger and more complex than just implementing a HAL in the kernel. For
 example, if the user task is responsible for asking the device to deassert
@@ -38,16 +38,16 @@ and return the relevant data back to the userland \texttt{await()} call.
 For keeping track of tasks that are blocked awaiting external events, we used
 a array of queues, one queue for each different possible event. This allows
 constant-time removal and addition of tasks from waiting queues. The latter
-is particularilly important, as tasks are currently dequed immediately in the
-interrupt handler, where speed is particularilly important, because it can
+is particularly important, as tasks are currently dequed immediately in the
+interrupt handler, where speed is particularly important, because it can
 directly impact the worst-case latency of a response. Had a linear scan been
 used instead, this could  yield quite bad latency if many tasks were stacked
-up waiting for interrupts, particularilly if many were stacked up at the same
+up waiting for interrupts, particularly if many were stacked up at the same
 time.
 
-We currently deque all of the waiting tasks when an event occurs. This could
+We currently dequeue all of the waiting tasks when an event occurs. This could
 cause some performance problems if many tasks are queued up at once, because
-a single interrupt would have to deque all of them. However, this is not
+a single interrupt would have to dequeue all of them. However, this is not
 currently a problem, because we only ever have a single task at a time
 awaiting an event.
 
@@ -56,7 +56,7 @@ As part of this assignment, we implemented a clock server as a user task, which
 allows other user tasks to request the current time, schedule themselves to run
 at some point at least $n$ ticks in the future, or schedule themselves to
 run at some absolute tick $m$ in the future. I assume this will be very useful
-when we start having trains going aronud the track, and we will start having
+when we start having trains going around the track, and we will start having
 tasks which care about real-world values like time and distance.
 
 To keep track of tasks which requested future wakeup, we chose to use a
@@ -66,7 +66,7 @@ important property, assuming the data structure isn't crazy stupid in other
 ways, because we have to check the top element of this queue against the
 number of ticks which have passed, \emph{every single tick}. An additional
 reason for the choice of this data structure was that we coincidentally
-happened to have one lying around from k1, because we thought we might end up
+happened to have one lying around from K1, because we thought we might end up
 using it for our priority queues (although we ended up going with an
 alternative data structure for that assignment).
 
@@ -74,17 +74,17 @@ alternative data structure for that assignment).
 As part of this assignment, we had to figure out and write a context switching
 routine to be run when an interrupt was triggered. We chose to implement this as
 a context switch into the kernel, where the interface to the kernel just looks
-like an svc call, but with a \texttt{SYSCALL\_IRQ} syscall number, where the kernel then
+like an SVC call, but with a \texttt{SYSCALL\_IRQ} syscall number, where the kernel then
 handles the interrupt just as it would a regular syscall. We considered having
-an extra psuedo-task to handle interrupts, with it's own stack, which would
+an extra pseudo-task to handle interrupts, with it's own stack, which would
 automatically get "scheduled" whenever an interrupt was triggered, but decided
-that the additional complexity would not be worth the benifits, and additionally
+that the additional complexity would not be worth the benefits, and additionally
 such a design would waste some space- the IRQ stack would only be used when
 IRQs are triggered, and is unlikely to hold much of anything useful the rest
 of the time.
 
 The actual context switching function is different depending on whether the
-interrupt originated from an svc call or a irq, although almost all of the
+interrupt originated from an SVC call or a IRQ, although almost all of the
 source code is shared through the use of assembly macros. Although we considered
 trying to fit both context switches into a single block of code through the use
 of conditional execution, it seemed like it would complicate things
@@ -167,10 +167,10 @@ This causes the tasks with the smallest delays to print out several times tasks 
 
 At the moment, the tasks print in a stable / predictable order.
 This is because the tasks have different delay periods which aren't multiples of each other.
-If the resume and wait process was instantaenous, this would mean that the tasks would wake up at $d, 2d, 3d, \ldots$,
+If the resume and wait process was instantaneous, this would mean that the tasks would wake up at $d, 2d, 3d, \ldots$,
 and since the GCD of any two $d$'s of the tasks is bigger than the amount of time the program runs, these
 numbers never collide.
-Since our resume and wait process never takes more than a single clock tick (10ms), it is sufficiently close to instantaenous
+Since our resume and wait process never takes more than a single clock tick (10ms), it is sufficiently close to instantaneous
 that clock ticks aren't dropped by the client tasks.
 (i.e.: a clock is supposed to be resumed at time $t$, but goes back to sleep at $t + \delta$.
 When it requests \texttt{delay(d)}, it will be woken back up at $t + \delta + d$, when it would ideally
