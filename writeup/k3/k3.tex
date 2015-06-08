@@ -181,22 +181,31 @@ Ran for 2136468 us total
 The first line is output produced as the kernel loads up, to provide feedback in the case that it breaks,
 and is not significant here.
 
-The following lines (until \texttt{Exiting kernel...}) are printed by the client tasks, after every delay.
-Because each message is printed out after a delay, output is not produced immediately by each task.
-This causes the tasks with the smallest delays to print out several times tasks with longer delays wake up.
+The lines between the bootup sequence until \texttt{Exiting kernel...} are
+printed by the client tasks, as expected.  Because each message is printed out
+following a delay, each task doesn't output until $n$ ticks have passed,
+allowing the tasks with the smallest delays to print out several lines before
+the tasks with the largest delays get a chance to print any line.
 
 At the moment, the tasks print in a stable / predictable order.
-This is because the tasks have different delay periods which aren't multiples of each other.
-If the resume and wait process was instantaneous, this would mean that the tasks would wake up at $d, 2d, 3d, \ldots$,
-and since the GCD of any two $d$'s of the tasks is bigger than the amount of time the program runs, these
-numbers never collide.
-Since our resume and wait process never takes more than a single clock tick (10ms), it is sufficiently close to instantaneous
-that clock ticks aren't dropped by the client tasks.
-(i.e.: a clock is supposed to be resumed at time $t$, but goes back to sleep at $t + \delta$.
-When it requests \texttt{delay(d)}, it will be woken back up at $t + \delta + d$, when it would ideally
-be woken up at $t + d$.)
-Therefore, because our kernel and user tasks are sufficiently fast (at least for now), and because
-none of the wakeup periods align with each other, there is a predictable order for waking up the tasks again.
+This is because the tasks have different delay periods which aren't multiples
+of each other. If the resume and wait process were to be instantaneous, this
+would mean that the tasks would wake up at $d, 2d, 3d, \ldots$, and since the
+GCD of any two $d$'s of the tasks is bigger than the amount of time the program
+runs, these numbers never collide.
+
+In this ideal world, a task is supposed to resume at time $t$, and go back to
+sleep immediately. However, in reality, it takes $t + \delta$ time to "call"
+\texttt{delay()} again, where $\delta$ includes time to execute the printing,
+context switch into the kernel, and context switch into the clock server. This
+makes the total time taken $t + \delta + d$, when it would ideally be just
+$t + d$.
+
+However, since our kernel is reasonably quick, $\delta$ is never larger than a
+single clock tick (10ms). Because two user tasks are never scheduled during
+the same tick, as shown above, this is sufficiently close to zero that we
+actually output the same lines as we would if our kernel was ideal, and we do so
+consistently.
 
 \section{Source Code}
 The source code is hosted on git, at \url{git.uwaterloo.ca/pgraboud/cs452-kernel}.
