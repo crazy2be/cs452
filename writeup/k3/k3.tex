@@ -70,6 +70,28 @@ happened to have one lying around from k1, because we thought we might end up
 using it for our priority queues (although we ended up going with an
 alternative data structure for that assignment).
 
+\subsection{Interrupt-Triggered Context Switch}
+As part of this assignment, we had to figure out and write a context switching
+routine to be run when an interrupt was triggered. We chose to implement this as
+a context switch into the kernel, where the interface to the kernel just looks
+like an svc call, but with a SYSCALL_IRQ syscall number, where the kernel then
+handles the interrupt just as it would a regular syscall. We considered having
+an extra psuedo-task to handle interrupts, with it's own stack, which would
+automatically get "scheduled" whenever an interrupt was triggered, but decided
+that the additional complexity would not be worth the benifits, and additionally
+such a design would waste some space- the IRQ stack would only be used when
+IRQs are triggered, and is unlikely to hold much of anything useful the rest
+of the time.
+
+The actual context switching function is different depending on whether the
+interrupt originated from an svc call or a irq, although almost all of the
+source code is shared through the use of assembly macros. Although we considered
+trying to fit both context switches into a single block of code through the use
+of conditional execution, it seemed like it would complicate things
+considerably, not least of which because you would have to find a register to
+store that state in. As the context switch is only slightly more than ten
+instructions, we opted just to implement the conditions at the assembler level.
+
 % Things we should probably talk about (not a complete list, just a brain dump
 % of some things I think we should include)
 % - how we queue tasks awaiting events
