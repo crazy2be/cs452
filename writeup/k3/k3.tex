@@ -68,7 +68,7 @@ I assume this will be very useful
 when we start having trains going around the track, and we will start having
 tasks which care about real-world values like time and distance.
 
-To keep track of tasks which requested future wakeup, we need a prority queue
+To keep track of tasks which requested future wakeup, we need a priority queue
 of tasks, ordered by the time at which they need to be woken up.
 We chose to use a min-heap for this purpose.
 A min heap is reasonably suitable, since there aren't hard bounds on
