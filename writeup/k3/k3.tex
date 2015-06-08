@@ -32,7 +32,7 @@ don't enable interrupts, then you can't preempt the user task, losing a
 significant advantage of implementing that portion of the device communication
 in userland. Thus, at least for this iteration of the kernel, we have chosen
 to have the kernel read the data from the device, deassert the interrupt,
-and return the relevant data back to the userland await() call.
+and return the relevant data back to the userland \texttt{await()} call.
 
 \subsection{Await Data Structures}
 For keeping track of tasks that are blocked awaiting external events, we used
@@ -54,13 +54,13 @@ awaiting an event.
 \subsection{Clockserver}
 As part of this assignment, we implemented a clock server as a user task, which
 allows other user tasks to request the current time, schedule themselves to run
-at some point at least \emph{n} ticks in the future, or schedule themselves to
-run at some particular point in the future. I assume this will be very useful
+at some point at least $n$ ticks in the future, or schedule themselves to
+run at some absolute tick $m$ in the future. I assume this will be very useful
 when we start having trains going aronud the track, and we will start having
 tasks which care about real-world values like time and distance.
 
 To keep track of tasks which requested future wakeup, we chose to use a
-min-heap. This allows lg(n) time insertion and removal of elements, with
+min-heap. This allows $lg(n)$ time insertion and removal of elements, with
 constant-time querying of the smallest element. The latter is the most
 important property, assuming the data structure isn't crazy stupid in other
 ways, because we have to check the top element of this queue against the
@@ -74,7 +74,7 @@ alternative data structure for that assignment).
 As part of this assignment, we had to figure out and write a context switching
 routine to be run when an interrupt was triggered. We chose to implement this as
 a context switch into the kernel, where the interface to the kernel just looks
-like an svc call, but with a SYSCALL_IRQ syscall number, where the kernel then
+like an svc call, but with a \texttt{SYSCALL\_IRQ} syscall number, where the kernel then
 handles the interrupt just as it would a regular syscall. We considered having
 an extra psuedo-task to handle interrupts, with it's own stack, which would
 automatically get "scheduled" whenever an interrupt was triggered, but decided
