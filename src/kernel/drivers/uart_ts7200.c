@@ -81,7 +81,7 @@ int uart_canwritefifo(int channel) {
 	return !(*reg(channel, UART_FLAG_OFFSET) & TXFF_MASK);
 }
 
-void uart_ack_rx_irq(int channel) {
+void uart_disable_rx_irq(int channel) {
 	int *ctrl = reg(channel, UART_CTLR_OFFSET);
 	*ctrl &= ~(RIEN_MASK | RTIEN_MASK);
 }
@@ -91,7 +91,7 @@ void uart_restore_rx_irq(int channel) {
 	*ctrl |= RIEN_MASK | RTIEN_MASK;
 }
 
-void uart_ack_tx_irq(int channel) {
+void uart_disable_tx_irq(int channel) {
 	int *ctrl = reg(channel, UART_CTLR_OFFSET);
 	*ctrl &= ~TIEN_MASK;
 }

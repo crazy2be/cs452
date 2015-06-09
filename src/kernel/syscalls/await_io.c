@@ -1,4 +1,4 @@
-#include "await_irq.h"
+#include "await_io.h"
 
 #include <io.h>
 
@@ -95,7 +95,7 @@ void io_irq_handler(int channel) {
 
 		if (read_handler(channel, td)) {
 			clear_awaiting_task(eid);
-			uart_ack_rx_irq(channel);
+			uart_disable_rx_irq(channel);
 		}
 	} else if (UART_IRQ_IS_TX(irq_mask)) {
 		KASSERT(uart_canwritefifo(channel));
@@ -109,7 +109,7 @@ void io_irq_handler(int channel) {
 
 		if (write_handler(channel, td)) {
 			clear_awaiting_task(eid);
-			uart_ack_tx_irq(channel);
+			uart_disable_tx_irq(channel);
 		}
 	} else {
 		KASSERT(0 && "UNKNOWN UART IRQ");

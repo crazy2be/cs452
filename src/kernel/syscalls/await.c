@@ -8,7 +8,7 @@
 #include "../tasks.h"
 #include "../drivers/irq.h"
 #include "../drivers/timer.h"
-#include "await_irq.h"
+#include "await_io.h"
 
 static struct task_descriptor *await_blocked_tasks[EID_NUM_EVENTS] = {};
 static int num_tasks_waiting = 0;
