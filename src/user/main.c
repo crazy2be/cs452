@@ -44,6 +44,10 @@ void test_init(void) {
 	for(int i = 0; i < 13; i++) {
 		await(EID_COM1_WRITE, str[i]);
 	}
+	for (;;) {
+		char c = await(EID_COM1_READ, 0);
+		printf("Got %c" EOL, c);
+	}
 }
 
 #include "benchmark.h"

@@ -88,6 +88,8 @@ int reply(int tid, const void *reply, int replylen);
 #define EID_COM2_WRITE 4
 #define EID_NUM_EVENTS 5
 int await(unsigned eid, unsigned data);
+#define AWAIT_UNKNOWN_EVENT -1
+#define AWAIT_MULTIPLE_WAITERS -2
 
 unsigned rand(void);
 

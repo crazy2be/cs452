@@ -10,8 +10,33 @@
 #include "../drivers/timer.h"
 #include "await_irq.h"
 
-static struct task_queue await_queues[EID_NUM_EVENTS] = {};
+static struct task_descriptor *await_blocked_tasks[EID_NUM_EVENTS] = {};
 static int num_tasks_waiting = 0;
+
+struct task_descriptor *get_awaiting_task(int eid) {
+	return await_blocked_tasks[eid];
+}
+
+void set_awaiting_task(int eid, struct task_descriptor *td) {
+	KASSERT(await_blocked_tasks[eid] == NULL);
+	num_tasks_waiting++;
+	await_blocked_tasks[eid] = td;
+}
+
+void clear_awaiting_task(int eid) {
+	KASSERT(await_blocked_tasks[eid] != NULL);
+	num_tasks_waiting--;
+	await_blocked_tasks[eid] = NULL;
+}
+
+void await_event_occurred(int eid, int data) {
+	struct task_descriptor *task = get_awaiting_task(eid);
+	if (task) {
+		clear_awaiting_task(eid);
+		syscall_set_return(task->context, data);
+		task_schedule(task);
+	}
+}
 
 // state stored by various hardware interrupts
 static unsigned clock_ticks = 0;
@@ -42,7 +67,8 @@ void irq_handler(struct task_descriptor *current_task) {
 void await_handler(struct task_descriptor *current_task) {
 	int eid = syscall_arg(current_task->context, 0);
 	if (eid < 0 || eid >= EID_NUM_EVENTS) {
-		syscall_set_return(current_task->context, -1);
+		syscall_set_return(current_task->context, AWAIT_UNKNOWN_EVENT);
+		task_schedule(current_task);
 		return;
 	}
 
@@ -66,24 +92,16 @@ void await_handler(struct task_descriptor *current_task) {
 	}
 
 	if (!immediate_return) {
-		printf("Queuing task on the await queue" EOL);
-		task_queue_push(&await_queues[eid], current_task);
-		num_tasks_waiting++;
-	}
-}
-
-struct task_descriptor *get_awaiting_task(int eid) {
-	struct task_descriptor *td = task_queue_pop(&await_queues[eid]);
-	if (td) num_tasks_waiting--;
-	return td;
-}
-
-void await_event_occurred(int eid, int data) {
-	struct task_descriptor *task;
-	while ((task = task_queue_pop(&await_queues[eid]))) {
-		num_tasks_waiting--;
-		syscall_set_return(task->context, data);
-		task_schedule(task);
+		if (get_awaiting_task(eid)) {
+			// for our purposes, there is never a case where we want to have multiple
+			// tasks awaiting the same event, so we just disallow it
+			syscall_set_return(current_task->context, AWAIT_MULTIPLE_WAITERS);
+			task_schedule(current_task);
+		} else {
+			printf("Queuing task on the await queue" EOL);
+			await_blocked_tasks[eid] = current_task;
+			num_tasks_waiting++;
+		}
 	}
 }
 

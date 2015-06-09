@@ -38,13 +38,14 @@ void io_irq_handler(int channel) {
 	int eid;
 	struct task_descriptor *td;
 	if (UART_IRQ_IS_RX(irq_mask)) {
-
-		eid = EID_COM1_READ + 2 * channel;
 		KASSERT(uart_canread(channel));
 		KASSERT(!st->rx_pending);
+
+		eid = EID_COM1_READ + 2 * channel;
 		td = get_awaiting_task(eid);
 
 		if (td) {
+			clear_awaiting_task(eid);
 			read_handler(channel, td);
 		} else {
 			// wait until we have a task to consume this data
@@ -58,6 +59,7 @@ void io_irq_handler(int channel) {
 		td = get_awaiting_task(eid);
 
 		if (td) {
+			clear_awaiting_task(eid);
 			write_handler(channel, td);
 		} else {
 			// wait until we have a task to provide data to write
