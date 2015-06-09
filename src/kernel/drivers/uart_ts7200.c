@@ -62,7 +62,7 @@ int uart_canwrite(int channel) {
 	return *flags & TXFE_MASK; // TODO: CTS_MASK?
 }
 void uart_write(int channel, char c) {
-	KASSERT(uart_canwrite(channel) && "can't write!");
+	/* KASSERT(uart_canwrite(channel) && "can't write!"); */
 	if (channel == COM1) {
 		KASSERT((*reg(COM1, UART_FLAG_OFFSET) & CTS_MASK) && "not cts");
 	}
@@ -74,9 +74,19 @@ int uart_canread(int channel) {
 	return *flags & RXFF_MASK;
 }
 char uart_read(int channel) {
-	KASSERT(uart_canread(channel) && "can't read!");
+	/* KASSERT(uart_canread(channel) && "can't read!"); */
 	int *data = reg(channel, UART_DATA_OFFSET);
 	return *data;
+}
+
+int uart_canreadfifo(int channel) {
+	// receive fifo is not empty
+	return !(*reg(channel, UART_FLAG_OFFSET) & RXFE_MASK);
+}
+
+int uart_canwritefifo(int channel) {
+	// transmit fifo is not full
+	return !(*reg(channel, UART_FLAG_OFFSET) & TXFF_MASK);
 }
 
 void uart_ack_rx_irq(int channel) {

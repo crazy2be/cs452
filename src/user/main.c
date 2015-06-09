@@ -40,8 +40,9 @@ void init(void) {
 }
 
 void test_init(void) {
-	char *str = "Hello, world!";
-	await(EID_COM1_WRITE, str, 13);
+	char *str = "Hello, world!" EOL "Here is a very long string which will overflow the FIFO!" EOL;
+	printf("Writing %d bytes" EOL, strlen(str));
+	await(EID_COM1_WRITE, str, strlen(str));
 	for (;;) {
 		char c[6];
 		await(EID_COM1_READ, c, 5);

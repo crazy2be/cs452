@@ -13,6 +13,10 @@ void uart_write(int channel, char c);
 int uart_canread(int channel);
 char uart_read(int channel);
 
+// FIFO io
+int uart_canreadfifo(int channel);
+int uart_canwritefifo(int channel);
+
 // interrupt related things
 void uart_ack_rx_irq(int channel);
 void uart_restore_tx_irq(int channel);

@@ -8,17 +8,22 @@
 #include "../drivers/uart.h"
 
 struct uart_state {
+	// rx_pending and tx_pending indicate that we received an rx or tx interrupt
+	// at some point in the past, but couldn't respond to it then
 	unsigned rx_pending : 1;
 	unsigned tx_pending : 1;
+	unsigned fifo_enabled : 1;
 };
 
 struct uart_state states[2];
 
 void io_irq_init(void) {
 	for (int i = COM1; i <= COM2; i++) {
-		states[i].rx_pending = 0;
-		states[i].tx_pending = 0;
+		states[i].rx_pending = states[i].tx_pending = 0;
 	}
+	// TODO: should COM1 have the fifo turned on? can this coexist with CTS?
+	states[0].fifo_enabled = 1;
+	states[1].fifo_enabled = 1;
 }
 
 // a single await can do multiple bytes of IO - these return 1 if the task
@@ -27,10 +32,20 @@ static int write_handler(int channel, struct task_descriptor *td) {
 	char *buf = (char*) syscall_arg(td->context, 1);
 	unsigned buflen = syscall_arg(td->context, 2);
 
-	KASSERT(buflen != 0);
 
-	uart_write(channel, *buf++); 
-	buflen--;
+	KASSERT(buflen != 0);
+	int b = buflen;
+
+	if (states[channel].fifo_enabled) {
+		do {
+			uart_write(channel, *buf++);
+			buflen--;
+		} while(uart_canwritefifo(channel) && buflen > 0);
+	} else {
+		uart_write(channel, *buf++);
+		buflen--;
+	}
+	printf("Wrote %d bytes in one go!" EOL, b - buflen);
 
 	if (buflen == 0) {
 		syscall_set_return(td->context, 0);
@@ -50,8 +65,15 @@ static int read_handler(int channel, struct task_descriptor *td) {
 
 	KASSERT(buflen != 0);
 
-	*buf++ = uart_read(channel);
-	buflen--;
+	if (states[channel].fifo_enabled) {
+		do {
+			*buf++ = uart_read(channel);
+			buflen--;
+		} while(uart_canreadfifo(channel) && buflen > 0);
+	} else {
+		*buf++ = uart_read(channel);
+		buflen--;
+	}
 
 	if (buflen == 0) {
 		syscall_set_return(td->context, 0);
@@ -70,7 +92,7 @@ void io_irq_handler(int channel) {
 	int eid;
 	struct task_descriptor *td;
 	if (UART_IRQ_IS_RX(irq_mask)) {
-		KASSERT(uart_canread(channel));
+		KASSERT(uart_canreadfifo(channel));
 		KASSERT(!st->rx_pending);
 
 		eid = EID_COM1_READ + 2 * channel;
@@ -87,6 +109,7 @@ void io_irq_handler(int channel) {
 		}
 	} else if (UART_IRQ_IS_TX(irq_mask)) {
 		KASSERT(!st->tx_pending);
+		KASSERT(uart_canwritefifo(channel));
 
 		eid = EID_COM1_WRITE + 2 * channel;
 		td = get_awaiting_task(eid);
