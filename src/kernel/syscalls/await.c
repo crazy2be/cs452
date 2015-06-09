@@ -98,7 +98,6 @@ void await_handler(struct task_descriptor *current_task) {
 			syscall_set_return(current_task->context, AWAIT_MULTIPLE_WAITERS);
 			task_schedule(current_task);
 		} else {
-			printf("Queuing task on the await queue" EOL);
 			await_blocked_tasks[eid] = current_task;
 			num_tasks_waiting++;
 		}

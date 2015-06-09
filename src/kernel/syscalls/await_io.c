@@ -38,7 +38,6 @@ static int write_handler(int channel, struct task_descriptor *td) {
 		uart_write(channel, *buf++);
 		buflen--;
 	}
-	printf("Wrote %d bytes in one go!" EOL, b - buflen);
 
 	if (buflen == 0) {
 		syscall_set_return(td->context, 0);
