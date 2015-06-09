@@ -51,7 +51,7 @@ void uart_configure(int channel, int speed, int fifo, int interrupts) {
 	// interrupt enable/disable
 	int *ctrl = reg(channel, UART_CTLR_OFFSET);
 	if (interrupts) {
-		*ctrl = TIEN_MASK | RIEN_MASK | UARTEN_MASK;
+		*ctrl = TIEN_MASK | RIEN_MASK | RTIEN_MASK | UARTEN_MASK;
 	} else {
 		*ctrl = UARTEN_MASK;
 	}
@@ -91,12 +91,12 @@ int uart_canwritefifo(int channel) {
 
 void uart_ack_rx_irq(int channel) {
 	int *ctrl = reg(channel, UART_CTLR_OFFSET);
-	*ctrl &= ~RIEN_MASK;
+	*ctrl &= ~(RIEN_MASK | RTIEN_MASK);
 }
 
 void uart_restore_rx_irq(int channel) {
 	int *ctrl = reg(channel, UART_CTLR_OFFSET);
-	*ctrl |= RIEN_MASK;
+	*ctrl |= RIEN_MASK | RTIEN_MASK;
 }
 
 void uart_ack_tx_irq(int channel) {

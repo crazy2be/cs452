@@ -44,9 +44,9 @@ void test_init(void) {
 	printf("Writing %d bytes" EOL, strlen(str));
 	await(EID_COM1_WRITE, str, strlen(str));
 	for (;;) {
-		char c[6];
-		await(EID_COM1_READ, c, 5);
-		c[5] = 0;
+		char c[2];
+		await(EID_COM1_READ, c, sizeof(c) - 1);
+		c[sizeof(c) - 1] = 0;
 		printf("Got %s" EOL, c);
 	}
 }

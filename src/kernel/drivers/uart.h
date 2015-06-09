@@ -29,6 +29,6 @@ void uart_cleanup(int channel); // disable interrupts
 // not implemented
 #else
 #include "ts7200.h"
-#define UART_IRQ_IS_RX(x) ((x) & RIS_MASK)
+#define UART_IRQ_IS_RX(x) ((x) & (RTIS_MASK | RIS_MASK))
 #define UART_IRQ_IS_TX(x) ((x) & TIS_MASK)
 #endif
