@@ -21,15 +21,47 @@ void io_irq_init(void) {
 	}
 }
 
-static void write_handler(int channel, struct task_descriptor *td) {
-	uart_write(channel, (unsigned char) syscall_arg(td->context, 1));
-	syscall_set_return(td->context, 0);
-	task_schedule(td);
+// a single await can do multiple bytes of IO - these return 1 if the task
+// has finished doing IO, 0 otherwise
+static int write_handler(int channel, struct task_descriptor *td) {
+	char *buf = (char*) syscall_arg(td->context, 1);
+	unsigned buflen = syscall_arg(td->context, 2);
+
+	KASSERT(buflen != 0);
+
+	uart_write(channel, *buf++); 
+	buflen--;
+
+	if (buflen == 0) {
+		syscall_set_return(td->context, 0);
+		task_schedule(td);
+		return 1;
+	} else {
+		// update arguments, and go back to sleep until more IO can be done
+		td->context->r1 = (unsigned) buf;
+		td->context->r2 = buflen;
+		return 0;
+	}
 }
 
-static void read_handler(int channel, struct task_descriptor *td) {
-	syscall_set_return(td->context, uart_read(channel));
-	task_schedule(td);
+static int read_handler(int channel, struct task_descriptor *td) {
+	char *buf = (char*) syscall_arg(td->context, 1);
+	unsigned buflen = syscall_arg(td->context, 2);
+
+	KASSERT(buflen != 0);
+
+	*buf++ = uart_read(channel);
+	buflen--;
+
+	if (buflen == 0) {
+		syscall_set_return(td->context, 0);
+		task_schedule(td);
+		return 1;
+	} else {
+		td->context->r1 = (unsigned) buf;
+		td->context->r2 = buflen;
+		return 0;
+	}
 }
 
 void io_irq_handler(int channel) {
@@ -45,8 +77,9 @@ void io_irq_handler(int channel) {
 		td = get_awaiting_task(eid);
 
 		if (td) {
-			clear_awaiting_task(eid);
-			read_handler(channel, td);
+			if (read_handler(channel, td)) {
+				clear_awaiting_task(eid);
+			}
 		} else {
 			// wait until we have a task to consume this data
 			uart_ack_rx_irq(channel);
@@ -59,8 +92,9 @@ void io_irq_handler(int channel) {
 		td = get_awaiting_task(eid);
 
 		if (td) {
-			clear_awaiting_task(eid);
-			write_handler(channel, td);
+			if (write_handler(channel, td)) {
+				clear_awaiting_task(eid);
+			}
 		} else {
 			// wait until we have a task to provide data to write
 			uart_ack_tx_irq(channel);
@@ -79,10 +113,9 @@ void io_irq_handler(int channel) {
 int io_irq_check_for_pending_tx(int channel, struct task_descriptor *td) {
 	struct uart_state *st = &states[channel];
 	if (st->tx_pending) {
-		write_handler(channel, td);
 		st->tx_pending = 0;
 		uart_restore_tx_irq(channel);
-		return 1;
+		return write_handler(channel, td);
 	} else {
 		return 0;
 	}
@@ -91,10 +124,9 @@ int io_irq_check_for_pending_tx(int channel, struct task_descriptor *td) {
 int io_irq_check_for_pending_rx(int channel, struct task_descriptor *td) {
 	struct uart_state *st = &states[channel];
 	if (st->rx_pending) {
-		read_handler(channel, td);
 		st->rx_pending = 0;
 		uart_restore_rx_irq(channel);
-		return 1;
+		return read_handler(channel, td);
 	} else {
 		return 0;
 	}

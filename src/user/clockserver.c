@@ -17,7 +17,7 @@ static void clocknotifier(void) {
 	int clockserver_tid = parent_tid();
 	req.type = TICK_HAPPENED;
 	for (;;) {
-		int ticks = await(EID_TIMER_TICK, 0);
+		int ticks = await(EID_TIMER_TICK, NULL, 0);
 		if (ticks >= 0) {
 			req.ticks = ticks;
 			if (send(clockserver_tid, &req, sizeof(req), NULL, 0) != 0) {

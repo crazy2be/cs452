@@ -41,12 +41,12 @@ void init(void) {
 
 void test_init(void) {
 	char *str = "Hello, world!";
-	for(int i = 0; i < 13; i++) {
-		await(EID_COM1_WRITE, str[i]);
-	}
+	await(EID_COM1_WRITE, str, 13);
 	for (;;) {
-		char c = await(EID_COM1_READ, 0);
-		printf("Got %c" EOL, c);
+		char c[6];
+		await(EID_COM1_READ, c, 5);
+		c[5] = 0;
+		printf("Got %s" EOL, c);
 	}
 }
 

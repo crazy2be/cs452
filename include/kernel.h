@@ -87,7 +87,7 @@ int reply(int tid, const void *reply, int replylen);
 #define EID_COM2_READ 3
 #define EID_COM2_WRITE 4
 #define EID_NUM_EVENTS 5
-int await(unsigned eid, unsigned data);
+int await(unsigned eid, char *buf, unsigned buflen);
 #define AWAIT_UNKNOWN_EVENT -1
 #define AWAIT_MULTIPLE_WAITERS -2
 
