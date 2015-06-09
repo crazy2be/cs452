@@ -47,14 +47,6 @@ void uart_configure(int channel, int speed, int fifo, int interrupts) {
 		buf = buf | STP2_MASK; buf = buf & ~PEN_MASK;
 	}
 	*reg(channel, UART_LCRH_OFFSET) = buf;
-
-	// interrupt enable/disable
-	int *ctrl = reg(channel, UART_CTLR_OFFSET);
-	if (interrupts) {
-		*ctrl = TIEN_MASK | RIEN_MASK | RTIEN_MASK | UARTEN_MASK;
-	} else {
-		*ctrl = UARTEN_MASK;
-	}
 }
 int uart_canwrite(int channel) {
 	// http://www.cgl.uwaterloo.ca/~wmcowan/teaching/cs452/s12/pdf/flowControl.pdf
