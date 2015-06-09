@@ -54,7 +54,7 @@ void irq_setup(void) {
 #else
 	// writing to VIC1IntEnable & VIC2IntEnable (see ep93xx user manual)
 	VWRITE(VIC1_BASE + ENABLE_OFFSET, 0x0);
-	VWRITE(VIC2_BASE + ENABLE_OFFSET, IRQ_MASK(IRQ_TIMER - 32));
+	VWRITE(VIC2_BASE + ENABLE_OFFSET, IRQ_MASK(IRQ_TIMER - 32) | IRQ_MASK(IRQ_COM1 - 32));
 #endif
 }
 

@@ -52,8 +52,8 @@ void clear_bss(void) {
 void setup(void) {
 	// write to the control registers of the UARTs to properly configure them
 	// for transmission
-	uart_configure(COM1, 2400, OFF);
-	uart_configure(COM2, 115200, OFF);
+	uart_configure(COM1, 2400, OFF, 1);
+	uart_configure(COM2, 115200, OFF, 0);
 
 	// clear UART errors
 	uart_clrerr(COM1);
@@ -68,6 +68,7 @@ void setup(void) {
 	while (!uart_canwrite(COM2)) {} uart_write(COM2, '.');
 	setup_irq_table();
 	while (!uart_canwrite(COM2)) {} uart_write(COM2, '.');
+	await_init();
 	irq_setup();
 	while (!uart_canwrite(COM2)) {} uart_write(COM2, '.');
 	setup_cache();
@@ -105,6 +106,8 @@ static void cleanup(void) {
 	// problem. More investigation is needed...
 	timer_deinit();
 	tick_timer_clear_interrupt();
+	uart_cleanup(COM1);
+	uart_cleanup(COM2);
 	irq_cleanup();
 }
 

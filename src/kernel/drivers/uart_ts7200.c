@@ -27,7 +27,7 @@ void uart_clrerr(int channel) {
  * 	no parity
  * 	fifos enabled
  */
-void uart_configure(int channel, int speed, int fifo) {
+void uart_configure(int channel, int speed, int fifo, int interrupts) {
 	// Speed - must set speed before fifo
 	int *high = reg(channel, UART_LCRM_OFFSET);
 	int *low = reg(channel, UART_LCRL_OFFSET);
@@ -47,6 +47,14 @@ void uart_configure(int channel, int speed, int fifo) {
 		buf = buf | STP2_MASK; buf = buf & ~PEN_MASK;
 	}
 	*reg(channel, UART_LCRH_OFFSET) = buf;
+
+	// interrupt enable/disable
+	int *ctrl = reg(channel, UART_CTLR_OFFSET);
+	if (interrupts) {
+		*ctrl = TIEN_MASK | RIEN_MASK | UARTEN_MASK;
+	} else {
+		*ctrl = UARTEN_MASK;
+	}
 }
 int uart_canwrite(int channel) {
 	// http://www.cgl.uwaterloo.ca/~wmcowan/teaching/cs452/s12/pdf/flowControl.pdf
@@ -70,10 +78,33 @@ char uart_read(int channel) {
 	int *data = reg(channel, UART_DATA_OFFSET);
 	return *data;
 }
-// void bwputc(int channel, char c) {
-// 	while (!(*flags & TXFE_MASK));
-// 	// ????
-// 	while ((*flags & CTS_MASK));
-// 	//while(!(*flags & CTS_MASK));
-// }
+
+void uart_ack_rx_irq(int channel) {
+	int *ctrl = reg(channel, UART_CTLR_OFFSET);
+	*ctrl &= ~RIEN_MASK;
+}
+
+void uart_restore_rx_irq(int channel) {
+	int *ctrl = reg(channel, UART_CTLR_OFFSET);
+	*ctrl |= RIEN_MASK;
+}
+
+void uart_ack_tx_irq(int channel) {
+	int *ctrl = reg(channel, UART_CTLR_OFFSET);
+	*ctrl &= ~TIEN_MASK;
+}
+
+void uart_restore_tx_irq(int channel) {
+	int *ctrl = reg(channel, UART_CTLR_OFFSET);
+	*ctrl |= TIEN_MASK;
+}
+
+int uart_irq_type(int channel) {
+	return *reg(channel, UART_INTR_OFFSET);
+}
+
+void uart_cleanup(int channel) {
+	int *ctrl = reg(channel, UART_CTLR_OFFSET);
+	*ctrl = UARTEN_MASK;
+}
 #endif

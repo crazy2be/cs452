@@ -82,10 +82,12 @@ int reply(int tid, const void *reply, int replylen);
 
 #define AwaitEvent await
 #define EID_TIMER_TICK 0
-#define EID_UART_READ 1
-#define EID_UART_WRITE 2
-#define EID_NUM_EVENTS 3
-int await(unsigned eid);
+#define EID_COM1_READ 1
+#define EID_COM1_WRITE 2
+#define EID_COM2_READ 3
+#define EID_COM2_WRITE 4
+#define EID_NUM_EVENTS 5
+int await(unsigned eid, unsigned data);
 
 unsigned rand(void);
 

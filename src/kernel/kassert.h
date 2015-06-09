@@ -1,5 +1,7 @@
 #pragma once
 
+#include <util.h>
+
 // this panics, and stops execution of the kernel, if the assertion fails
 #define KASSERT(stmt) {\
     if (!(stmt)) { \

@@ -39,9 +39,16 @@ void init(void) {
 	shutdown_clockserver();
 }
 
+void test_init(void) {
+	char *str = "Hello, world!";
+	for(int i = 0; i < 13; i++) {
+		await(EID_COM1_WRITE, str[i]);
+	}
+}
+
 #include "benchmark.h"
 int main(int argc, char *argv[]) {
-	boot(init, 0, 1);
+	boot(test_init, 0, 1);
 // 	extern void rps_init_task(void);
 // 	boot(rps_init_task, 0);
 	/* boot(await_init_task, 0); */
