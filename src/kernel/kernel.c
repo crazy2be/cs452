@@ -52,8 +52,8 @@ void clear_bss(void) {
 void setup(void) {
 	// write to the control registers of the UARTs to properly configure them
 	// for transmission
-	uart_configure(COM1, 2400, ON, 1);
-	uart_configure(COM2, 115200, OFF, 0);
+	uart_configure(COM1, 2400, ON);
+	uart_configure(COM2, 115200, OFF);
 
 	// clear UART errors
 	uart_clrerr(COM1);

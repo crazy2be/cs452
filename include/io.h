@@ -4,7 +4,7 @@
 #define COM2 1
 
 #ifdef QEMU
-#define EOL "\n"
+#define EOL "\n\r" // This is the same now that we use telnet.
 #else
 #define EOL "\n\r"
 #endif

@@ -50,18 +50,37 @@ void irq_handler(struct task_descriptor *current_task) {
 	unsigned irq_mask_lo = irq_mask;
 	unsigned irq_mask_hi = irq_mask >> 32;
 
+	extern void uart_print_ctrl(int);
+	if (clock_ticks % 100 == 0) {
+		printf("As of tick %d...\r\n", clock_ticks);
+		uart_print_ctrl(COM1);
+		uart_print_ctrl(COM2);
+		printf("\r\n");
+	}
+
 	if (IRQ_TEST(IRQ_TIMER, irq_mask_lo, irq_mask_hi)) {
 		tick_timer_clear_interrupt();
 		await_event_occurred(EID_TIMER_TICK, ++clock_ticks & 0x7fffffff);
 	} else if (IRQ_TEST(IRQ_COM1, irq_mask_lo, irq_mask_hi)) {
+		uart_print_ctrl(COM1);
 		io_irq_handler(COM1);
+		printf("\r\n");
 	} else if (IRQ_TEST(IRQ_COM2, irq_mask_lo, irq_mask_hi)) {
+		uart_print_ctrl(COM1);
 		io_irq_handler(COM2);
 	} else {
 		KASSERT(0 && "UNKNOWN INTERRUPT!");
 	}
 
 	task_schedule(current_task);
+}
+
+int eid_for_uart(int channel, int is_tx) {
+	return EID_COM1_READ + is_tx + 2*channel;
+}
+void uart_for_eid(int eid, int* channel, int* is_tx) {
+	*channel = (eid - EID_COM1_READ) / 2;
+	*is_tx = (eid - EID_COM1_READ) % 2;
 }
 
 void await_handler(struct task_descriptor *current_task) {
@@ -72,35 +91,17 @@ void await_handler(struct task_descriptor *current_task) {
 		return;
 	}
 
-	int immediate_return;
+	int channel, is_tx;
+	uart_for_eid(eid, &channel, &is_tx);
+	io_irq_mask_add(channel, is_tx);
 
-	switch (eid) {
-	case EID_COM1_READ:
-		immediate_return = io_irq_check_for_pending_rx(COM1, current_task);
-		break;
-	case EID_COM1_WRITE:
-		immediate_return = io_irq_check_for_pending_tx(COM1, current_task);
-		break;
-	case EID_COM2_READ:
-		immediate_return = io_irq_check_for_pending_rx(COM2, current_task);
-		break;
-	case EID_COM2_WRITE:
-		immediate_return = io_irq_check_for_pending_tx(COM2, current_task);
-		break;
-	default:
-		immediate_return = 1;
-	}
-
-	if (!immediate_return) {
-		if (get_awaiting_task(eid)) {
-			// for our purposes, there is never a case where we want to have multiple
-			// tasks awaiting the same event, so we just disallow it
-			syscall_set_return(current_task->context, AWAIT_MULTIPLE_WAITERS);
-			task_schedule(current_task);
-		} else {
-			await_blocked_tasks[eid] = current_task;
-			num_tasks_waiting++;
-		}
+	if (get_awaiting_task(eid)) {
+		// for our purposes, there is never a case where we want to have multiple
+		// tasks awaiting the same event, so we just disallow it
+		syscall_set_return(current_task->context, AWAIT_MULTIPLE_WAITERS);
+		task_schedule(current_task);
+	} else {
+		set_awaiting_task(eid, current_task);
 	}
 }
 

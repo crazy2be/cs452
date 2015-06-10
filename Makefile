@@ -169,7 +169,10 @@ install: $(KERNEL_ELF)
 
 qemu-run: $(KERNEL_BIN)
 	@echo "Press Ctrl+A x to quit"
-	qemu-system-arm -M versatilepb -m 32M -nographic -kernel $(KERNEL_BIN)
+	qemu-system-arm -M versatilepb -m 32M -nographic \
+		-serial telnet:localhost:1230,server \
+		-serial telnet:localhost:1231,server \
+		-kernel $(KERNEL_BIN)
 
 qemu-start: $(KERNEL_BIN)
 	@echo "Starting in suspended mode for debugging... Press Ctrl+A x to quit."

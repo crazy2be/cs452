@@ -82,9 +82,15 @@
 #define RXFF_MASK	0x40	// Receive buffer full
 #define TXFE_MASK	0x80	// Transmit buffer empty
 #define UART_INTR_OFFSET	0x1c
-#define RTIS_MASK   0x8
-#define TIS_MASK    0x4
+#ifdef QEMU
+#define RIS_MASK    0x10
+#define TIS_MASK    0x20
+#define RTIS_MASK   0x00 // TODO: What is this even?
+#else
 #define RIS_MASK    0x2
+#define TIS_MASK    0x4
+#define RTIS_MASK   0x8
+#endif
 #define MIS_MASK    0x1
 #define UART_DMAR_OFFSET	0x28
 
