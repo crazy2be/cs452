@@ -55,6 +55,7 @@ void irq_handler(struct task_descriptor *current_task) {
 		printf("As of tick %d...\r\n", clock_ticks);
 		uart_print_ctrl(COM1);
 		uart_print_ctrl(COM2);
+		printf("\r\n");
 	}
 
 	if (IRQ_TEST(IRQ_TIMER, irq_mask_lo, irq_mask_hi)) {
@@ -63,6 +64,7 @@ void irq_handler(struct task_descriptor *current_task) {
 	} else if (IRQ_TEST(IRQ_COM1, irq_mask_lo, irq_mask_hi)) {
 		uart_print_ctrl(COM1);
 		io_irq_handler(COM1);
+		printf("\r\n");
 	} else if (IRQ_TEST(IRQ_COM2, irq_mask_lo, irq_mask_hi)) {
 		uart_print_ctrl(COM1);
 		io_irq_handler(COM2);

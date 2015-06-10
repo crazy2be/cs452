@@ -19,43 +19,10 @@ void io_irq_init(void) {
 	states[1].fifo_enabled = 1;
 }
 
-// a single await can do multiple bytes of IO - these return 1 if the task
-// has finished doing IO, 0 otherwise
-static int write_handler(int channel, struct task_descriptor *td) {
-	char *buf = (char*) syscall_arg(td->context, 1);
-	unsigned buflen = syscall_arg(td->context, 2);
-
-	KASSERT(buflen != 0);
-
-	if (states[channel].fifo_enabled) {
-		do {
-			uart_write(channel, *buf++);
-			buflen--;
-		} while(uart_canwritefifo(channel) && buflen > 0);
-	} else {
-		uart_write(channel, *buf++);
-		buflen--;
-	}
-
-	if (buflen == 0) {
-		syscall_set_return(td->context, 0);
-		task_schedule(td);
-		return 1;
-	} else {
-		// update arguments, and go back to sleep until more IO can be done
-		td->context->r1 = (unsigned) buf;
-		td->context->r2 = buflen;
-		return 0;
-	}
-}
-
-static int read_handler(int channel, struct task_descriptor *td) {
-	char *buf = (char*) syscall_arg(td->context, 1);
-	unsigned buflen = syscall_arg(td->context, 2);
-
-	KASSERT(buflen != 0);
-
-	if (states[channel].fifo_enabled) {
+static void rx_handler(int channel, char **ppbuf, int *pbuflen, int fifo_enabled) {
+	char *buf = *ppbuf;
+	int buflen = *pbuflen;
+	if (fifo_enabled) {
 		do {
 			*buf++ = uart_read(channel);
 			buflen--;
@@ -64,33 +31,53 @@ static int read_handler(int channel, struct task_descriptor *td) {
 		*buf++ = uart_read(channel);
 		buflen--;
 	}
-
-	if (buflen == 0) {
-		syscall_set_return(td->context, 0);
-		task_schedule(td);
-		return 1;
-	} else {
-		td->context->r1 = (unsigned) buf;
-		td->context->r2 = buflen;
-		return 0;
-	}
+	*ppbuf = buf;
+	*pbuflen = buflen;
 }
-
+static void tx_handler(int channel, char **ppbuf, int *pbuflen, int fifo_enabled) {
+	char *buf = *ppbuf;
+	int buflen = *pbuflen;
+	if (fifo_enabled) {
+		do {
+			uart_write(channel, *buf++);
+			buflen--;
+		} while(uart_canwritefifo(channel) && buflen > 0);
+	} else {
+		uart_write(channel, *buf++);
+		buflen--;
+	}
+	*ppbuf = buf;
+	*pbuflen = buflen;
+}
 static void handle_irq(int channel, int is_tx) {
 	KASSERT(is_tx ? uart_canwritefifo(channel) : uart_canreadfifo(channel));
 
 	int eid = eid_for_uart(channel, is_tx);
 	struct task_descriptor *td = get_awaiting_task(eid);
-
 	// interrupts should be turned off if there is no waiting task
 	// so we shouldn't even get this interrupt if there is no waiting task
 	KASSERT(td);
 
-	if (is_tx ? write_handler(channel, td) : read_handler(channel, td)) {
-		clear_awaiting_task(eid);
-		if (is_tx) uart_disable_tx_irq(channel);
-		else uart_disable_rx_irq(channel);
+	char *buf = (char*) syscall_arg(td->context, 1);
+	int buflen = (int) syscall_arg(td->context, 2);
+	KASSERT(buflen != 0);
+
+	printf("Before: buf: %x, len: %d\r\n", buf, buflen);
+	if (is_tx) tx_handler(channel, &buf, &buflen, states[channel].fifo_enabled);
+	else rx_handler(channel, &buf, &buflen, states[channel].fifo_enabled);
+	printf("After: buf: %x, len: %d\r\n", buf, buflen);
+
+	if (buflen > 0) {
+		td->context->r1 = (unsigned) buf;
+		td->context->r2 = buflen;
+		return;
 	}
+
+	syscall_set_return(td->context, 0);
+	task_schedule(td);
+	clear_awaiting_task(eid);
+	if (is_tx) uart_disable_tx_irq(channel);
+	else uart_disable_rx_irq(channel);
 }
 void io_irq_handler(int channel) {
 	int irq_mask = uart_irq_type(channel);
@@ -103,7 +90,6 @@ void io_irq_handler(int channel) {
 		KASSERT(0 && "UNKNOWN UART IRQ");
 	}
 }
-
 void io_irq_mask_add(int channel, int is_tx) {
 	if (is_tx) uart_restore_tx_irq(channel);
 	else uart_restore_rx_irq(channel);

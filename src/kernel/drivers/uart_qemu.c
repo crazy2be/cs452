@@ -84,14 +84,14 @@ void uart_restore_rx_irq(int channel) {
 
 // COMMON
 void uart_disable_tx_irq(int channel) {
-	printf("Disabling tx irq for channel %d", channel);
+	printf("Disabling tx irq for channel %d\r\n", channel);
 	volatile int *ctrl = reg(channel, UART_CTLR_OFFSET);
 	*ctrl &= ~TIEN_MASK;
 }
 
 // COMMON
 void uart_restore_tx_irq(int channel) {
-	printf("Restoring tx irq for channel %d", channel);
+	printf("Restoring tx irq for channel %d\r\n", channel);
 	volatile int *ctrl = reg(channel, UART_CTLR_OFFSET);
 	*ctrl |= TIEN_MASK;
 }
