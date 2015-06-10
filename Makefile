@@ -172,8 +172,8 @@ qemu-run: $(KERNEL_BIN)
 	@echo "Press Ctrl+A x to quit"
 	qemu-system-arm -M versatilepb -m 32M -nographic \
 		-nodefaults \
-		-serial stdio \
 		-serial telnet:localhost:1231,server \
+		-serial stdio \
 		-kernel $(KERNEL_BIN)
 
 qemu-start: $(KERNEL_BIN)

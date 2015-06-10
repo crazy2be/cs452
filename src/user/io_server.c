@@ -56,11 +56,7 @@ static int transmit(int notifier_tid, struct char_rbuf *buf) {
 	int msg_len = MIN(sizeof(buf->buf) - buf->i, buf->l);
 	msg_len = MIN(TX_BUFSZ, msg_len);
 
-	printf("buffering out (%d, %d, %d): \"", sizeof(buf->buf) - buf->i, buf->l, msg_len);
-	for (int i = 0; i < msg_len; i++) {
-		io_putc(COM2, msg_start[i]);
-	}
-	printf("\"" EOL);
+	/* printf("buffering out (%d, %d, %d, %d): \"", sizeof(buf->buf) - buf->i, buf->l, TX_BUFSZ, msg_len); */
 
 	reply(notifier_tid, msg_start, msg_len);
 	char_rbuf_drop(buf, msg_len);
@@ -89,8 +85,6 @@ static void tx_notifier(void) {
 	char buf[TX_BUFSZ];
 	const char req = IO_TX_NTFY;
 
-	printf("TX notifier started up" EOL);
-
 	for (;;) {
 		int len = send(parent, &req, sizeof(req), buf, TX_BUFSZ);
 		ASSERT(len >= 0); // shouldn't have gotten an error
@@ -105,7 +99,6 @@ static void rx_notifier(void) {
 	char buf[RX_BUFSZ + 1];
 	unsigned resp;
 
-	printf("RX notifier started up" EOL);
 	for (;;) {
 		await(evt, buf + 1, RX_BUFSZ);
 		buf[0] = IO_RX_NTFY;
@@ -128,17 +121,14 @@ static void io_server_run(const int channel, const char *name) {
 	struct io_blocked_task temp;
 
 	int bytes_tx = 0, bytes_rx = 0;
-	int tx_ntfy = -1, rx_ntfy = -1;
+	int tx_ntfy = -1;
 	unsigned resp;
-
-	printf("IO server started up" EOL);
 
 	for (;;) {
 		// invariants:
 		// there can't be both the notifier and the client tasks waiting at
 		// the same time
-		ASSERT(tx_ntfy < 0 || tx_waiters.l == 0);
-		ASSERT(rx_ntfy < 0 || rx_waiters.l == 0);
+		ASSERT(tx_ntfy < 0 || io_rbuf_empty(&tx_waiters));
 
 		struct io_request req;
 		int tid;
@@ -155,11 +145,11 @@ static void io_server_run(const int channel, const char *name) {
 				.byte_count = msg_len,
 			};
 			io_rbuf_put(&tx_waiters, temp);
-			printf("Got msg len of %d, %d from queue" EOL, msg_len, io_rbuf_peek(&tx_waiters)->byte_count);
 			for (int i = 0; i < msg_len; i++) {
 				char_rbuf_put(&tx_buf, req.u.buf[i]);
 			}
-			if (tx_ntfy > 0) {
+
+			if (tx_ntfy >= 0) {
 				bytes_tx += transmit(tx_ntfy, &tx_buf);
 				tx_ntfy = -1;
 			}
@@ -175,15 +165,10 @@ static void io_server_run(const int channel, const char *name) {
 				reply(task->tid, &resp, sizeof(resp));
 
 				// advance to the next task
-				if (io_rbuf_empty(&tx_waiters)) {
-					io_rbuf_drop(&tx_waiters, 1);
-					task = io_rbuf_peek(&tx_waiters);
-				} else {
-					task = NULL;
-				}
+				io_rbuf_drop(&tx_waiters, 1);
+				task = io_rbuf_empty(&tx_waiters) ? NULL : io_rbuf_peek(&tx_waiters);
 			}
 			if (task) {
-				printf("%d of %d bytes tx" EOL, bytes_tx, task->byte_count);
 				bytes_tx += transmit(tid, &tx_buf);
 			} else {
 				tx_ntfy = tid;
@@ -214,12 +199,8 @@ static void io_server_run(const int channel, const char *name) {
 			task = io_rbuf_empty(&rx_waiters) ? NULL : io_rbuf_peek(&rx_waiters);
 			while (task && bytes_rx >= task->byte_count) {
 				bytes_rx -= receive_data(tid, &rx_buf, task->byte_count);
-				if (io_rbuf_empty(&rx_waiters)) {
-					io_rbuf_drop(&rx_waiters, 1);
-					task = io_rbuf_peek(&rx_waiters);
-				} else {
-					task = NULL;
-				}
+				io_rbuf_drop(&rx_waiters, 1);
+				task = io_rbuf_empty(&rx_waiters) ? NULL : io_rbuf_peek(&rx_waiters);
 			}
 			break;
 		case IO_STOP:
@@ -282,13 +263,15 @@ static int io_server_tid(void) {
 // functions which interact with the io server
 int iosrv_puts(const char *str) {
 	int len = strlen(str);
+	ASSERT(len <= MAX_STR_LEN);
 	struct io_request req;
 	unsigned resp;
 
 	req.type = IO_TX;
 	memcpy(req.u.buf, str, len);
 
-	int err = send(io_server_tid(), &req, 1 + len, &resp, sizeof(resp));
+	unsigned msg_len = sizeof(req) - MAX_STR_LEN + len;
+	int err = send(io_server_tid(), &req, msg_len, &resp, sizeof(resp));
 	ASSERT(err >= 0);
 
 	return (err < 0) ? err : 0;
