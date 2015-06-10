@@ -116,21 +116,7 @@ void io_irq_handler(int channel) {
 	}
 }
 
-// these two functions check for tx / rx events already pending,
-// and the syscalls immediately return if the event has already happened
-// returns non-zero iff the event has already happened (in this case, it
-// will already have made the return from the syscall, so there is no
-// need to put the task on the await queue)
-//
-// TODO: right now, we don't actually check for this anymore - but we could.
-// it used to be that we thought this was necessary for correctness (and it's
-// not), but it might be more efficient to do it this way.
-int io_irq_check_for_pending_tx(int channel, struct task_descriptor *td) {
-	uart_restore_tx_irq(channel);
-	return 0;
-}
-
-int io_irq_check_for_pending_rx(int channel, struct task_descriptor *td) {
-	uart_restore_rx_irq(channel);
-	return 0;
+void io_irq_mask_add(int channel, int is_write) {
+	if (is_write) uart_restore_tx_irq(channel);
+	else uart_restore_rx_irq(channel);
 }
