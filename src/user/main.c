@@ -48,6 +48,7 @@ void test_init(void) {
 		await(EID_COM1_READ, c, sizeof(c) - 1);
 		c[sizeof(c) - 1] = 0;
 		printf("Got %s" EOL, c);
+		await(EID_COM1_WRITE, c, strlen(c));
 	}
 }
 
