@@ -18,3 +18,6 @@ void should_idle_handler(struct task_descriptor *current_task);
 struct task_descriptor *get_awaiting_task(int eid);
 void set_awaiting_task(int eid, struct task_descriptor *td);
 void clear_awaiting_task(int eid);
+
+int eid_for_uart(int channel, int is_tx);
+void uart_for_eid(int eid, int* channel, int* is_tx);

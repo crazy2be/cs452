@@ -73,12 +73,12 @@ void irq_handler(struct task_descriptor *current_task) {
 	task_schedule(current_task);
 }
 
-int eid_for_uart(int channel, int is_write) {
-	return EID_COM1_READ + is_write + 2*channel;
+int eid_for_uart(int channel, int is_tx) {
+	return EID_COM1_READ + is_tx + 2*channel;
 }
-void uart_for_eid(int eid, int* channel, int* is_write) {
+void uart_for_eid(int eid, int* channel, int* is_tx) {
 	*channel = (eid - EID_COM1_READ) / 2;
-	*is_write = (eid - EID_COM1_READ) % 2;
+	*is_tx = (eid - EID_COM1_READ) % 2;
 }
 
 void await_handler(struct task_descriptor *current_task) {
@@ -89,9 +89,9 @@ void await_handler(struct task_descriptor *current_task) {
 		return;
 	}
 
-	int channel, is_write;
-	uart_for_eid(eid, &channel, &is_write);
-	io_irq_mask_add(channel, is_write);
+	int channel, is_tx;
+	uart_for_eid(eid, &channel, &is_tx);
+	io_irq_mask_add(channel, is_tx);
 
 	if (get_awaiting_task(eid)) {
 		// for our purposes, there is never a case where we want to have multiple

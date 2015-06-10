@@ -76,47 +76,35 @@ static int read_handler(int channel, struct task_descriptor *td) {
 	}
 }
 
+static void handle_irq(int channel, int is_tx) {
+	KASSERT(is_tx ? uart_canwritefifo(channel) : uart_canreadfifo(channel));
+
+	int eid = eid_for_uart(channel, is_tx);
+	struct task_descriptor *td = get_awaiting_task(eid);
+
+	// interrupts should be turned off if there is no waiting task
+	// so we shouldn't even get this interrupt if there is no waiting task
+	KASSERT(td);
+
+	if (is_tx ? write_handler(channel, td) : read_handler(channel, td)) {
+		clear_awaiting_task(eid);
+		if (is_tx) uart_disable_tx_irq(channel);
+		else uart_disable_rx_irq(channel);
+	}
+}
 void io_irq_handler(int channel) {
 	int irq_mask = uart_irq_type(channel);
 	printf("Got io_irq with mask %u\n\r", irq_mask);
-	int eid;
-	struct task_descriptor *td;
-	if (UART_IRQ_IS_RX(irq_mask)) {
-		KASSERT(uart_canreadfifo(channel));
-
-		eid = EID_COM1_READ + 2 * channel;
-		td = get_awaiting_task(eid);
-
-		// interrupts should be turned off if there is no waiting task
-		// so we shouldn't even get this interrupt if there is no waiting task
-		KASSERT(td);
-
-		if (read_handler(channel, td)) {
-			clear_awaiting_task(eid);
-			uart_disable_rx_irq(channel);
-		}
-	} else if (UART_IRQ_IS_TX(irq_mask)) {
-		KASSERT(uart_canwritefifo(channel));
-
-		eid = EID_COM1_WRITE + 2 * channel;
-		td = get_awaiting_task(eid);
-
-		// interrupts should be turned off if there is no waiting task
-		// so we shouldn't even get this interrupt if there is no waiting task
-		KASSERT(td);
-
-		if (write_handler(channel, td)) {
-			clear_awaiting_task(eid);
-			uart_disable_tx_irq(channel);
-		}
-	} else {
+	if (UART_IRQ_IS_RX(irq_mask)) handle_irq(channel, 0);
+	else if (UART_IRQ_IS_TX(irq_mask)) handle_irq(channel, 1);
+	else {
 		printf("mask: %d, is_tx: %d, tis_mask: %d\r\n", irq_mask,
 			   UART_IRQ_IS_TX(irq_mask), TIS_MASK);
 		KASSERT(0 && "UNKNOWN UART IRQ");
 	}
 }
 
-void io_irq_mask_add(int channel, int is_write) {
-	if (is_write) uart_restore_tx_irq(channel);
+void io_irq_mask_add(int channel, int is_tx) {
+	if (is_tx) uart_restore_tx_irq(channel);
 	else uart_restore_rx_irq(channel);
 }

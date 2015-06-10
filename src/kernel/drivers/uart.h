@@ -22,6 +22,7 @@ void uart_disable_rx_irq(int channel);
 void uart_restore_tx_irq(int channel);
 void uart_disable_tx_irq(int channel);
 void uart_restore_rx_irq(int channel);
+int uart_irq_mask(int channel);
 int uart_irq_type(int channel);
 void uart_cleanup(int channel); // disable interrupts
 
