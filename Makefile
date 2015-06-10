@@ -166,11 +166,13 @@ install: $(KERNEL_ELF)
 	chmod a+r $(ELF_DESTINATION)
 
 # scripts for convenience
+# TODO: there's a lot of different qemu-system-arm invocations - we should DRY this up
 
 qemu-run: $(KERNEL_BIN)
 	@echo "Press Ctrl+A x to quit"
 	qemu-system-arm -M versatilepb -m 32M -nographic \
-		-serial telnet:localhost:1230,server \
+		-nodefaults \
+		-serial stdio \
 		-serial telnet:localhost:1231,server \
 		-kernel $(KERNEL_BIN)
 
