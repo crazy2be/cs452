@@ -15,6 +15,7 @@ struct uart_state states[2];
 
 void io_irq_init(void) {
 	// TODO: should COM1 have the fifo turned on? can this coexist with CTS?
+	// (the answer is, as far as Cowen has said, anyway, "no".)
 	states[0].fifo_enabled = 1;
 	states[1].fifo_enabled = 1;
 }
