@@ -38,6 +38,12 @@ void uart_clrerr(int channel) {
 void uart_configure(int channel, int speed, int fifo) {
 	// TODO: We should actually set the speed, turn off the fifo, etc. here,
 	// as that will allow more accurate emulation of the real hardware.
+	if (channel == 0) {
+		// NOTE: This is a bit of a hack, because in QEMU, the interrupt is
+		// edge-sensitive rather than level-sensitive. Thus, we write a byte
+		// to get things going.
+		*reg(channel, DR) = 0x00;
+	}
 }
 int uart_canwrite(int channel) {
 	return !(*reg(channel, UART_FLAG_OFFSET) & TXFF_MASK);
@@ -88,10 +94,6 @@ void uart_restore_tx_irq(int channel) {
 	printf("Restoring tx irq for channel %d", channel);
 	volatile int *ctrl = reg(channel, UART_CTLR_OFFSET);
 	*ctrl |= TIEN_MASK;
-	// NOTE: This is a bit of a hack, because in QEMU, the interrupt is
-	// edge-sensitive rather than level-sensitive. Thus, we write a byte
-	// to get things going.
-	*reg(channel, DR) = 0x00;
 }
 
 void uart_print_ctrl(int channel) {
