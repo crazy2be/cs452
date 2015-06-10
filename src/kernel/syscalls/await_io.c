@@ -25,9 +25,7 @@ static int write_handler(int channel, struct task_descriptor *td) {
 	char *buf = (char*) syscall_arg(td->context, 1);
 	unsigned buflen = syscall_arg(td->context, 2);
 
-
 	KASSERT(buflen != 0);
-	int b = buflen;
 
 	if (states[channel].fifo_enabled) {
 		do {

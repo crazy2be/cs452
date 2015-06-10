@@ -27,7 +27,7 @@ void uart_clrerr(int channel) {
  * 	no parity
  * 	fifos enabled
  */
-void uart_configure(int channel, int speed, int fifo, int interrupts) {
+void uart_configure(int channel, int speed, int fifo) {
 	// Speed - must set speed before fifo
 	int *high = reg(channel, UART_LCRM_OFFSET);
 	int *low = reg(channel, UART_LCRL_OFFSET);
@@ -82,22 +82,22 @@ int uart_canwritefifo(int channel) {
 }
 
 void uart_disable_rx_irq(int channel) {
-	int *ctrl = reg(channel, UART_CTLR_OFFSET);
+	volatile int *ctrl = reg(channel, UART_CTLR_OFFSET);
 	*ctrl &= ~(RIEN_MASK | RTIEN_MASK);
 }
 
 void uart_restore_rx_irq(int channel) {
-	int *ctrl = reg(channel, UART_CTLR_OFFSET);
+	volatile int *ctrl = reg(channel, UART_CTLR_OFFSET);
 	*ctrl |= RIEN_MASK | RTIEN_MASK;
 }
 
 void uart_disable_tx_irq(int channel) {
-	int *ctrl = reg(channel, UART_CTLR_OFFSET);
+	volatile int *ctrl = reg(channel, UART_CTLR_OFFSET);
 	*ctrl &= ~TIEN_MASK;
 }
 
 void uart_restore_tx_irq(int channel) {
-	int *ctrl = reg(channel, UART_CTLR_OFFSET);
+	volatile int *ctrl = reg(channel, UART_CTLR_OFFSET);
 	*ctrl |= TIEN_MASK;
 }
 
@@ -106,7 +106,7 @@ int uart_irq_type(int channel) {
 }
 
 void uart_cleanup(int channel) {
-	int *ctrl = reg(channel, UART_CTLR_OFFSET);
+	volatile int *ctrl = reg(channel, UART_CTLR_OFFSET);
 	*ctrl = UARTEN_MASK;
 }
 #endif

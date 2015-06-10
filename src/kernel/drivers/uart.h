@@ -7,7 +7,7 @@
 
 int uart_err(int channel);
 void uart_clrerr(int channel);
-void uart_configure(int channel, int speed, int fifo, int interrupts);
+void uart_configure(int channel, int speed, int fifo);
 int uart_canwrite(int channel);
 void uart_write(int channel, char c);
 int uart_canread(int channel);
@@ -25,10 +25,6 @@ void uart_restore_rx_irq(int channel);
 int uart_irq_type(int channel);
 void uart_cleanup(int channel); // disable interrupts
 
-#ifdef QEMU
-// not implemented
-#else
 #include "ts7200.h"
 #define UART_IRQ_IS_RX(x) ((x) & (RTIS_MASK | RIS_MASK))
 #define UART_IRQ_IS_TX(x) ((x) & TIS_MASK)
-#endif

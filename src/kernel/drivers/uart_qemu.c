@@ -14,6 +14,12 @@
 #define UART1 0x101F2000
 #define DR 0
 
+// TODO: these should be declared in the same place as the constants from ts7200.h
+#undef UART_CTLR_OFFSET
+#define UART_CTLR_OFFSET 0x38
+#undef UART_INTR_OFFSET
+#define UART_INTR_OFFSET 0x40
+
 static volatile int* reg(int channel, int off) {
 	switch (channel) {
 	// Intentionally reversed- in ts7200, COM2 is stdout, and COM1 is
@@ -45,5 +51,51 @@ int uart_canread(int channel) {
 }
 char uart_read(int channel) {
 	return *reg(channel, DR);
+}
+
+// COMMON
+int uart_canreadfifo(int channel) {
+	// receive fifo is not empty
+	return !(*reg(channel, UART_FLAG_OFFSET) & RXFE_MASK);
+}
+
+// COMMON
+int uart_canwritefifo(int channel) {
+	// transmit fifo is not full
+	return !(*reg(channel, UART_FLAG_OFFSET) & TXFF_MASK);
+}
+
+// COMMON
+void uart_disable_rx_irq(int channel) {
+	volatile int *ctrl = reg(channel, UART_CTLR_OFFSET);
+	*ctrl &= ~(RIEN_MASK | RTIEN_MASK);
+}
+
+// COMMON
+void uart_restore_rx_irq(int channel) {
+	volatile int *ctrl = reg(channel, UART_CTLR_OFFSET);
+	*ctrl |= RIEN_MASK | RTIEN_MASK;
+}
+
+// COMMON
+void uart_disable_tx_irq(int channel) {
+	volatile int *ctrl = reg(channel, UART_CTLR_OFFSET);
+	*ctrl &= ~TIEN_MASK;
+}
+
+// COMMON
+void uart_restore_tx_irq(int channel) {
+	volatile int *ctrl = reg(channel, UART_CTLR_OFFSET);
+	*ctrl |= TIEN_MASK;
+}
+
+// COMMON
+int uart_irq_type(int channel) {
+	return *reg(channel, UART_INTR_OFFSET);
+}
+
+void uart_cleanup(int channel) {
+	volatile int *ctrl = reg(channel, UART_CTLR_OFFSET);
+	*ctrl = 0;
 }
 #endif
