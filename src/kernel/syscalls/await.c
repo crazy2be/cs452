@@ -81,35 +81,28 @@ void await_handler(struct task_descriptor *current_task) {
 		return;
 	}
 
-	int immediate_return;
-
 	switch (eid) {
 	case EID_COM1_READ:
-		immediate_return = io_irq_check_for_pending_rx(COM1, current_task);
+		io_irq_check_for_pending_rx(COM1, current_task);
 		break;
 	case EID_COM1_WRITE:
-		immediate_return = io_irq_check_for_pending_tx(COM1, current_task);
+		io_irq_check_for_pending_tx(COM1, current_task);
 		break;
 	case EID_COM2_READ:
-		immediate_return = io_irq_check_for_pending_rx(COM2, current_task);
+		io_irq_check_for_pending_rx(COM2, current_task);
 		break;
 	case EID_COM2_WRITE:
-		immediate_return = io_irq_check_for_pending_tx(COM2, current_task);
+		io_irq_check_for_pending_tx(COM2, current_task);
 		break;
-	default:
-		immediate_return = 0; // TODO THIS IS GROSS
 	}
 
-	if (!immediate_return) {
-		if (get_awaiting_task(eid)) {
-			// for our purposes, there is never a case where we want to have multiple
-			// tasks awaiting the same event, so we just disallow it
-			syscall_set_return(current_task->context, AWAIT_MULTIPLE_WAITERS);
-			task_schedule(current_task);
-		} else {
-			await_blocked_tasks[eid] = current_task;
-			num_tasks_waiting++;
-		}
+	if (get_awaiting_task(eid)) {
+		// for our purposes, there is never a case where we want to have multiple
+		// tasks awaiting the same event, so we just disallow it
+		syscall_set_return(current_task->context, AWAIT_MULTIPLE_WAITERS);
+		task_schedule(current_task);
+	} else {
+		set_awaiting_task(eid, current_task);
 	}
 }
 
