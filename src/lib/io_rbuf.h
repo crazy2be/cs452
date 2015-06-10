@@ -2,7 +2,7 @@
 
 struct io_blocked_task {
 	int tid;
-	unsigned byte_count;
+	int byte_count;
 };
 
 #define RBUF_SIZE 256

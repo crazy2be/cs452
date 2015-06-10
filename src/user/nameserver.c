@@ -6,6 +6,8 @@
 
 #include <kernel.h>
 
+#include <io.h>
+
 #define NAMESERVER_TID 2
 
 struct nameserver_request {
@@ -26,14 +28,15 @@ void nameserver(void) {
 		switch (req.type) {
 		case WHOIS:
 			err = hashtable_get(&name_map, req.name, &resp);
+			printf("GOT err = %d, resp = %d from nameserver" EOL, err, resp);
 			if (err != HASHTABLE_SUCCESS) {
-				resp = err;
+				resp = -1;
 			}
 			break;
 		case REGISTER_AS:
 			err = hashtable_set(&name_map, req.name, tid);
 			if (err != HASHTABLE_SUCCESS) {
-				resp = err;
+				resp = -1;
 			}
 			break;
 		default:

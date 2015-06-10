@@ -9,6 +9,7 @@
 #include <kernel.h>
 #include <util.h>
 #include <assert.h>
+#include <hashtable.h>
 
 #define IO_TX 0
 #define IO_RX 1
@@ -23,7 +24,7 @@ struct io_request {
 	unsigned char type;
 	union {
 		char buf[MAX_STR_LEN]; // buffer for tx & rx_ntfy requests
-		unsigned len; // len for rx requests; right now this is always 0
+		int len; // len for rx requests; right now this is always 0
 		// tx_ntfy & quit requests don't pass any additional data
 	} u;
 };
@@ -31,7 +32,7 @@ struct io_request {
 // message definitions:
 // TX: req: io_request, type followed by n bytes of input
 //     resp: unsigned, 0
-// RX: req: io_request, type followed by unsigned len
+// RX: req: io_request, type followed by int len
 //     resp: char buffer of bytes returned
 // TX_NTFY: req: io_request, just type
 //          resp: char buffer of bytes to send
@@ -47,52 +48,73 @@ struct io_request {
 #define RX_BUFSZ 1
 #define TX_BUFSZ 16
 
-static unsigned transmit(int notifier_tid, struct char_rbuf *buf) {
+static int transmit(int notifier_tid, struct char_rbuf *buf) {
 	// we do a little bit of nastiness to pull the message directly out
 	// of the rbuf
 	char *msg_start = &buf->buf[buf->i];
 	// let the msg go either to the end of the rbuf, or to the max size of the notifier buf
-	unsigned msg_len = MIN(TX_BUFSZ, sizeof(buf->buf) - buf->i);
+	int msg_len = MIN(sizeof(buf->buf) - buf->i, buf->l);
+	msg_len = MIN(TX_BUFSZ, msg_len);
+
+	printf("buffering out (%d, %d, %d): \"", sizeof(buf->buf) - buf->i, buf->l, msg_len);
+	for (int i = 0; i < msg_len; i++) {
+		io_putc(COM2, msg_start[i]);
+	}
+	printf("\"" EOL);
+
 	reply(notifier_tid, msg_start, msg_len);
 	char_rbuf_drop(buf, msg_len);
 	return msg_len;
 }
 
-int notifier_get_channel(int server_tid) {
-	char req = IO_INFO;
-	int channel;
-	send(parent, buf, 1, &channel, sizeof(channel));
+static int receive_data(int tid, struct char_rbuf *buf, int len) {
+	char reply_buf[MAX_STR_LEN];
+	for (unsigned i = 0; i < len && buf->l > 0; i++) {
+		reply_buf[i] = char_rbuf_take(buf);
+	}
+	reply(tid, reply_buf, len);
+	return len;
+}
+
+static int notifier_get_channel(int server_tid) {
+	int channel, tid;
+	receive(&tid, &channel, sizeof(channel));
+	reply(tid, NULL, 0);
 	return channel;
 }
 
-void tx_notifier(void) {
+static void tx_notifier(void) {
 	int parent = parent_tid();
-	const int evt = (notifier_get_channel(parent) * 2) + EVT_COM1_WRITE;
+	const int evt = (notifier_get_channel(parent) * 2) + EID_COM1_WRITE;
 	char buf[TX_BUFSZ];
 	const char req = IO_TX_NTFY;
 
+	printf("TX notifier started up" EOL);
+
 	for (;;) {
-		int len = send(parent, req, sizeof(req), buf, TX_BUFSZ);
+		int len = send(parent, &req, sizeof(req), buf, TX_BUFSZ);
 		ASSERT(len >= 0); // shouldn't have gotten an error
 		// if (len <= 0) break; // quit if no work left TODO
-		await(evt, buf, TX_BUFSZ);
+		await(evt, buf, len);
 	}
 }
 
-void rx_notifier(void) {
+static void rx_notifier(void) {
 	int parent = parent_tid();
-	const int evt = (notifier_get_channel(parent) * 2) + EVT_COM1_READ;
+	const int evt = (notifier_get_channel(parent) * 2) + EID_COM1_READ;
 	char buf[RX_BUFSZ + 1];
 	unsigned resp;
 
+	printf("RX notifier started up" EOL);
 	for (;;) {
 		await(evt, buf + 1, RX_BUFSZ);
-		buf[0] = IO_RX_NOTIFY;
-		send(parent, buf, sizeof(buf), resp, sizeof(resp));
+		buf[0] = IO_RX_NTFY;
+		send(parent, buf, sizeof(buf), &resp, sizeof(resp));
+		// if (resp) break; // quit if no work left TODO
 	}
 }
 
-void io_server_start(const int channel, const char *name) {
+static void io_server_run(const int channel, const char *name) {
 	register_as(name);
 
 	// buffers to accumulate data
@@ -105,11 +127,11 @@ void io_server_start(const int channel, const char *name) {
 	const struct io_blocked_task *task;
 	struct io_blocked_task temp;
 
-	unsigned bytes_tx = 0, bytes_rx = 0, resp;
+	int bytes_tx = 0, bytes_rx = 0;
 	int tx_ntfy = -1, rx_ntfy = -1;
+	unsigned resp;
 
-	create(1, rx_notifier);
-	create(1, tx_notifier);
+	printf("IO server started up" EOL);
 
 	for (;;) {
 		// invariants:
@@ -121,16 +143,19 @@ void io_server_start(const int channel, const char *name) {
 		struct io_request req;
 		int tid;
 
-		int msg_len = receive(&tid, &req, sizeof(req)) - 1;
-		ASSERT(msg_len > 0);
+		int msg_len = receive(&tid, &req, sizeof(req));
+		ASSERT(msg_len >= 1);
+		msg_len--; // don't count the initial byte in the length
 
 		switch (req.type) {
 		case IO_TX:
+			ASSERT(msg_len > 0); // TODO make this an error message
 			temp = (struct io_blocked_task) {
 				.tid = tid,
 				.byte_count = msg_len,
 			};
 			io_rbuf_put(&tx_waiters, temp);
+			printf("Got msg len of %d, %d from queue" EOL, msg_len, io_rbuf_peek(&tx_waiters)->byte_count);
 			for (int i = 0; i < msg_len; i++) {
 				char_rbuf_put(&tx_buf, req.u.buf[i]);
 			}
@@ -140,7 +165,7 @@ void io_server_start(const int channel, const char *name) {
 			}
 			break;
 		case IO_TX_NTFY:
-			task = io_rbuf_peek(&tx_waiters);
+			task = io_rbuf_empty(&tx_waiters) ? NULL : io_rbuf_peek(&tx_waiters);
 			// TODO: better control flow here?
 			if (task && bytes_tx >= task->byte_count) {
 				// the notifier just came back from outputting the last of this task's
@@ -150,23 +175,23 @@ void io_server_start(const int channel, const char *name) {
 				reply(task->tid, &resp, sizeof(resp));
 
 				// advance to the next task
-				io_rbuf_drop(&tx_waiters, 1);
-				task = io_rbuf_peek(&tx_waiters);
+				if (io_rbuf_empty(&tx_waiters)) {
+					io_rbuf_drop(&tx_waiters, 1);
+					task = io_rbuf_peek(&tx_waiters);
+				} else {
+					task = NULL;
+				}
 			}
 			if (task) {
-				transmit(tid, &tx_buf);
+				printf("%d of %d bytes tx" EOL, bytes_tx, task->byte_count);
+				bytes_tx += transmit(tid, &tx_buf);
 			} else {
 				tx_ntfy = tid;
 			}
 			break;
 		case IO_RX:
 			if (bytes_rx >= req.u.len) {
-				unsigned len = req.u.len;
-				bytes_rx -= len;
-				for (unsigned i = 0; i < len; i++) {
-					req.u.buf[i] = char_rbuf_take(&rx_buf);
-				}
-				reply(tid, req.u.buf, len);
+				bytes_rx -= receive_data(tid, &rx_buf, req.u.len);
 			} else {
 				temp = (struct io_blocked_task) {
 					.tid = tid,
@@ -186,23 +211,19 @@ void io_server_start(const int channel, const char *name) {
 			}
 			bytes_rx += msg_len;
 
-			task = io_rbuf_peek(&rx_waiters);
+			task = io_rbuf_empty(&rx_waiters) ? NULL : io_rbuf_peek(&rx_waiters);
 			while (task && bytes_rx >= task->byte_count) {
-				bytes_rx -= task->byte_count;
-				for (unsigned i = 0; i < task->byte_count; i++) {
-					req.u.buf[i] = char_rbuf_take(&rx_buf);
+				bytes_rx -= receive_data(tid, &rx_buf, task->byte_count);
+				if (io_rbuf_empty(&rx_waiters)) {
+					io_rbuf_drop(&rx_waiters, 1);
+					task = io_rbuf_peek(&rx_waiters);
+				} else {
+					task = NULL;
 				}
-				reply(task->tid, req.u.buf, task->byte_count);
-				io_rbuf_drop(&rx_waiters, 1);
-				task = io_rbuf_peek(&rx_waiters);
 			}
 			break;
-		case IO_QUIT:
+		case IO_STOP:
 			// TODO
-			break;
-		case IO_INFO:
-			resp = channel;
-			reply(tid, &resp, sizeof(resp));
 			break;
 		default:
 			ASSERT(0 && "Unknown request made to IO server");
@@ -210,3 +231,68 @@ void io_server_start(const int channel, const char *name) {
 		}
 	}
 }
+
+struct io_server_init_msg {
+	int channel;
+
+	// length bounded by max namelen supported by nameserver
+	char name[MAX_KEYLEN + 1];
+};
+
+#define NOTIFIER_COUNT 2
+
+// startup routines for io server
+static void io_server_init(void) {
+	struct io_server_init_msg resp;
+	int tid;
+
+	// our parent immediately sends us some bootstrap info
+	receive(&tid, &resp, sizeof(resp));
+	reply(tid, NULL, 0);
+
+	// start up notifiers, and give them their bootstrap info in turn
+	static void (*notifiers[NOTIFIER_COUNT])(void) = { rx_notifier, tx_notifier };
+
+	for (int i = 0; i < NOTIFIER_COUNT; i++) {
+		tid = create(1, notifiers[i]);
+		ASSERT(tid > 0);
+		ASSERT(send(tid, &resp.channel, sizeof(resp.channel), NULL, 0) == 0);
+	}
+
+	io_server_run(resp.channel, resp.name);
+}
+
+void ioserver(const int priority, const int channel, const char *name) {
+	int tid = create(priority, io_server_init);
+	struct io_server_init_msg resp;
+	resp.channel = channel;
+	strcpy(resp.name, name);
+	send(tid, &resp, sizeof(int) + strlen(name) + 1, NULL, 0);
+}
+
+// eventually, we'll have to support IO servers for COM1 & COM2 
+static int io_server_tid(void) {
+	static int tid = -1;
+	if (tid < 0) {
+		tid = whois("io_server");
+	}
+	return tid;
+}
+
+// functions which interact with the io server
+int iosrv_puts(const char *str) {
+	int len = strlen(str);
+	struct io_request req;
+	unsigned resp;
+
+	req.type = IO_TX;
+	memcpy(req.u.buf, str, len);
+
+	int err = send(io_server_tid(), &req, 1 + len, &resp, sizeof(resp));
+	ASSERT(err >= 0);
+
+	return (err < 0) ? err : 0;
+}
+
+/* int putc(const char c); */
+/* int getc(); */

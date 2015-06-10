@@ -3,6 +3,7 @@
 #include <assert.h>
 #include "nameserver.h"
 #include "clockserver.h"
+#include "io_server.h"
 #include "rps.h"
 #include "signal.h"
 #include <util.h>
@@ -40,18 +41,21 @@ void init(void) {
 }
 
 void test_init(void) {
+	create(LOWER(PRIORITY_MAX, 3), nameserver);
+	ioserver(LOWER(PRIORITY_MAX, 2), COM1, "io_server");
 	char *str = "Hello, world!" EOL "Here is a very long string which will overflow the FIFO!" EOL;
 	printf("Writing %d bytes" EOL, strlen(str));
-	await(EID_COM1_WRITE, str, strlen(str));
-	for (;;) {
-		char c[2];
-		await(EID_COM1_READ, c, sizeof(c) - 1);
-		c[sizeof(c) - 1] = 0;
-		printf("Got %s" EOL, c);
-	}
+	iosrv_puts(str);
+	/* await(EID_COM1_WRITE, str, strlen(str)); */
+	/* for (;;) { */
+	/* 	char c[2]; */
+	/* 	await(EID_COM1_READ, c, sizeof(c) - 1); */
+	/* 	c[sizeof(c) - 1] = 0; */
+	/* 	printf("Got %s" EOL, c); */
+	/* } */
 }
 
 #include "benchmark.h"
 int main(int argc, char *argv[]) {
-	boot(test_init, 0, 1);
+	boot(test_init, PRIORITY_MIN, 1);
 }

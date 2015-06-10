@@ -29,6 +29,8 @@
 #define RBUF_TAKE PASTER(RBUF_PREFIX, rbuf_take)
 #define RBUF_PEEK PASTER(RBUF_PREFIX, rbuf_peek)
 #define RBUF_DROP PASTER(RBUF_PREFIX, rbuf_drop)
+#define RBUF_EMPTY PASTER(RBUF_PREFIX, rbuf_empty)
+#define RBUF_FULL PASTER(RBUF_PREFIX, rbuf_full)
 RBUF_T {
 	int i; /**< index offset */
 	int l; /**< length of data */
@@ -53,4 +55,6 @@ void RBUF_PUT(RBUF_T *rbuf, RBUF_ELE val);
 RBUF_ELE RBUF_TAKE(RBUF_T *rbuf);
 
 const RBUF_ELE *RBUF_PEEK(const RBUF_T *rbuf);
+int RBUF_EMPTY(const RBUF_T *rbuf);
+int RBUF_FULL(const RBUF_T *rbuf);
 void RBUF_DROP(RBUF_T *rbuf, unsigned n);
