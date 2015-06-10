@@ -18,7 +18,7 @@ void io_irq_init(void) {
 	states[0].fifo_enabled = 1;
 	states[1].fifo_enabled = 1;
 }
-
+// TODO: I think we can dedupe some more of this code from rx/tx handler
 static void rx_handler(int channel, char **ppbuf, int *pbuflen, int fifo_enabled) {
 	char *buf = *ppbuf;
 	int buflen = *pbuflen;
@@ -49,7 +49,23 @@ static void tx_handler(int channel, char **ppbuf, int *pbuflen, int fifo_enabled
 	*ppbuf = buf;
 	*pbuflen = buflen;
 }
-static void handle_irq(int channel, int is_tx) {
+static int mask_is_tx(int irq_mask) {
+	if (UART_IRQ_IS_TX(irq_mask)) return 1;
+	else if (UART_IRQ_IS_RX(irq_mask)) return 0;
+	else {
+		printf("irq_mask: %d\r\n", irq_mask);
+		KASSERT(0 && "UNKNOWN UART IRQ");
+		return -1;
+	}
+}
+static void disable_irq(int channel, int is_tx) {
+	if (is_tx) uart_disable_tx_irq(channel);
+	else uart_disable_rx_irq(channel);
+}
+void io_irq_handler(int channel) {
+	int irq_mask = uart_irq_mask(channel);
+	printf("Got io_irq with mask %u\n\r", irq_mask);
+	int is_tx = mask_is_tx(irq_mask);
 	KASSERT(is_tx ? uart_canwritefifo(channel) : uart_canreadfifo(channel));
 
 	int eid = eid_for_uart(channel, is_tx);
@@ -76,19 +92,7 @@ static void handle_irq(int channel, int is_tx) {
 	syscall_set_return(td->context, 0);
 	task_schedule(td);
 	clear_awaiting_task(eid);
-	if (is_tx) uart_disable_tx_irq(channel);
-	else uart_disable_rx_irq(channel);
-}
-void io_irq_handler(int channel) {
-	int irq_mask = uart_irq_type(channel);
-	printf("Got io_irq with mask %u\n\r", irq_mask);
-	if (UART_IRQ_IS_RX(irq_mask)) handle_irq(channel, 0);
-	else if (UART_IRQ_IS_TX(irq_mask)) handle_irq(channel, 1);
-	else {
-		printf("mask: %d, is_tx: %d, tis_mask: %d\r\n", irq_mask,
-			   UART_IRQ_IS_TX(irq_mask), TIS_MASK);
-		KASSERT(0 && "UNKNOWN UART IRQ");
-	}
+	disable_irq(channel, is_tx);
 }
 void io_irq_mask_add(int channel, int is_tx) {
 	if (is_tx) uart_restore_tx_irq(channel);

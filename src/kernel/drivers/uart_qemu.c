@@ -104,7 +104,7 @@ void uart_print_ctrl(int channel) {
 }
 
 // COMMON
-int uart_irq_type(int channel) {
+int uart_irq_mask(int channel) {
 	return *reg(channel, UART_INTR_OFFSET);
 }
 

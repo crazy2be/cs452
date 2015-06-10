@@ -108,7 +108,7 @@ void uart_print_ctrl(int channel) {
 	printf(" MIS: %u\r\n", *reg(channel, 0x40));
 }
 
-int uart_irq_type(int channel) {
+int uart_irq_mask(int channel) {
 	return *reg(channel, UART_INTR_OFFSET);
 }
 
