@@ -26,3 +26,14 @@ RBUF_ELE RBUF_TAKE(RBUF_T *rbuf) {
 	rbuf->l--;
 	return val;
 }
+
+void RBUF_DROP(RBUF_T *rbuf, unsigned n) {
+	KASSERT(rbuf->l >= n);
+	KASSERT(rbuf->i >= 0 && rbuf->i < RBUF_SIZE);
+	rbuf->i = (rbuf->i + n) % RBUF_SIZE;
+	rbuf->l -= n;
+}
+
+const RBUF_ELE *RBUF_PEEK(const RBUF_T *rbuf) {
+	return &rbuf->buf[rbuf->i];
+}
