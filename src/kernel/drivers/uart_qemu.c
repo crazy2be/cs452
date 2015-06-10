@@ -12,6 +12,7 @@
 // http://infocenter.arm.com/help/topic/com.arm.doc.ddi0183f/DDI0183.pdf
 #define UART0 0x101F1000
 #define UART1 0x101F2000
+#define UART2 0x101F3000
 #define DR 0
 
 // TODO: these should be declared in the same place as the constants from ts7200.h
@@ -77,14 +78,23 @@ void uart_restore_rx_irq(int channel) {
 
 // COMMON
 void uart_disable_tx_irq(int channel) {
+	printf("Disabling tx irq for channel %d", channel);
 	volatile int *ctrl = reg(channel, UART_CTLR_OFFSET);
 	*ctrl &= ~TIEN_MASK;
 }
 
 // COMMON
 void uart_restore_tx_irq(int channel) {
+	printf("Restoring tx irq for channel %d", channel);
 	volatile int *ctrl = reg(channel, UART_CTLR_OFFSET);
 	*ctrl |= TIEN_MASK;
+}
+
+void uart_print_ctrl(int channel) {
+	printf("For channel %d:...\r\n", channel);
+	printf(" MSC: %u\r\n", *reg(channel, UART_CTLR_OFFSET));
+	printf(" RIS: %u\r\n", *reg(channel, 0x3C));
+	printf(" MIS: %u\r\n", *reg(channel, 0x40));
 }
 
 // COMMON

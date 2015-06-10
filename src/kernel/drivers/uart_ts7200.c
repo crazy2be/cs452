@@ -101,6 +101,13 @@ void uart_restore_tx_irq(int channel) {
 	*ctrl |= TIEN_MASK;
 }
 
+void uart_print_ctrl(int channel) {
+	printf("For channel %d:...\r\n", channel);
+	printf(" MSC: %u\r\n", *reg(channel, UART_CTLR_OFFSET));
+	printf(" RIS: %u\r\n", *reg(channel, UART_INTR_OFFSET));
+	printf(" MIS: %u\r\n", *reg(channel, 0x40));
+}
+
 int uart_irq_type(int channel) {
 	return *reg(channel, UART_INTR_OFFSET);
 }

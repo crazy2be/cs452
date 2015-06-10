@@ -50,12 +50,21 @@ void irq_handler(struct task_descriptor *current_task) {
 	unsigned irq_mask_lo = irq_mask;
 	unsigned irq_mask_hi = irq_mask >> 32;
 
+	extern void uart_print_ctrl(int);
+	//printf("Got interrupt %u %u\n", irq_mask_lo, irq_mask_hi);
+	if (clock_ticks % 100 == 0) {
+		uart_print_ctrl(COM1);
+		uart_print_ctrl(COM2);
+	}
+
 	if (IRQ_TEST(IRQ_TIMER, irq_mask_lo, irq_mask_hi)) {
 		tick_timer_clear_interrupt();
 		await_event_occurred(EID_TIMER_TICK, ++clock_ticks & 0x7fffffff);
 	} else if (IRQ_TEST(IRQ_COM1, irq_mask_lo, irq_mask_hi)) {
+		uart_print_ctrl(COM1);
 		io_irq_handler(COM1);
 	} else if (IRQ_TEST(IRQ_COM2, irq_mask_lo, irq_mask_hi)) {
+		uart_print_ctrl(COM1);
 		io_irq_handler(COM2);
 	} else {
 		KASSERT(0 && "UNKNOWN INTERRUPT!");
@@ -88,7 +97,7 @@ void await_handler(struct task_descriptor *current_task) {
 		immediate_return = io_irq_check_for_pending_tx(COM2, current_task);
 		break;
 	default:
-		immediate_return = 1;
+		immediate_return = 0; // TODO THIS IS GROSS
 	}
 
 	if (!immediate_return) {

@@ -78,6 +78,7 @@ static int read_handler(int channel, struct task_descriptor *td) {
 
 void io_irq_handler(int channel) {
 	int irq_mask = uart_irq_type(channel);
+	printf("Got io_irq with mask %u\n\r", irq_mask);
 	int eid;
 	struct task_descriptor *td;
 	if (UART_IRQ_IS_RX(irq_mask)) {
