@@ -51,8 +51,8 @@ void irq_handler(struct task_descriptor *current_task) {
 	unsigned irq_mask_hi = irq_mask >> 32;
 
 	extern void uart_print_ctrl(int);
-	//printf("Got interrupt %u %u\n", irq_mask_lo, irq_mask_hi);
 	if (clock_ticks % 100 == 0) {
+		printf("As of tick %d...\r\n", clock_ticks);
 		uart_print_ctrl(COM1);
 		uart_print_ctrl(COM2);
 	}

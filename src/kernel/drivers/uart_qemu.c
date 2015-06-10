@@ -96,9 +96,9 @@ void uart_restore_tx_irq(int channel) {
 
 void uart_print_ctrl(int channel) {
 	printf("For channel %d:...\r\n", channel);
-	printf(" MSC: %u\r\n", *reg(channel, UART_CTLR_OFFSET));
-	printf(" RIS: %u\r\n", *reg(channel, 0x3C));
-	printf(" MIS: %u\r\n", *reg(channel, 0x40));
+	printf(" MSC: 0x%x\r\n", *reg(channel, UART_CTLR_OFFSET)); // Masks
+	printf(" RIS: 0x%x\r\n", *reg(channel, 0x3C)); // Raw interrupt status
+	printf(" MIS: 0x%x\r\n", *reg(channel, 0x40)); // Masked interrupt status
 }
 
 // COMMON
