@@ -110,6 +110,8 @@ void io_irq_handler(int channel) {
 			uart_disable_tx_irq(channel);
 		}
 	} else {
+		printf("mask: %d, is_tx: %d, tis_mask: %d\r\n", irq_mask,
+			   UART_IRQ_IS_TX(irq_mask), TIS_MASK);
 		KASSERT(0 && "UNKNOWN UART IRQ");
 	}
 }
