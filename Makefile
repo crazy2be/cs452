@@ -170,8 +170,8 @@ install: $(KERNEL_ELF)
 qemu-run: $(KERNEL_BIN)
 	@echo "Press Ctrl+A x to quit"
 	qemu-system-arm -M versatilepb -m 32M -nographic \
-		-chardev socket,id=com1,path=com1.sock,server,nowait \
-		-serial chardev:com1 \
+		-serial telnet:localhost:1230,server \
+		-serial telnet:localhost:1231,server \
 		-kernel $(KERNEL_BIN)
 
 qemu-start: $(KERNEL_BIN)
