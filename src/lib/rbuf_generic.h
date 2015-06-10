@@ -1,0 +1,51 @@
+/**
+ * A FIFO character ring buffer.
+ *
+ * Used to buffer IO being produced and consumed, so that IO can be
+ * buffered until the UARTs are ready to consume it.
+ * This should not be interacted with to perform IO - the buffered IO code
+ * should be used instead.
+ */
+
+#ifndef RBUF_SIZE
+#error No buffer size was provided to ring buffer
+#endif
+#ifndef RBUF_ELE
+#error No element type was provided to ring buffer
+#endif
+#ifndef RBUF_PREFIX
+#error No prefix was provided to ring buffer
+#endif
+
+/* we require a second level of indirection here in order to have the
+ * parameters expanded before concatenating - see
+ * https://stackoverflow.com/questions/1489932/c-preprocessor-and-concatenation */
+#define PASTER2(x, y) x##_##y
+#define PASTER(x, y) PASTER2(x, y)
+
+#define RBUF_T struct PASTER(RBUF_PREFIX, rbuf)
+#define RBUF_INIT PASTER(RBUF_PREFIX, rbuf_init)
+#define RBUF_PUT PASTER(RBUF_PREFIX, rbuf_put)
+#define RBUF_TAKE PASTER(RBUF_PREFIX, rbuf_take)
+RBUF_T {
+	int i; /**< index offset */
+	int l; /**< length of data */
+	RBUF_ELE buf[RBUF_SIZE];
+};
+
+/**
+ * Intializes the buffer to an empty state
+ */
+void RBUF_INIT(RBUF_T *rbuf);
+
+/**
+ * Adds a character to the ringbuffer
+ * There must be space in the buffer, or the result is undefined.
+ */
+void RBUF_PUT(RBUF_T *rbuf, RBUF_ELE val);
+
+/**
+ * Consumes a character from the ringbuffer
+ * It must not be empty, or the result is undefined.
+ */
+RBUF_ELE RBUF_TAKE(RBUF_T *rbuf);
