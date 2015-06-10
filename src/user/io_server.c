@@ -18,13 +18,18 @@
 #define IO_STOP 4
 #define IO_INFO 5
 
-#define MAX_STR_LEN 255
+#define MAX_STR_LEN 256
 
 struct io_request {
 	unsigned char type;
 	union {
-		char buf[MAX_STR_LEN]; // buffer for tx & rx_ntfy requests
-		int len; // len for rx requests; right now this is always 0
+		// buffer for tx & rx_ntfy requests
+		// we want this word-aligned, so we can do efficient memcpy to it
+		char buf[MAX_STR_LEN];
+
+		// len for rx requests; right now this is always 0
+		int len;
+
 		// tx_ntfy & quit requests don't pass any additional data
 	} u;
 };
@@ -135,11 +140,12 @@ static void io_server_run(const int channel, const char *name) {
 
 		int msg_len = receive(&tid, &req, sizeof(req));
 		ASSERT(msg_len >= 1);
-		msg_len--; // don't count the initial byte in the length
 
 		switch (req.type) {
 		case IO_TX:
+			msg_len -= 4; // don't count the initial type in the length
 			ASSERT(msg_len > 0); // TODO make this an error message
+			printf("Printing msg of %d bytes" EOL, msg_len);
 			temp = (struct io_blocked_task) {
 				.tid = tid,
 				.byte_count = msg_len,
@@ -175,6 +181,7 @@ static void io_server_run(const int channel, const char *name) {
 			}
 			break;
 		case IO_RX:
+			ASSERT(msg_len == 8);
 			if (bytes_rx >= req.u.len) {
 				bytes_rx -= receive_data(tid, &rx_buf, req.u.len);
 			} else {
@@ -190,17 +197,19 @@ static void io_server_run(const int channel, const char *name) {
 			resp = 0;
 			reply(tid, &resp, sizeof(resp));
 
+			msg_len -= 4; // don't count the initial type in the length
 			// copy input into buffer
 			for (int i = 0; i < msg_len; i++) {
 				char_rbuf_put(&rx_buf, req.u.buf[i]);
 			}
 			bytes_rx += msg_len;
 
-			task = io_rbuf_empty(&rx_waiters) ? NULL : io_rbuf_peek(&rx_waiters);
-			while (task && bytes_rx >= task->byte_count) {
-				bytes_rx -= receive_data(tid, &rx_buf, task->byte_count);
-				io_rbuf_drop(&rx_waiters, 1);
+			for (;;) {
 				task = io_rbuf_empty(&rx_waiters) ? NULL : io_rbuf_peek(&rx_waiters);
+				if (!task || bytes_rx < task->byte_count) break;
+
+				bytes_rx -= receive_data(task->tid, &rx_buf, task->byte_count);
+				io_rbuf_drop(&rx_waiters, 1);
 			}
 			break;
 		case IO_STOP:
@@ -251,17 +260,27 @@ void ioserver(const int priority, const int channel, const char *name) {
 	send(tid, &resp, sizeof(int) + strlen(name) + 1, NULL, 0);
 }
 
-// eventually, we'll have to support IO servers for COM1 & COM2 
-static int io_server_tid(void) {
-	static int tid = -1;
-	if (tid < 0) {
-		tid = whois("io_server");
+// eventually, we'll have to support IO servers for COM1 & COM2
+static int io_server_tid(int channel) {
+	static int tids[2] = {-1 , -1};
+	if (tids[channel] < 0) {
+		switch (channel) {
+		case COM1:
+			tids[channel] = whois("com1_io_server");
+			break;
+		case COM2:
+			tids[channel] = whois("com2_io_server");
+			break;
+		default:
+			ASSERT(0 && "No IO server for unknown COM channel");
+			break;
+		}
 	}
-	return tid;
+	return tids[channel];
 }
 
 // functions which interact with the io server
-int iosrv_puts(const char *str) {
+int iosrv_puts(const int channel, const char *str) {
 	int len = strlen(str);
 	ASSERT(len <= MAX_STR_LEN);
 	struct io_request req;
@@ -270,12 +289,25 @@ int iosrv_puts(const char *str) {
 	req.type = IO_TX;
 	memcpy(req.u.buf, str, len);
 
-	unsigned msg_len = sizeof(req) - MAX_STR_LEN + len;
-	int err = send(io_server_tid(), &req, msg_len, &resp, sizeof(resp));
+	// TODO: offsetof() ?
+	unsigned msg_len = 4 + len; // need to worry about alignment when doing this calculation
+	int err = send(io_server_tid(channel), &req, msg_len, &resp, sizeof(resp));
 	ASSERT(err >= 0);
 
-	return (err < 0) ? err : 0;
+	return (err < 0) ? -1 : 0;
 }
 
 /* int putc(const char c); */
-/* int getc(); */
+int iosrv_getc(int channel) {
+	struct io_request req;
+
+	req.type = IO_RX;
+	req.u.len = 1;
+
+	unsigned msg_len = sizeof(req) - sizeof(req.u.buf) + sizeof(req.u.len);
+	char c;
+	int err = send(io_server_tid(channel), &req, msg_len, &c, sizeof(c));
+	ASSERT(err >= 0);
+
+	return (err < 0) ? -1 : c;
+}
