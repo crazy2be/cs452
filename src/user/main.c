@@ -51,9 +51,11 @@ void test_init(void) {
 	/* } */
 
 	for (;;) {
-		int c = iosrv_getc(COM1);
-		ASSERT(c >= 0);
-		printf("Got char %c" EOL, c);
+		char buf[8 + 1];
+		ASSERT(iosrv_gets(COM1, buf, 8) == 8);
+		buf[8] = '\0';
+		for (int i = 0; i < 8; i++) iosrv_putc(COM1, buf[i]);
+		printf("Got input %s" EOL, buf);
 	}
 }
 

@@ -28,7 +28,6 @@ void nameserver(void) {
 		switch (req.type) {
 		case WHOIS:
 			err = hashtable_get(&name_map, req.name, &resp);
-			printf("GOT err = %d, resp = %d from nameserver" EOL, err, resp);
 			if (err != HASHTABLE_SUCCESS) {
 				resp = -1;
 			}

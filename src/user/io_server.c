@@ -276,35 +276,47 @@ static int io_server_tid(int channel) {
 	return tids[channel];
 }
 
-// functions which interact with the io server
-int iosrv_puts(const int channel, const char *str) {
-	int len = strlen(str);
-	ASSERT(len <= MAX_STR_LEN);
+static int iosrv_put_buf(const int channel, const char *buf, int buflen) {
 	struct io_request req;
 	unsigned resp;
 
 	req.type = IO_TX;
-	memcpy(req.u.buf, str, len);
+	memcpy(req.u.buf, buf, buflen);
 
 	// TODO: offsetof() ?
-	unsigned msg_len = 4 + len; // need to worry about alignment when doing this calculation
+	unsigned msg_len = 4 + buflen; // need to worry about alignment when doing this calculation
 	int err = send(io_server_tid(channel), &req, msg_len, &resp, sizeof(resp));
 	ASSERT(err >= 0);
 
 	return (err < 0) ? -1 : 0;
 }
 
-/* int putc(const char c); */
-int iosrv_getc(int channel) {
+// functions which interact with the io server
+int iosrv_puts(const int channel, const char *str) {
+	int len = strlen(str);
+	ASSERT(len <= MAX_STR_LEN);
+	return iosrv_put_buf(channel, str, len);
+}
+
+int iosrv_putc(const int channel, const char c) {
+	return iosrv_put_buf(channel, &c, 1);
+}
+
+int iosrv_gets(const int channel, char *buf, int len) {
 	struct io_request req;
 
 	req.type = IO_RX;
-	req.u.len = 1;
+	req.u.len = len;
 
 	unsigned msg_len = sizeof(req) - sizeof(req.u.buf) + sizeof(req.u.len);
-	char c;
-	int err = send(io_server_tid(channel), &req, msg_len, &c, sizeof(c));
+	int err = send(io_server_tid(channel), &req, msg_len, buf, len);
 	ASSERT(err >= 0);
 
-	return (err < 0) ? -1 : c;
+	return err;
+}
+
+int iosrv_getc(int channel) {
+	char c;
+	int err = iosrv_gets(channel, &c, 1);
+	return (err < 0) ? err : c;
 }
