@@ -41,23 +41,20 @@ void init(void) {
 }
 
 void test_init(void) {
-	const char *str = "Here is a very long string which will overflow the FIFO!\r\n";
+	/* const char *str = "Here is a very long string which will overflow the FIFO!\r\n"; */
 
 	create(LOWER(PRIORITY_MAX, 3), nameserver);
 	ioserver(LOWER(PRIORITY_MAX, 2), COM1, "com1_io_server");
-	for (int i = 0; i < 100; i++) {
-		printf("Writing %d bytes" EOL, strlen(str));
-		iosrv_puts(COM1, str);
-	}
-
-	/* await(EID_COM1_WRITE, str, strlen(str)); */
-	/* for (;;) { */
-	/* 	char c[2]; */
-	/* 	await(EID_COM1_READ, c, sizeof(c) - 1); */
-	/* 	c[sizeof(c) - 1] = 0; */
-	/* 	printf("Got %s" EOL, c); */
-	/* 	await(EID_COM1_WRITE, c, strlen(c)); */
+	/* for (int i = 0; i < 100; i++) { */
+	/* 	printf("Writing %d bytes" EOL, strlen(str)); */
+	/* 	iosrv_puts(COM1, str); */
 	/* } */
+
+	for (;;) {
+		int c = iosrv_getc(COM1);
+		ASSERT(c >= 0);
+		printf("Got char %c" EOL, c);
+	}
 }
 
 #include "benchmark.h"

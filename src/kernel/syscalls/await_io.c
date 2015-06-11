@@ -66,7 +66,6 @@ static void disable_irq(int channel, int is_tx) {
 }
 void io_irq_handler(int channel) {
 	int irq_mask = uart_irq_mask(channel);
-	printf("Got io_irq with mask %u\n\r", irq_mask);
 	int is_tx = mask_is_tx(irq_mask);
 	KASSERT(is_tx ? uart_canwritefifo(channel) : uart_canreadfifo(channel));
 
@@ -80,10 +79,8 @@ void io_irq_handler(int channel) {
 	int buflen = (int) syscall_arg(td->context, 2);
 	KASSERT(buflen != 0);
 
-	printf("Before: buf: %x, len: %d\r\n", buf, buflen);
 	if (is_tx) tx_handler(channel, &buf, &buflen, states[channel].fifo_enabled);
 	else rx_handler(channel, &buf, &buflen, states[channel].fifo_enabled);
-	printf("After: buf: %x, len: %d\r\n", buf, buflen);
 
 	if (buflen > 0) {
 		td->context->r1 = (unsigned) buf;

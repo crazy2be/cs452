@@ -61,8 +61,6 @@ static int transmit(int notifier_tid, struct char_rbuf *buf) {
 	int msg_len = MIN(sizeof(buf->buf) - buf->i, buf->l);
 	msg_len = MIN(TX_BUFSZ, msg_len);
 
-	/* printf("buffering out (%d, %d, %d, %d): \"", sizeof(buf->buf) - buf->i, buf->l, TX_BUFSZ, msg_len); */
-
 	reply(notifier_tid, msg_start, msg_len);
 	char_rbuf_drop(buf, msg_len);
 	return msg_len;
@@ -101,11 +99,11 @@ static void tx_notifier(void) {
 static void rx_notifier(void) {
 	int parent = parent_tid();
 	const int evt = (notifier_get_channel(parent) * 2) + EID_COM1_READ;
-	char buf[RX_BUFSZ + 1];
+	char buf[4 + RX_BUFSZ];
 	unsigned resp;
 
 	for (;;) {
-		await(evt, buf + 1, RX_BUFSZ);
+		await(evt, buf + 4, RX_BUFSZ);
 		buf[0] = IO_RX_NTFY;
 		send(parent, buf, sizeof(buf), &resp, sizeof(resp));
 		// if (resp) break; // quit if no work left TODO
@@ -145,7 +143,6 @@ static void io_server_run(const int channel, const char *name) {
 		case IO_TX:
 			msg_len -= 4; // don't count the initial type in the length
 			ASSERT(msg_len > 0); // TODO make this an error message
-			printf("Printing msg of %d bytes" EOL, msg_len);
 			temp = (struct io_blocked_task) {
 				.tid = tid,
 				.byte_count = msg_len,
