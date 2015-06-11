@@ -20,6 +20,9 @@
 
 #define MAX_STR_LEN 256
 
+#define COM1_SRV_NAME "com1_iosrv"
+#define COM2_SRV_NAME "com2_iosrv"
+
 struct io_request {
 	unsigned char type;
 	union {
@@ -110,9 +113,7 @@ static void rx_notifier(void) {
 	}
 }
 
-static void io_server_run(const int channel, const char *name) {
-	register_as(name);
-
+static void io_server_run() {
 	// buffers to accumulate data
 	struct char_rbuf tx_buf, rx_buf;
 
@@ -219,22 +220,16 @@ static void io_server_run(const int channel, const char *name) {
 	}
 }
 
-struct io_server_init_msg {
-	int channel;
-
-	// length bounded by max namelen supported by nameserver
-	char name[MAX_KEYLEN + 1];
-};
-
 #define NOTIFIER_COUNT 2
 
 // startup routines for io server
 static void io_server_init(void) {
-	struct io_server_init_msg resp;
+	int channel;
 	int tid;
 
 	// our parent immediately sends us some bootstrap info
-	receive(&tid, &resp, sizeof(resp));
+	receive(&tid, &channel, sizeof(channel));
+	register_as((channel == COM1) ? COM1_SRV_NAME : COM2_SRV_NAME);
 	reply(tid, NULL, 0);
 
 	// start up notifiers, and give them their bootstrap info in turn
@@ -243,30 +238,30 @@ static void io_server_init(void) {
 	for (int i = 0; i < NOTIFIER_COUNT; i++) {
 		tid = create(1, notifiers[i]);
 		ASSERT(tid > 0);
-		ASSERT(send(tid, &resp.channel, sizeof(resp.channel), NULL, 0) == 0);
+		ASSERT(send(tid, &channel, sizeof(channel), NULL, 0) == 0);
 	}
 
-	io_server_run(resp.channel, resp.name);
+	io_server_run();
 }
 
-void ioserver(const int priority, const int channel, const char *name) {
+void ioserver(const int priority, const int channel) {
 	int tid = create(priority, io_server_init);
-	struct io_server_init_msg resp;
-	resp.channel = channel;
-	strcpy(resp.name, name);
-	send(tid, &resp, sizeof(int) + strlen(name) + 1, NULL, 0);
+	send(tid, &channel, sizeof(channel), NULL, 0);
 }
 
-// eventually, we'll have to support IO servers for COM1 & COM2
+//
+// All of the code below is called by clients to the IO server
+//
+
 static int io_server_tid(int channel) {
 	static int tids[2] = {-1 , -1};
 	if (tids[channel] < 0) {
 		switch (channel) {
 		case COM1:
-			tids[channel] = whois("com1_io_server");
+			tids[channel] = whois(COM1_SRV_NAME);
 			break;
 		case COM2:
-			tids[channel] = whois("com2_io_server");
+			tids[channel] = whois(COM2_SRV_NAME);
 			break;
 		default:
 			ASSERT(0 && "No IO server for unknown COM channel");

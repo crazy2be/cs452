@@ -44,7 +44,7 @@ void test_init(void) {
 	/* const char *str = "Here is a very long string which will overflow the FIFO!\r\n"; */
 
 	create(LOWER(PRIORITY_MAX, 3), nameserver);
-	ioserver(LOWER(PRIORITY_MAX, 2), COM1, "com1_io_server");
+	ioserver(LOWER(PRIORITY_MAX, 2), COM1);
 	/* for (int i = 0; i < 100; i++) { */
 	/* 	printf("Writing %d bytes" EOL, strlen(str)); */
 	/* 	iosrv_puts(COM1, str); */
