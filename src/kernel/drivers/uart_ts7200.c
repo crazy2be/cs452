@@ -75,14 +75,6 @@ char uart_read(int channel) {
 	return *data;
 }
 
-int uart_cts(int channel) {
-	return *reg(channel, UART_FLAG_OFFSET) & CTS_MASK;
-}
-
-int uart_status(int channel) {
-	return *reg(channel, UART_FLAG_OFFSET);
-}
-
 int uart_canreadfifo(int channel) {
 	// receive fifo is not empty
 	return !(*reg(channel, UART_FLAG_OFFSET) & RXFE_MASK);
@@ -111,18 +103,6 @@ void uart_disable_tx_irq(int channel) {
 void uart_restore_tx_irq(int channel) {
 	volatile int *ctrl = reg(channel, UART_CTLR_OFFSET);
 	*ctrl |= TIEN_MASK;
-}
-
-void uart_disable_modem_irq(int channel) {
-	volatile int *ctrl = reg(channel, UART_CTLR_OFFSET);
-	*ctrl &= ~MSIEN_MASK;
-}
-void uart_restore_modem_irq(int channel) {
-	volatile int *ctrl = reg(channel, UART_CTLR_OFFSET);
-	*ctrl |= MSIEN_MASK;
-}
-void uart_clear_modem_irq(int channel) {
-	*reg(channel, UART_INTR_OFFSET) = 0;
 }
 
 void uart_print_ctrl(int channel) {

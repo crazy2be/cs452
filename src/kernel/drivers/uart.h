@@ -32,7 +32,6 @@ int uart_irq_mask(int channel);
 void uart_cleanup(int channel); // disable interrupts
 
 // DEBUG ONLY
-int uart_status(int channel);
 void uart_print_ctrl(int channel);
 
 #include "ts7200.h"
