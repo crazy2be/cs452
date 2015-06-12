@@ -8,7 +8,7 @@ void task_queue_init(struct task_queue *q) {
 	q->tail = q->head = 0;
 }
 
-static inline int task_queue_empty(struct task_queue *q) {
+int task_queue_empty(struct task_queue *q) {
 	return !q->head;
 }
 

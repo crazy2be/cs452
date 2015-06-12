@@ -37,6 +37,7 @@ void task_queue_init(struct task_queue *q);
  * If the queue is empty, NULL is returned.
  */
 struct task_descriptor *task_queue_pop(struct task_queue *q);
+int task_queue_empty(struct task_queue *q);
 
 /**
  * Add a task descriptor at the start of the queue.

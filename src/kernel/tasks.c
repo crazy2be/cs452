@@ -14,7 +14,7 @@ void tasks_init(void) {
 
 	task_queue_init(&free_tds);
 	for (int i = 0; i < NUM_TID; i++) {
-		tasks.task_buf[i].tid = NUM_TID - i; // Is this the best way to do this?
+		tasks.task_buf[i].tid = i - NUM_TID; // Is this the best way to do this?
 		task_queue_push(&free_tds, &tasks.task_buf[i]);
 	}
 	priority_task_queue_init(&queue);
@@ -64,7 +64,7 @@ struct task_descriptor *task_create(void *entrypoint, int priority, int parent_t
 }
 
 int tasks_full() {
-	return tasks.next_tid > MAX_TID;
+	return task_queue_empty(&free_tds);
 }
 struct task_descriptor *task_from_tid(int tid) {
 	KASSERT(tid >= 0 && tid < tasks.next_tid);
