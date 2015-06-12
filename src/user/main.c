@@ -7,6 +7,7 @@
 #include "rps.h"
 #include "signal.h"
 #include <util.h>
+#include "track_control.h"
 #include "../kernel/drivers/timer.h"
 
 struct init_reply {
@@ -41,22 +42,22 @@ void init(void) {
 }
 
 void test_init(void) {
-	const char *str = "Here is a very long string which will overflow the FIFO!\r\n";
-
 	create(LOWER(PRIORITY_MAX, 3), nameserver);
 	ioserver(LOWER(PRIORITY_MAX, 2), COM1);
-	for (int i = 0; i < 100; i++) {
-		printf("Writing %d bytes" EOL, strlen(str));
-		iosrv_puts(COM1, str);
-	}
+	create(LOWER(PRIORITY_MAX, 1), clockserver);
 
-	for (;;) {
-		char buf[8 + 1];
-		ASSERT(iosrv_gets(COM1, buf, 8) == 8);
-		buf[8] = '\0';
-		for (int i = 0; i < 8; i++) iosrv_putc(COM1, buf[i]);
-		printf("Got input %s" EOL, buf);
-	}
+	/* set_train_speed(45, 15); */
+	/* set_switch_state(4, STRAIGHT); */
+	set_switch_state(12, STRAIGHT);
+	delay(10);
+	disable_switch_solenoid();
+	delay(10);
+
+	/* set_switch_state(4, CURVED); */
+	set_switch_state(12, CURVED);
+	delay(10);
+	disable_switch_solenoid();
+	delay(10);
 }
 
 #include "benchmark.h"
