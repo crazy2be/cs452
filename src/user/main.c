@@ -46,17 +46,17 @@ void test_init(void) {
 	ioserver(LOWER(PRIORITY_MAX, 3), COM1);
 	create(LOWER(PRIORITY_MAX, 1), clockserver);
 
-	set_switch_state(4, STRAIGHT);
-	set_switch_state(12, STRAIGHT);
-	delay(10);
-	disable_switch_solenoid();
-	delay(10);
+	int switches[] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 153, 154, 155, 156};
 
-	set_switch_state(4, CURVED);
-	set_switch_state(12, CURVED);
+	for (int i = 0; i < sizeof(switches) / sizeof(switches[0]); i++) {
+		set_switch_state(switches[i], CURVED);
+		if (i % 8 == 7) {
+			delay(10);
+			disable_switch_solenoid();
+		}
+	}
 	delay(10);
 	disable_switch_solenoid();
-	delay(10);
 }
 
 #include "benchmark.h"
