@@ -67,10 +67,10 @@ int tasks_full() {
 	return task_queue_empty(&free_tds);
 }
 struct task_descriptor *task_from_tid(int tid) {
-	KASSERT(tid >= 0 && tid < tasks.next_tid);
+	KASSERT(tid >= 0);
 	struct task_descriptor *task = &tasks.task_buf[tid % NUM_TID];
 	KASSERT(task->tid == tid); // TODO: Better error handling?
-	return &tasks.task_buf[tid];
+	return &tasks.task_buf[tid % NUM_TID];
 }
 
 // WARNING: This doesn't look through the pending queues for the given task,
@@ -91,12 +91,12 @@ struct task_descriptor *task_next_scheduled() {
 }
 
 int tid_valid(int tid) {
-	return tid >= 0 && tid < tasks.next_tid
+	return tid >= 0
 			&& tasks.task_buf[tid % NUM_TID].tid == tid
 			&& tasks.task_buf[tid % NUM_TID].state != DEAD;
 }
 int tid_possible(int tid) {
-	return tid >= 0 && tid <= MAX_TID; // TODO: This is wrong
+	return 1; // TODO: What should this be?
 }
 
 int tid_next(void) {
