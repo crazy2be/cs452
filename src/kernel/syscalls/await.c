@@ -91,9 +91,11 @@ void await_handler(struct task_descriptor *current_task) {
 		return;
 	}
 
-	int channel, is_tx;
-	uart_for_eid(eid, &channel, &is_tx);
-	io_irq_mask_add(channel, is_tx);
+	if (eid >= EID_COM1_READ && eid <= EID_COM2_WRITE) {
+		int channel, is_tx;
+		uart_for_eid(eid, &channel, &is_tx);
+		io_irq_mask_add(channel, is_tx);
+	}
 
 	if (get_awaiting_task(eid)) {
 		// for our purposes, there is never a case where we want to have multiple
