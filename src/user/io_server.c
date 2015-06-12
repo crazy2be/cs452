@@ -56,7 +56,7 @@ struct io_request {
 #define RX_BUFSZ 1
 #define TX_BUFSZ 16
 
-static int transmit(int notifier_tid, struct char_rbuf *buf) {
+static void transmit(int notifier_tid, struct char_rbuf *buf) {
 	// we do a little bit of nastiness to pull the message directly out
 	// of the rbuf
 	char *msg_start = &buf->buf[buf->i];
@@ -66,7 +66,6 @@ static int transmit(int notifier_tid, struct char_rbuf *buf) {
 
 	reply(notifier_tid, msg_start, msg_len);
 	char_rbuf_drop(buf, msg_len);
-	return msg_len;
 }
 
 static int receive_data(int tid, struct char_rbuf *buf, int len) {
@@ -119,21 +118,16 @@ static void io_server_run() {
 
 	// tasks awaiting IO (the one at the front of the queue is currently being
 	// serviced)
-	struct io_rbuf tx_waiters, rx_waiters;
+	struct io_rbuf rx_waiters;
 
 	const struct io_blocked_task *task;
 	struct io_blocked_task temp;
 
-	int bytes_tx = 0, bytes_rx = 0;
+	int bytes_rx = 0;
 	int tx_ntfy = -1;
 	unsigned resp;
 
 	for (;;) {
-		// invariants:
-		// there can't be both the notifier and the client tasks waiting at
-		// the same time
-		ASSERT(tx_ntfy < 0 || io_rbuf_empty(&tx_waiters));
-
 		struct io_request req;
 		int tid;
 
@@ -144,36 +138,23 @@ static void io_server_run() {
 		case IO_TX:
 			msg_len -= 4; // don't count the initial type in the length
 			ASSERT(msg_len > 0); // TODO make this an error message
-			temp = (struct io_blocked_task) {
-				.tid = tid,
-				.byte_count = msg_len,
-			};
-			io_rbuf_put(&tx_waiters, temp);
+
+			resp = 0;
+			reply(tid, &resp, sizeof(resp));
+
 			for (int i = 0; i < msg_len; i++) {
+				ASSERT(!char_rbuf_full(&tx_buf));
 				char_rbuf_put(&tx_buf, req.u.buf[i]);
 			}
 
 			if (tx_ntfy >= 0) {
-				bytes_tx += transmit(tx_ntfy, &tx_buf);
+				transmit(tx_ntfy, &tx_buf);
 				tx_ntfy = -1;
 			}
 			break;
 		case IO_TX_NTFY:
-			task = io_rbuf_empty(&tx_waiters) ? NULL : io_rbuf_peek(&tx_waiters);
-			// TODO: better control flow here?
-			if (task && bytes_tx >= task->byte_count) {
-				// the notifier just came back from outputting the last of this task's
-				// data, so we can now return that task
-				bytes_tx -= task->byte_count;
-				resp = 0;
-				reply(task->tid, &resp, sizeof(resp));
-
-				// advance to the next task
-				io_rbuf_drop(&tx_waiters, 1);
-				task = io_rbuf_empty(&tx_waiters) ? NULL : io_rbuf_peek(&tx_waiters);
-			}
-			if (task) {
-				bytes_tx += transmit(tid, &tx_buf);
+			if (!char_rbuf_empty(&tx_buf)) {
+				transmit(tid, &tx_buf);
 			} else {
 				tx_ntfy = tid;
 			}
@@ -198,6 +179,7 @@ static void io_server_run() {
 			msg_len -= 4; // don't count the initial type in the length
 			// copy input into buffer
 			for (int i = 0; i < msg_len; i++) {
+				ASSERT(!char_rbuf_full(&rx_buf));
 				char_rbuf_put(&rx_buf, req.u.buf[i]);
 			}
 			bytes_rx += msg_len;
