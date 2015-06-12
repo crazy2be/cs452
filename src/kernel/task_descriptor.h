@@ -44,7 +44,7 @@ struct task_descriptor *task_queue_pop(struct task_queue *q);
 void task_queue_push(struct task_queue *q, struct task_descriptor *d);
 
 
-enum task_state { READY, SEND_BLK, RECV_BLK, REPLY_BLK, ZOMBIE };
+enum task_state { DEAD, READY, SEND_BLK, RECV_BLK, REPLY_BLK };
 struct task_descriptor {
 	int tid;
 	int parent_tid;

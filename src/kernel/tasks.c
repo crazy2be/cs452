@@ -4,13 +4,19 @@
 #include "kassert.h"
 
 static struct task_collection tasks;
+static struct task_queue free_tds;
 static struct priority_task_queue queue;
 
 void tasks_init(void) {
-	tasks.next_tid = 0;
+	memset(&tasks, sizeof(tasks), 0);
 	extern int stack_top;
 	tasks.memory_alloc = (void*) &stack_top + USER_STACK_SIZE;
 
+	task_queue_init(&free_tds);
+	for (int i = 0; i < NUM_TID; i++) {
+		tasks.task_buf[i].tid = NUM_TID - i; // Is this the best way to do this?
+		task_queue_push(&free_tds, &tasks.task_buf[i]);
+	}
 	priority_task_queue_init(&queue);
 }
 
@@ -30,12 +36,12 @@ void tasks_init(void) {
 struct task_descriptor *task_create(void *entrypoint, int priority, int parent_tid) {
 	void *sp = tasks.memory_alloc;
 	tasks.memory_alloc += USER_STACK_SIZE;
-	struct task_descriptor *task = &tasks.task_buf[tasks.next_tid];
+	struct task_descriptor *task = task_queue_pop(&free_tds);
 	*task = (struct task_descriptor) {
-		.tid = tasks.next_tid++,
-		 .parent_tid = parent_tid,
-		  .priority = priority,
-		   .state = READY,
+		.tid = task->tid + NUM_TID,
+		.parent_tid = parent_tid,
+		.priority = priority,
+		.state = READY,
 	};
 
 	struct user_context *uc = ((struct user_context*) sp) - 1;
@@ -62,7 +68,18 @@ int tasks_full() {
 }
 struct task_descriptor *task_from_tid(int tid) {
 	KASSERT(tid >= 0 && tid < tasks.next_tid);
+	struct task_descriptor *task = &tasks.task_buf[tid % NUM_TID];
+	KASSERT(task->tid == tid); // TODO: Better error handling?
 	return &tasks.task_buf[tid];
+}
+
+// WARNING: This doesn't look through the pending queues for the given task,
+// so killing a task which is already scheduled to execute will not work out
+// well.
+// TODO: Should we empty message queues here as well?
+void task_kill(struct task_descriptor *task) {
+	task->state = DEAD;
+	task_queue_push(&free_tds, task);
 }
 
 void task_schedule(struct task_descriptor *task) {
@@ -75,10 +92,11 @@ struct task_descriptor *task_next_scheduled() {
 
 int tid_valid(int tid) {
 	return tid >= 0 && tid < tasks.next_tid
-	       && tasks.task_buf[tid].state != ZOMBIE;
+			&& tasks.task_buf[tid % NUM_TID].tid == tid
+			&& tasks.task_buf[tid % NUM_TID].state != DEAD;
 }
 int tid_possible(int tid) {
-	return tid >= 0 && tid <= MAX_TID;
+	return tid >= 0 && tid <= MAX_TID; // TODO: This is wrong
 }
 
 int tid_next(void) {
