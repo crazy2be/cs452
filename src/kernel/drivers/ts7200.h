@@ -87,9 +87,10 @@
 #define TIS_MASK    0x20
 #define RTIS_MASK   0x00 // TODO: What is this even?
 #else
-#define RIS_MASK    0x2
-#define TIS_MASK    0x4
-#define RTIS_MASK   0x8
+#define RIS_MASK    0x2 // receive interrupt
+#define TIS_MASK    0x4 // transmit interrupt
+#define RTIS_MASK   0x8 // receive timeout interrupt
+#define MIS_MASK    0x1 // modem interrupt
 #endif
 #define MIS_MASK    0x1
 #define UART_DMAR_OFFSET	0x28

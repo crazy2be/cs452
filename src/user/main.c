@@ -42,18 +42,17 @@ void init(void) {
 }
 
 void test_init(void) {
-	create(LOWER(PRIORITY_MAX, 3), nameserver);
-	ioserver(LOWER(PRIORITY_MAX, 2), COM1);
+	create(LOWER(PRIORITY_MAX, 4), nameserver);
+	ioserver(LOWER(PRIORITY_MAX, 3), COM1);
 	create(LOWER(PRIORITY_MAX, 1), clockserver);
 
-	/* set_train_speed(45, 15); */
-	/* set_switch_state(4, STRAIGHT); */
+	set_switch_state(4, STRAIGHT);
 	set_switch_state(12, STRAIGHT);
 	delay(10);
 	disable_switch_solenoid();
 	delay(10);
 
-	/* set_switch_state(4, CURVED); */
+	set_switch_state(4, CURVED);
 	set_switch_state(12, CURVED);
 	delay(10);
 	disable_switch_solenoid();

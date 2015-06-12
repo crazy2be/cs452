@@ -60,7 +60,7 @@ int uart_canwrite(int channel) {
 void uart_write(int channel, char c) {
 	/* KASSERT(uart_canwrite(channel) && "can't write!"); */
 	if (channel == COM1) {
-		KASSERT((*reg(COM1, UART_FLAG_OFFSET) & CTS_MASK) && "not cts");
+		KASSERT(uart_cts(channel) && "not cts");
 	}
 	int *data = reg(channel, UART_DATA_OFFSET);
 	*data = c;
@@ -73,6 +73,14 @@ char uart_read(int channel) {
 	/* KASSERT(uart_canread(channel) && "can't read!"); */
 	int *data = reg(channel, UART_DATA_OFFSET);
 	return *data;
+}
+
+int uart_cts(int channel) {
+	return *reg(channel, UART_FLAG_OFFSET) & CTS_MASK;
+}
+
+int uart_status(int channel) {
+	return *reg(channel, UART_FLAG_OFFSET);
 }
 
 int uart_canreadfifo(int channel) {
@@ -103,6 +111,18 @@ void uart_disable_tx_irq(int channel) {
 void uart_restore_tx_irq(int channel) {
 	volatile int *ctrl = reg(channel, UART_CTLR_OFFSET);
 	*ctrl |= TIEN_MASK;
+}
+
+void uart_disable_modem_irq(int channel) {
+	volatile int *ctrl = reg(channel, UART_CTLR_OFFSET);
+	*ctrl &= ~MSIEN_MASK;
+}
+void uart_restore_modem_irq(int channel) {
+	volatile int *ctrl = reg(channel, UART_CTLR_OFFSET);
+	*ctrl |= MSIEN_MASK;
+}
+void uart_clear_modem_irq(int channel) {
+	*reg(channel, UART_INTR_OFFSET) = 0;
 }
 
 void uart_print_ctrl(int channel) {
