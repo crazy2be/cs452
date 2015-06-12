@@ -15,7 +15,6 @@
 #define IO_RX 1
 #define IO_TX_NTFY 2
 #define IO_RX_NTFY 3
-#define IO_STOP 4
 #define IO_INFO 5
 
 #define MAX_STR_LEN 256
@@ -46,7 +45,6 @@ struct io_request {
 //          resp: char buffer of bytes to send
 // RX_NTFY: req: io_request, type followed by n bytes of input
 //          resp: unsigned 0
-// STOP:
 // INFO: req: io_request, just type
 //       resp: int com number
 
@@ -191,9 +189,6 @@ static void io_server_run() {
 				bytes_rx -= receive_data(task->tid, &rx_buf, task->byte_count);
 				io_rbuf_drop(&rx_waiters, 1);
 			}
-			break;
-		case IO_STOP:
-			// TODO
 			break;
 		default:
 			ASSERT(0 && "Unknown request made to IO server");
