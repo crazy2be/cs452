@@ -199,7 +199,8 @@ TEST_EXPECTED=test_expected
 
 test-run: $(TEST_BIN)
 	@echo "Press Ctrl+A x to quit"
-	qemu-system-arm -M versatilepb -m 32M -nographic -kernel $(TEST_BIN)
+	qemu-system-arm -M versatilepb -m 32M -nographic -nodefaults \
+		-serial null -serial stdio -kernel $(TEST_BIN)
 
 test-start: $(TEST_BIN)
 	@echo "Starting tests in suspended mode for debugging... Press Ctrl+A x to quit."

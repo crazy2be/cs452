@@ -226,8 +226,31 @@ void messages_basic(void) {
 	printf("Created child tasks, exiting...");
 }
 
+struct ReverserStruct {
+	int train_id;
+	int reverse_speed;
+};
+void destroy_worker(void) {
+	struct ReverserStruct msg = {};
+	int tid;
+	receive(&tid, &msg, sizeof(msg));
+	printf("Sending stop command to %d..." EOL);
+	for (int i = 0; i < 200; i++) await(EID_TIMER_TICK, NULL, 0);
+	printf("Sending reverse command..." EOL);
+}
+void destroy_init(void) {
+	printf("Starting destroy..."EOL);
+	struct ReverserStruct msg = (struct ReverserStruct) {
+		.train_id = 5, .reverse_speed = 7};
+	int reverser = create(PRIORITY_MAX, destroy_worker);
+	printf("Created task..."EOL);
+	send(reverser, &msg, sizeof(msg), NULL, 0);
+}
+
 int main(int argc, char *argv[]) {
-	boot(init_task, PRIORITY_MAX, 0);
+	//boot(init_task, PRIORITY_MAX, 0);
 	//boot(messages_basic, PRIORITY_MAX);
-	boot(message_suite, PRIORITY_MAX, 0);
+	//boot(message_suite, PRIORITY_MAX, 0);
+	printf("Starting main..."EOL);
+	boot(destroy_init, PRIORITY_MIN, 0);
 }
