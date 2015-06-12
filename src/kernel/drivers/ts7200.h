@@ -27,8 +27,14 @@
 #define LED_BOTH	0x3
 
 #define IRDA_BASE	0x808b0000
-#define UART1_BASE	0x808c0000
-#define UART2_BASE	0x808d0000
+#ifdef QEMU
+#define UART0_BASE 0x101F1000
+#define UART1_BASE 0x101F2000
+#define UART2_BASE 0x101F3000
+#else
+#define UART0_BASE	0x808c0000
+#define UART1_BASE	0x808d0000
+#endif
 
 // All the below registers for UART1
 // First nine registers (up to Ox28) for UART 2
@@ -64,7 +70,11 @@
 #define UART_LCRL_OFFSET	0x10	// low 8 bits
 #define BRDL_MASK	0xff	// LSB of baud rate divisor
 
+#ifdef QEMU
+#define UART_CTLR_OFFSET 0x38
+#else
 #define UART_CTLR_OFFSET	0x14	// low 8 bits
+#endif
 #define UARTEN_MASK	0x1
 #define MSIEN_MASK	0x8	// modem status int
 #define RIEN_MASK	0x10	// receive int
@@ -81,18 +91,21 @@
 #define TXFF_MASK	0x20	// Transmit buffer full
 #define RXFF_MASK	0x40	// Receive buffer full
 #define TXFE_MASK	0x80	// Transmit buffer empty
-#define UART_INTR_OFFSET	0x1c
+
 #ifdef QEMU
+#define UART_INTR_OFFSET 0x40
 #define RIS_MASK    0x10
 #define TIS_MASK    0x20
-#define RTIS_MASK   0x00 // TODO: What is this even?
+#define RTIS_MASK   0x40 // TODO: What is this even?
+#define MIS_MASK    0x1
 #else
+#define UART_INTR_OFFSET	0x1c
 #define RIS_MASK    0x2 // receive interrupt
 #define TIS_MASK    0x4 // transmit interrupt
 #define RTIS_MASK   0x8 // receive timeout interrupt
 #define MIS_MASK    0x1 // modem interrupt
 #endif
-#define MIS_MASK    0x1
+
 #define UART_DMAR_OFFSET	0x28
 
 // Specific to UART1

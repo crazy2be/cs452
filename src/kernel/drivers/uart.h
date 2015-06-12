@@ -1,6 +1,7 @@
 #pragma once
 
 #include <kernel.h>
+#include "ts7200.h"
 
 #define ON	1
 #define	OFF	0
@@ -31,10 +32,6 @@ void uart_clear_modem_irq(int channel);
 int uart_irq_mask(int channel);
 void uart_cleanup(int channel); // disable interrupts
 
-// DEBUG ONLY
-void uart_print_ctrl(int channel);
-
-#include "ts7200.h"
 #define UART_IRQ_IS_RX(x) ((x) & (RTIS_MASK | RIS_MASK))
 #define UART_IRQ_IS_TX(x) ((x) & TIS_MASK)
 #define UART_IRQ_IS_MODEM(x) ((x) & MIS_MASK)

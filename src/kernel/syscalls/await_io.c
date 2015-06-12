@@ -24,11 +24,17 @@ void io_irq_init(void) {
 	states[COM2].cts = CTS_READY;
 }
 
+#ifdef QEMU
+#define USE_FIFO(channel) 1
+#else
+#define USE_FIFO(channel) (channel == COM2)
+#endif
+
 // TODO: I think we can dedupe some more of this code from rx/tx handler
 static void rx_handler(int channel, char **ppbuf, int *pbuflen) {
 	char *buf = *ppbuf;
 	int buflen = *pbuflen;
-	if (channel == COM2) {
+	if (USE_FIFO(channel)) {
 		// use the RX FIFO
 		do {
 			*buf++ = uart_read(channel);
@@ -45,7 +51,7 @@ static void rx_handler(int channel, char **ppbuf, int *pbuflen) {
 static void tx_handler(int channel, char **ppbuf, int *pbuflen) {
 	char *buf = *ppbuf;
 	int buflen = *pbuflen;
-	if (channel == COM2) {
+	if (USE_FIFO(channel)) {
 		// use the TX FIFO, and don't use CTS
 		do {
 			uart_write(channel, *buf++);
