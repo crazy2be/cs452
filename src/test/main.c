@@ -231,7 +231,7 @@ struct ReverserStruct {
 	int reverse_speed;
 };
 void destroy_worker(void) {
-	printf("Destroyering worker..."EOL);
+	printf("Destroyering worker... %d"EOL, tid());
 	struct ReverserStruct msg = {};
 	int tid;
 	receive(&tid, &msg, sizeof(msg));
