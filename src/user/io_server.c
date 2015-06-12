@@ -125,6 +125,10 @@ static void io_server_run() {
 	int tx_ntfy = -1;
 	unsigned resp;
 
+	char_rbuf_init(&tx_buf);
+	char_rbuf_init(&rx_buf);
+	io_rbuf_init(&rx_waiters);
+
 	for (;;) {
 		struct io_request req;
 		int tid;
