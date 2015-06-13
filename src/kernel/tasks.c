@@ -28,6 +28,7 @@ struct task_descriptor *task_create(void *entrypoint, int priority, int parent_t
 	// TODO: Are stacks ascending or descending in memory? One of those makes
 	// this wrong (although it seems to _work_, but it might break other things)
 	void *sp = tasks.stacks[tid%NUM_TID + 1];
+	memset(sp - sizeof(tasks.stacks[0]), 0, sizeof(tasks.stacks[0]));
 	*task = (struct task_descriptor) {
 		.tid = tid,
 		.parent_tid = parent_tid,
