@@ -1,0 +1,43 @@
+#!/bin/bash
+
+command=$1
+file=$2
+
+case "$1" in
+	capture)
+		com1="file:$3"
+		com2="file:$4"
+        com3="null"
+		;;
+	*)
+		com1="telnet:localhost:1230,server"
+		com2="telnet:localhost:1231,server"
+		com3="stdio"
+		;;
+esac
+
+base="qemu-system-arm -M versatilepb -m 32M -nographic -nodefaults
+		-serial $com1
+		-serial $com2
+		-serial $com3
+		-kernel $file"
+
+echo $base
+
+case "$1" in
+	run)
+		echo "Press Ctrl-C to quit."
+		exec $base
+		;;
+	start|capture)
+		echo "Starting in suspended mode for debugging... Press Ctrl+C to quit."
+		exec $base -s -S
+		;;
+	debug)
+		exec arm-none-eabi-gdb -ex "target remote localhost:1234" $2
+		;;
+	*)
+		echo "Unknown command"
+		exit 1
+		;;
+esac

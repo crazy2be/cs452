@@ -2,14 +2,16 @@
 #include <util.h>
 #include "../kassert.h"
 
+static int uart_bases[3] = {UART0_BASE, UART1_BASE, UART2_BASE};
+
 static int* reg(int channel, int off) {
-	switch (channel) {
-	case COM1: return (int*)(UART0_BASE + off);
-	case COM2: return (int*)(UART1_BASE + off);
-	default: KASSERT(0 && "Invalid channel"); return (int*)-1;
+	if (COM1 <= channel && channel <= COM3) {
+		return (int*)(uart_bases[channel] + off);
+	} else {
+		KASSERT(0 && "Invalid channel");
+		return NULL;
 	}
 }
-
 
 //
 // Configuration

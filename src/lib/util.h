@@ -21,7 +21,7 @@ char* strcpy(char *dst, const char *src);
 int strcmp(const char *a, const char *b);
 
 static inline int usermode(void) {
-	int psr;
-	__asm__("msr %0, cpsr" : "=r"(psr));
-	return (psr | 0x1f) == 0x10;
+	unsigned cpsr;
+	__asm__ ("mrs %0, cpsr" : "=r"(cpsr));
+	return (cpsr & 0x1f) == 0x10;
 }

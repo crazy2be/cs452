@@ -1,5 +1,4 @@
 #include <kernel.h>
-#include <io.h>
 #include <assert.h>
 
 #include <least_significant_set_bit.h>
@@ -8,10 +7,11 @@
 #include <util.h>
 
 #include "min_heap.h"
+#include "../user/servers.h"
+#include "../user/signal.h"
 
 void child(void) {
-	io_printf(COM2, "Child task %d" EOL, tid());
-	io_flush(COM2);
+	printf(COM2, "Child task %d" EOL, tid());
 }
 
 void nop(void) {
@@ -60,7 +60,6 @@ struct Reply {
 // this is pretty bad, but it's just for testing
 static int receiving_tid = -1;
 static int misbehaving_receiving_tid = -1;
-static int nop_tid = -1;
 static int producers = 20;
 
 // webscale multiplication!
@@ -76,6 +75,7 @@ void sending_task(void) {
 		ASSERT(rep.sum == msg.a + msg.b);
 		ASSERT(rep.prod == msg.a * msg.b);
 	}
+	signal_send(parent_tid());
 }
 
 void receiving_task(void) {
@@ -91,7 +91,8 @@ void receiving_task(void) {
 
 		ASSERT(reply(tid, &rep, sizeof(rep)) == REPLY_SUCCESSFUL);
 	}
-	printf("Receive done" EOL);
+	printf(COM2, "Receive done" EOL);
+	signal_send(parent_tid());
 }
 
 void misbehaving_sending_task(void) {
@@ -104,14 +105,17 @@ void misbehaving_sending_task(void) {
 	ASSERT(send(254, &msg, sizeof(msg), &rep, sizeof(rep)) == SEND_INVALID_TID);
 	ASSERT(send(tid(), &msg, sizeof(msg), &rep, sizeof(rep)) == SEND_INVALID_TID);
 
-	// our parent should have exited by now, so we shouldn't be able to send to it
-	ASSERT(send(parent_tid(), &msg, sizeof(msg), &rep, sizeof(rep)) == SEND_INVALID_TID);
+	int child = create(PRIORITY_MAX, nop);
+	// the child should exit immediately, so we shouldn't be able to send to it
+	ASSERT(send(child, &msg, sizeof(msg), &rep, sizeof(rep)) == SEND_INVALID_TID);
 
 	ASSERT(send(misbehaving_receiving_tid, &msg, sizeof(msg), &rep, sizeof(rep)) == sizeof(rep));
 
 	// the other task should exit before we have a chance to send
 	ASSERT(send(misbehaving_receiving_tid, &msg, sizeof(msg), &rep, sizeof(rep)) == SEND_INCOMPLETE);
-	printf("Misbehaving send done" EOL);
+	printf(COM2, "Misbehaving send done" EOL);
+
+	signal_send(parent_tid());
 }
 
 void misbehaving_receiving_task(void) {
@@ -123,17 +127,22 @@ void misbehaving_receiving_task(void) {
 	ASSERT(reply(254, &rep, sizeof(rep)) == REPLY_INVALID_TID);
 	ASSERT(reply(tid(), &rep, sizeof(rep)) == REPLY_INVALID_TID);
 
-	// our parent should have exited by now, so we shouldn't be able to send to it
-	ASSERT(reply(parent_tid(), &rep, sizeof(rep)) == REPLY_INVALID_TID);
+	int child = create(PRIORITY_MAX, nop);
+	// the child should exit immediately, so we shouldn't be able to reply to it
+	ASSERT(reply(child, &rep, sizeof(rep)) == REPLY_INVALID_TID);
 
+	child = create(PRIORITY_MIN, nop);
 	// we shouldn't be able to reply to somebody that hasn't sent a message to us
-	ASSERT(reply(nop_tid, &rep, sizeof(rep)) == REPLY_UNSOLICITED);
+	// to do this test, we rely on the child not scheduling before us
+	ASSERT(reply(child, &rep, sizeof(rep)) == REPLY_UNSOLICITED);
 
 	int tid;
 	ASSERT(receive(&tid, &msg, sizeof(msg)) == sizeof(msg));
 	ASSERT(reply(tid, &rep, sizeof(rep) + 1) == REPLY_TOO_LONG);
 	ASSERT(reply(tid, &rep, sizeof(rep)) == REPLY_SUCCESSFUL);
-	printf("Misbehaving receive done" EOL);
+	printf(COM2, "Misbehaving receive done" EOL);
+
+	signal_send(parent_tid());
 }
 
 void hashtable_tests(void) {
@@ -171,6 +180,8 @@ void hashtable_tests(void) {
 }
 
 void init_task(void) {
+	start_servers();
+
 	lssb_tests();
 	hashtable_tests();
 	memcpy_tests();
@@ -178,56 +189,40 @@ void init_task(void) {
 	ASSERT(1);
 	ASSERT(create(-1, child) == CREATE_INVALID_PRIORITY);
 	ASSERT(create(32, child) == CREATE_INVALID_PRIORITY);
-	int i;
-	for (i = 0; i < 10; i++) {
-		// create tasks in descending priority order
-		create(PRIORITY_MIN - i, &child);
-	}
 
-	for (; i < 255; i++) {
-		create(PRIORITY_MIN, &nop);
-	}
+	while (create(PRIORITY_MIN, &nop) < 255);
 
 	ASSERT(create(4, child) == CREATE_INSUFFICIENT_RESOURCES);
+
+	stop_servers();
 }
 
 void message_suite(void) {
+	start_servers();
+
 	receiving_tid = create(PRIORITY_MIN, receiving_task);
 	for (int i = 0; i < producers; i++) {
 		create(PRIORITY_MIN, sending_task);
 	}
 	misbehaving_receiving_tid = create(PRIORITY_MIN - 1, misbehaving_receiving_task);
-	nop_tid = create(PRIORITY_MIN, nop);
 	create(PRIORITY_MIN - 1, misbehaving_sending_task);
+
+	for (int i = 0; i < producers + 3; i++) signal_recv();
+
+	stop_servers();
 }
 
-static int messages_basic_reply10_tid = -1;
-void messages_basic_send10(void) {
-	for (int i = 0; i < 10; i++) {
-		char msg[10] = "Hello ";
-		char rpl[10];
-		send(messages_basic_reply10_tid, &msg, sizeof(msg), rpl, sizeof(rpl));
-		printf("Completed round %i, sent %s, got %s.\n", i, msg, rpl);
-	}
-}
-void messages_basic_reply10(void) {
-	static char msg_reply[10] = "World!";
-	for (int i = 0; i < 10; i++) {
-		char msg[10];
-		int tid;
-		receive(&tid, &msg, sizeof(msg));
-		printf("Round %d: recieved %s, sending reply...", i, msg);
-		reply(tid, &msg_reply, sizeof(msg_reply));
-	}
-}
-void messages_basic(void) {
-	create(PRIORITY_MIN, messages_basic_send10);
-	messages_basic_reply10_tid = create(PRIORITY_MIN, messages_basic_reply10);
-	printf("Created child tasks, exiting...");
+void io_suite(void) {
+	start_servers();
+	puts(COM1, "Hello COM1" EOL);
+	printf(COM1, "Hello COM1 9 = %d, 0 = %d, -1 = %d or %u, 117 = %d, 0x7f = 0x%x" EOL,
+			9, 0, -1, -1, 117, 0x7f);
+	puts(COM2, "Hello COM2" EOL);
+	stop_servers();
 }
 
 int main(int argc, char *argv[]) {
-	boot(init_task, PRIORITY_MAX, 0);
-	//boot(messages_basic, PRIORITY_MAX);
-	boot(message_suite, PRIORITY_MAX, 0);
+	boot(init_task, PRIORITY_MIN, 0);
+	boot(message_suite, PRIORITY_MIN, 0);
+	boot(io_suite, PRIORITY_MIN, 0);
 }

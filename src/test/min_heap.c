@@ -1,7 +1,6 @@
 #include "../user/min_heap.h"
 #include "min_heap.h"
 #include <assert.h>
-#include <io.h>
 
 void min_heap_valid(struct min_heap *h) {
 	int i, child, offset;

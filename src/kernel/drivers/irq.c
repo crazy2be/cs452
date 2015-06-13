@@ -49,11 +49,11 @@ void irq_setup(void) {
 #ifdef QEMU
 	// see http://infocenter.arm.com/help/topic/com.arm.doc.dui0224i/DUI0224I_realview_platform_baseboard_for_arm926ej_s_ug.pdf
 	// PICIntEnable
-	VWRITE(0x10140010, IRQ_MASK(IRQ_TIMER) | IRQ_MASK(IRQ_COM1));
+	VWRITE(0x10140010, IRQ_MASK(IRQ_TIMER) | IRQ_MASK(IRQ_COM1) | IRQ_MASK(IRQ_COM2));
 #else
 	// writing to VIC1IntEnable & VIC2IntEnable (see ep93xx user manual)
 	VWRITE(VIC1_BASE + ENABLE_OFFSET, 0x0);
-	VWRITE(VIC2_BASE + ENABLE_OFFSET, IRQ_MASK(IRQ_TIMER - 32) | IRQ_MASK(IRQ_COM1 - 32));
+	VWRITE(VIC2_BASE + ENABLE_OFFSET, IRQ_MASK(IRQ_TIMER - 32) | IRQ_MASK(IRQ_COM1 - 32) | IRQ_MASK(IRQ_COM2 - 32));
 #endif
 }
 

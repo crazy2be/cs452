@@ -2,6 +2,7 @@
 
 #include "../user/nameserver.h"
 #include "../kernel/drivers/uart.h"
+#include "../kernel/kassert.h"
 #include <io_rbuf.h>
 #undef RBUF_SIZE
 #undef RBUF_ELE
@@ -16,6 +17,7 @@
 #define IO_RX 1
 #define IO_TX_NTFY 2
 #define IO_RX_NTFY 3
+#define IO_STOP 4
 #define IO_INFO 5
 
 #define MAX_STR_LEN 256
@@ -125,12 +127,13 @@ static void io_server_run() {
 	int bytes_rx = 0;
 	int tx_ntfy = -1;
 	unsigned resp;
+	int shutdown_tid = -1;
 
 	char_rbuf_init(&tx_buf);
 	char_rbuf_init(&rx_buf);
 	io_rbuf_init(&rx_waiters);
 
-	for (;;) {
+	while (shutdown_tid < 0 || !char_rbuf_empty(&tx_buf)) {
 		struct io_request req;
 		int tid;
 
@@ -139,6 +142,7 @@ static void io_server_run() {
 
 		switch (req.type) {
 		case IO_TX:
+			ASSERT(shutdown_tid < 0 && "Got new TX request while shutting down");
 			msg_len -= 4; // don't count the initial type in the length
 			ASSERT(msg_len > 0); // TODO make this an error message
 
@@ -163,6 +167,7 @@ static void io_server_run() {
 			}
 			break;
 		case IO_RX:
+			ASSERT(shutdown_tid < 0 && "Got new RX request while shutting down");
 			ASSERT(msg_len == 8);
 			if (bytes_rx >= req.u.len) {
 				bytes_rx -= receive_data(tid, &rx_buf, req.u.len);
@@ -175,9 +180,15 @@ static void io_server_run() {
 			}
 			break;
 		case IO_RX_NTFY:
-			// immediately reply to notifier to get more input
-			resp = 0;
-			reply(tid, &resp, sizeof(resp));
+			if (shutdown_tid < 0) {
+				// immediately reply to notifier to get more input
+				resp = 0;
+				reply(tid, &resp, sizeof(resp));
+			} else {
+				// we're shutting down - just drop the whole thing on the floor
+				// nobody should be listening for this input anyway
+				break;
+			}
 
 			msg_len -= 4; // don't count the initial type in the length
 			// copy input into buffer
@@ -195,11 +206,20 @@ static void io_server_run() {
 				io_rbuf_drop(&rx_waiters, 1);
 			}
 			break;
+		case IO_STOP:
+			ASSERT(shutdown_tid < 0 && "Got new shutdown request while shutting down");
+			kprintf("Got shutdown request" EOL);
+			shutdown_tid = tid;
+			// we now need to wait for all characters of output to be flushed
+			break;
 		default:
 			ASSERT(0 && "Unknown request made to IO server");
 			break;
 		}
 	}
+
+	kprintf("All bytes flushed; done" EOL);
+	reply(shutdown_tid, NULL, 0);
 }
 
 #define NOTIFIER_COUNT 2
@@ -270,20 +290,20 @@ static int iosrv_put_buf(const int channel, const char *buf, int buflen) {
 
 // bw analogues to the functions below
 int bw_putc(const int channel, const char c) {
-	ASSERT(!usermode());
+	/* KASSERT(!usermode()); */
 	while(!uart_canwrite(channel));
 	uart_write(channel, c);
 	return 0;
 }
 
 int bw_puts(const int channel, const char *str) {
-	ASSERT(!usermode());
+	/* KASSERT(!usermode()); */
 	while (*str) putc(channel, *str++);
 	return 0;
 }
 
 int bw_gets(const int channel, char *buf, int len) {
-	ASSERT(!usermode());
+	/* KASSERT(!usermode()); */
 	while (len-- > 0) {
 		while (!uart_canread(channel));
 		*buf++ = uart_read(channel);
@@ -291,12 +311,13 @@ int bw_gets(const int channel, char *buf, int len) {
 	return 0;
 }
 
-#define USE_BWIO(channel) ((channel) == COM2)
+#define USE_BWIO(channel) ((channel) == COM3)
 
 // functions which interact with the io server
 int puts(const int channel, const char *str) {
 	if (USE_BWIO(channel)) return bw_puts(channel, str);
 
+	KASSERT(usermode());
 	int len = strlen(str);
 	ASSERT(len <= MAX_STR_LEN);
 	return iosrv_put_buf(channel, str, len);
@@ -305,12 +326,14 @@ int puts(const int channel, const char *str) {
 int putc(const int channel, const char c) {
 	if (USE_BWIO(channel)) return bw_putc(channel, c);
 
+	KASSERT(usermode());
 	return iosrv_put_buf(channel, &c, 1);
 }
 
 int gets(const int channel, char *buf, int len) {
 	if (USE_BWIO(channel)) return bw_gets(channel, buf, len);
 
+	KASSERT(usermode());
 	struct io_request req;
 
 	req.type = IO_RX;
@@ -328,3 +351,10 @@ int getc(int channel) {
 	int err = gets(channel, &c, 1);
 	return (err < 0) ? err : c;
 }
+
+// blocks until all output in the buffers is flushed, and the server is shutting down
+void ioserver_stop(const int channel) {
+	unsigned char msg = IO_STOP;
+	send(io_server_tid(channel), &msg, sizeof(msg), NULL, 0);
+}
+

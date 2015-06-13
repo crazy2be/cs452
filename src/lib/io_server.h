@@ -2,6 +2,7 @@
 
 #define COM1 0
 #define COM2 1
+#define COM3 2 // kernel debug channel, uses BWIO
 
 #ifdef QEMU
 #define EOL "\n\r" // This is the same now that we use telnet.
@@ -20,9 +21,10 @@ int gets(const int channel, char *buf, int len);
 int getc(const int channel);
 
 int printf(int channel, const char *format, ...);
-#define kprintf(...) printf(COM2, __VA_ARGS__)
+#define kprintf(...) printf(COM3, __VA_ARGS__)
 
 // do all of the initialization needed to start an IO server with the given parameters
 // (because we need to pass data in, we need to do some message passing in addition
 // to just creating the task)
 void ioserver(const int priority, const int channel);
+void ioserver_stop(const int channel);

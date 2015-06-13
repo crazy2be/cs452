@@ -1,12 +1,12 @@
 #include <kernel.h>
 #include <assert.h>
-#include "nameserver.h"
-#include "clockserver.h"
 #include <io_server.h>
+#include "clockserver.h"
 #include "rps.h"
 #include "signal.h"
 #include <util.h>
 #include "track_control.h"
+#include "servers.h"
 #include "../kernel/drivers/timer.h"
 
 struct init_reply {
@@ -25,8 +25,7 @@ void client_task(void) {
 }
 
 void init(void) {
-	create(LOWER(PRIORITY_MAX, 2), nameserver);
-	create(LOWER(PRIORITY_MAX, 1), clockserver);
+	start_servers();
 
 	for (int i = 0; i < 4; i++) {
 		create(LOWER(PRIORITY_MAX, i + 3), client_task);
@@ -37,14 +36,12 @@ void init(void) {
 	for (int i = 0; i < 4; i++) reply(tids[i], &rpys[i], sizeof(rpys[i]));
 
 	for (int i = 0; i < 4; i++) signal_recv();
-	shutdown_clockserver();
+
+	stop_servers();
 }
 
 void test_init(void) {
-	create(LOWER(PRIORITY_MAX, 4), nameserver);
-	ioserver(LOWER(PRIORITY_MAX, 3), COM1);
-	create(LOWER(PRIORITY_MAX, 1), clockserver);
-
+	start_servers();
 	puts(COM1, "BEEP" EOL);
 	printf(COM1, "Hello, world! \"%s\"" EOL, "boop");
 	puts(COM1, "BOOP" EOL);

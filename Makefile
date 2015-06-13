@@ -93,7 +93,7 @@ USER_COMMON_OBJECTS = $(call objectify, $(USER_SOURCES) $(USER_ASM_SOURCES))
 TEST_COMMON_OBJECTS = $(call objectify, $(TEST_SOURCES) $(TEST_ASM_SOURCES))
 LIB_COMMON_OBJECTS = $(call objectify, $(LIB_SOURCES) $(LIB_ASM_SOURCES))
 
-TEST_ALL_OBJECTS = $(KERNEL_COMMON_OBJECTS) $(LIB_COMMON_OBJECTS) $(TEST_COMMON_OBJECTS) $(BUILD_DIR)/user/min_heap.o
+TEST_ALL_OBJECTS = $(KERNEL_COMMON_OBJECTS) $(LIB_COMMON_OBJECTS) $(TEST_COMMON_OBJECTS) $(filter-out $(BUILD_DIR)/user/main.o, $(USER_COMMON_OBJECTS))
 USER_ALL_OBJECTS = $(KERNEL_COMMON_OBJECTS) $(LIB_COMMON_OBJECTS) $(USER_COMMON_OBJECTS)
 
 # unity build definitions
@@ -167,28 +167,23 @@ install: $(KERNEL_ELF)
 
 # scripts for convenience
 # TODO: there's a lot of different qemu-system-arm invocations - we should DRY this up
-
 qemu-run: $(KERNEL_BIN)
-	@echo "Press Ctrl+A x to quit"
-	qemu-system-arm -M versatilepb -m 32M -nographic \
-		-nodefaults \
-		-serial telnet:localhost:1231,server \
-		-serial stdio \
-		-kernel $(KERNEL_BIN)
+	./scripts/qemu run $<
 
 qemu-start: $(KERNEL_BIN)
-	@echo "Starting in suspended mode for debugging... Press Ctrl+A x to quit."
-	qemu-system-arm -M versatilepb -m 32M -nographic -s -S -kernel $(KERNEL_BIN)
+	./scripts/qemu start $<
 
 qemu-debug: $(KERNEL_ELF)
-	arm-none-eabi-gdb -ex "target remote localhost:1234" $(KERNEL_ELF)
+	./scripts/qemu debug $<
+
+qemu-run-test: $(TEST_BIN)
+	./scripts/qemu run $<
 
 qemu-start-test: $(TEST_BIN)
-	@echo "Starting in suspended mode for debugging... Press Ctrl+A x to quit."
-	qemu-system-arm -M versatilepb -m 32M -nographic -s -S -kernel $(TEST_BIN)
+	./scripts/qemu start $<
 
 qemu-debug-test: $(TEST_ELF)
-	arm-none-eabi-gdb -ex "target remote localhost:1234" $(TEST_ELF)
+	./scripts/qemu debug $<
 
 sync:
 	rsync -avzd . uw:cs452-kernel/
@@ -196,23 +191,15 @@ sync:
 
 all: $(KERNEL_ELF)
 
-TEST_OUTPUT=test_output
-TEST_EXPECTED=test_expected
-
-test-run: $(TEST_BIN)
-	@echo "Press Ctrl+A x to quit"
-	qemu-system-arm -M versatilepb -m 32M -nographic -kernel $(TEST_BIN)
-
-test-start: $(TEST_BIN)
-	@echo "Starting tests in suspended mode for debugging... Press Ctrl+A x to quit."
-	qemu-system-arm -M versatilepb -m 32M -nographic -s -S -kernel $(TEST_BIN)
-
-test-debug: $(TEST_ELF)
-	arm-none-eabi-gdb -ex "target remote localhost:1234" $(TEST_ELF)
+TEST_COM1_OUTPUT=scripts/test_com1_output
+TEST_COM2_OUTPUT=scripts/test_com2_output
+TEST_COM1_EXPECTED=scripts/test_com1_expected
+TEST_COM2_EXPECTED=scripts/test_com2_expected
 
 test: $(TEST_BIN)
-	./qemu_capture $(TEST_BIN) $(TEST_ELF) $(TEST_OUTPUT)
-	diff -y $(TEST_EXPECTED) $(TEST_OUTPUT)
+	./scripts/qemu_capture $(TEST_BIN) $(TEST_ELF) $(TEST_COM1_OUTPUT) $(TEST_COM2_OUTPUT)
+	diff -y $(TEST_COM1_EXPECTED) $(TEST_COM1_OUTPUT)
+	diff -y $(TEST_COM2_EXPECTED) $(TEST_COM2_OUTPUT)
 
 format:
 	astyle -R --style=java --keep-one-line-statements --suffix=none \

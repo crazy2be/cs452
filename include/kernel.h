@@ -95,4 +95,6 @@ unsigned rand(void);
 
 int should_idle(void); // Just for the idle task.
 
+void halt(void); // stop the kernel immediately, does not return
+
 #define NULL (void*)0
