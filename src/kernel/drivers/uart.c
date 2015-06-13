@@ -9,7 +9,6 @@ static int* reg(int channel, int off) {
 		return (int*)(uart_bases[channel] + off);
 	} else {
 		KASSERT(0 && "Invalid channel");
-		return NULL;
 	}
 }
 
