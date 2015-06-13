@@ -60,27 +60,27 @@ void setup(void) {
 	uart_clrerr(COM2);
 	uart_clrerr(COM3);
 
-	puts(COM3, "Boot");
+	fputs(COM3, "Boot");
 
 	clear_bss();
-	putc(COM3, '.');
+	fputc(COM3, '.');
 
 	setup_irq_table();
-	putc(COM3, '.');
+	fputc(COM3, '.');
 
 	await_init();
-	putc(COM3, '.');
+	fputc(COM3, '.');
 
 	irq_setup();
-	putc(COM3, '.');
+	fputc(COM3, '.');
 
 	setup_cache();
-	putc(COM3, '.');
+	fputc(COM3, '.');
 
 	timer_init();
-	putc(COM3, '.');
+	fputc(COM3, '.');
 
-	puts(COM3, "IO..." EOL);
+	fputs(COM3, "IO..." EOL);
 
 	rand_init(0xdeadbeef);
 

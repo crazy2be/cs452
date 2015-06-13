@@ -11,7 +11,7 @@
 
 static int flush_buffer(int channel, char *buf, int i) {
 	buf[i] = '\0';
-	puts(channel, buf);
+	fputs(channel, buf);
 	return 0;
 }
 
@@ -120,7 +120,7 @@ static void format(int channel, char *fmt, va_list va) {
 				break;
 			case 's':
 				i = flush_buffer(channel, buf, i);
-				puts(channel, va_arg(va, char*));
+				fputs(channel, va_arg(va, char*));
 				break;
 			case 'u':
 				i = bwui2a(channel, buf, i, va_arg(va, unsigned int), 10, w, lz, 0);
@@ -140,7 +140,7 @@ static void format(int channel, char *fmt, va_list va) {
 	flush_buffer(channel, buf, i);
 }
 
-int printf(int channel, const char *fmt, ...) {
+int fprintf(int channel, const char *fmt, ...) {
 	va_list va;
 	va_start(va,fmt);
 	format(channel, (char*)fmt, va); // Shouldn't need this cast...

@@ -19,7 +19,7 @@ void client_task(void) {
 	send(1, NULL, 0, &rpy, sizeof(rpy));
 	for (int i = 0; i < rpy.delay_count; i++) {
 		delay(rpy.delay_time);
-		printf(COM2, "tid: %d, interval: %d, round: %d" EOL, tid(), rpy.delay_time, i);
+		printf("tid: %d, interval: %d, round: %d" EOL, tid(), rpy.delay_time, i);
 	}
 	signal_send(parent_tid());
 }
@@ -42,9 +42,9 @@ void init(void) {
 
 void test_init(void) {
 	start_servers();
-	puts(COM1, "BEEP" EOL);
-	printf(COM1, "Hello, world! \"%s\"" EOL, "boop");
-	puts(COM1, "BOOP" EOL);
+	fputs(COM1, "BEEP" EOL);
+	fprintf(COM1, "Hello, world! \"%s\"" EOL, "boop");
+	fputs(COM1, "BOOP" EOL);
 
 	/* int switches[] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 153, 154, 155, 156}; */
 

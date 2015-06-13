@@ -298,7 +298,7 @@ int bw_putc(const int channel, const char c) {
 
 int bw_puts(const int channel, const char *str) {
 	/* KASSERT(!usermode()); */
-	while (*str) putc(channel, *str++);
+	while (*str) bw_putc(channel, *str++);
 	return 0;
 }
 
@@ -314,7 +314,7 @@ int bw_gets(const int channel, char *buf, int len) {
 #define USE_BWIO(channel) ((channel) == COM3)
 
 // functions which interact with the io server
-int puts(const int channel, const char *str) {
+int fputs(const int channel, const char *str) {
 	if (USE_BWIO(channel)) return bw_puts(channel, str);
 
 	KASSERT(usermode());
@@ -323,14 +323,14 @@ int puts(const int channel, const char *str) {
 	return iosrv_put_buf(channel, str, len);
 }
 
-int putc(const int channel, const char c) {
+int fputc(const int channel, const char c) {
 	if (USE_BWIO(channel)) return bw_putc(channel, c);
 
 	KASSERT(usermode());
 	return iosrv_put_buf(channel, &c, 1);
 }
 
-int gets(const int channel, char *buf, int len) {
+int fgets(const int channel, char *buf, int len) {
 	if (USE_BWIO(channel)) return bw_gets(channel, buf, len);
 
 	KASSERT(usermode());
@@ -346,9 +346,9 @@ int gets(const int channel, char *buf, int len) {
 	return err;
 }
 
-int getc(int channel) {
+int fgetc(int channel) {
 	char c;
-	int err = gets(channel, &c, 1);
+	int err = fgets(channel, &c, 1);
 	return (err < 0) ? err : c;
 }
 

@@ -36,7 +36,7 @@ void rps_client(void) {
 	resp_len = send(server, &req, sizeof(req), &resp, sizeof(resp));
 	ASSERT(resp_len == sizeof(resp));
 	ASSERT(resp == RESP_CONNECTED);
-	printf(COM2, "Client %d connected" EOL, tid());
+	printf("Client %d connected" EOL, tid());
 
 	unsigned rounds_to_play = rand() % 20;
 
@@ -48,16 +48,16 @@ void rps_client(void) {
 
 		switch (resp) {
 		case RESP_WON:
-			printf(COM2, "Client %d won round %d with %s" EOL, tid(), i, move_names[move]);
+			printf("Client %d won round %d with %s" EOL, tid(), i, move_names[move]);
 			break;
 		case RESP_DRAW:
-			printf(COM2, "Client %d drew round %d with %s" EOL, tid(), i, move_names[move]);
+			printf("Client %d drew round %d with %s" EOL, tid(), i, move_names[move]);
 			break;
 		case RESP_LOST:
-			printf(COM2, "Client %d lost round %d with %s" EOL, tid(), i, move_names[move]);
+			printf("Client %d lost round %d with %s" EOL, tid(), i, move_names[move]);
 			break;
 		case RESP_QUIT:
-			printf(COM2, "Client %d won round %d by default, now quitting..." EOL, tid(), i);
+			printf("Client %d won round %d by default, now quitting..." EOL, tid(), i);
 			return;
 		default:
 			ASSERT(0 && "Unknown response from the RPS server");
@@ -69,7 +69,7 @@ void rps_client(void) {
 	resp_len = send(server, &req, sizeof(req), &resp, sizeof(resp));
 	ASSERT(resp_len == sizeof(resp));
 	ASSERT(resp == RESP_QUIT);
-	printf(COM2, "Client %d quit" EOL, tid());
+	printf("Client %d quit" EOL, tid());
 }
 
 #define STATUS_WAITING 0
@@ -167,18 +167,18 @@ void rps_server(void) {
 			break;
 		}
 	}
-	printf(COM2, "RPS server done" EOL);
+	printf("RPS server done" EOL);
 }
 
 void rps_init_task(void) {
 	int tid;
 	tid = create(PRIORITY_MAX, nameserver);
-	printf(COM2, "Got %d as TID for name server" EOL, tid);
+	printf("Got %d as TID for name server" EOL, tid);
 	tid = create(PRIORITY_MIN, rps_server);
-	printf(COM2, "Got %d as TID for rps server" EOL, tid);
+	printf("Got %d as TID for rps server" EOL, tid);
 	for (int i = MIN_CLIENT_TID; i <= MAX_CLIENT_TID; i++) {
 		tid = create(PRIORITY_MIN, rps_client);
-		printf(COM2, "Got %d as TID for client %d" EOL, tid, i);
+		printf("Got %d as TID for client %d" EOL, tid, i);
 		ASSERT(i == tid);
 	}
 }

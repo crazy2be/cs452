@@ -11,7 +11,7 @@
 #include "../user/signal.h"
 
 void child(void) {
-	printf(COM2, "Child task %d" EOL, tid());
+	printf("Child task %d" EOL, tid());
 }
 
 void nop(void) {
@@ -91,7 +91,7 @@ void receiving_task(void) {
 
 		ASSERT(reply(tid, &rep, sizeof(rep)) == REPLY_SUCCESSFUL);
 	}
-	printf(COM2, "Receive done" EOL);
+	printf("Receive done" EOL);
 	signal_send(parent_tid());
 }
 
@@ -113,7 +113,7 @@ void misbehaving_sending_task(void) {
 
 	// the other task should exit before we have a chance to send
 	ASSERT(send(misbehaving_receiving_tid, &msg, sizeof(msg), &rep, sizeof(rep)) == SEND_INCOMPLETE);
-	printf(COM2, "Misbehaving send done" EOL);
+	printf("Misbehaving send done" EOL);
 
 	signal_send(parent_tid());
 }
@@ -140,7 +140,7 @@ void misbehaving_receiving_task(void) {
 	ASSERT(receive(&tid, &msg, sizeof(msg)) == sizeof(msg));
 	ASSERT(reply(tid, &rep, sizeof(rep) + 1) == REPLY_TOO_LONG);
 	ASSERT(reply(tid, &rep, sizeof(rep)) == REPLY_SUCCESSFUL);
-	printf(COM2, "Misbehaving receive done" EOL);
+	printf("Misbehaving receive done" EOL);
 
 	signal_send(parent_tid());
 }
@@ -214,10 +214,10 @@ void message_suite(void) {
 
 void io_suite(void) {
 	start_servers();
-	puts(COM1, "Hello COM1" EOL);
-	printf(COM1, "Hello COM1 9 = %d, 0 = %d, -1 = %d or %u, 117 = %d, 0x7f = 0x%x" EOL,
+	fputs(COM1, "Hello COM1" EOL);
+	fprintf(COM1, "Hello COM1 9 = %d, 0 = %d, -1 = %d or %u, 117 = %d, 0x7f = 0x%x" EOL,
 			9, 0, -1, -1, 117, 0x7f);
-	puts(COM2, "Hello COM2" EOL);
+	fputs(COM2, "Hello COM2" EOL);
 	stop_servers();
 }
 
