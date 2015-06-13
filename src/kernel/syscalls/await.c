@@ -2,7 +2,6 @@
 
 #include <kernel.h>
 #include <util.h>
-#include <io.h>
 
 #include "../kassert.h"
 #include "../tasks.h"

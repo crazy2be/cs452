@@ -1,5 +1,4 @@
 #include "irq.h"
-#include <io.h>
 
 // TS7200 has 64 possible interrupts, where as we only support the first 32
 // on versatile PB. Depending on which specific interrupts we need to listen

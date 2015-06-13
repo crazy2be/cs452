@@ -6,8 +6,6 @@
 
 #include <kernel.h>
 
-#include <io.h>
-
 #define NAMESERVER_TID 2
 
 struct nameserver_request {

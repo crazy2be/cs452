@@ -4,7 +4,6 @@
 #include <least_significant_set_bit.h>
 #include <prng.h>
 
-#include "io.h"
 #include "drivers/timer.h"
 #include "drivers/uart.h"
 #include "drivers/irq.h"
@@ -75,15 +74,8 @@ void setup(void) {
 	while (!uart_canwrite(COM2)) {} uart_write(COM2, '.');
 	timer_init();
 	while (!uart_canwrite(COM2)) {} uart_write(COM2, '.');
-	io_init();
-	while (!uart_canwrite(COM2)) {} uart_write(COM2, '.');
 
-	io_puts(COM2, "IO..." EOL);
-	io_flush(COM2);
-
-	/* printf("e1:%x" EOL, uart_err(COM1)); */
-	/* printf("e2:%x" EOL, uart_err(COM2)); */
-	io_flush(COM2);
+	puts(COM2, "IO..." EOL);
 
 	rand_init(0xdeadbeef);
 
@@ -168,7 +160,7 @@ int boot(void (*init_task)(void), int init_task_priority, int debug) {
 	unsigned ts_end = debug_timer_useconds();
 	unsigned total_time_useconds = ts_end - ts_start;
 
-	printf("Exiting kernel..." EOL);
+	kprintf("Exiting kernel..." EOL);
 	cleanup();
 
 	if (debug) {
@@ -176,11 +168,11 @@ int boot(void (*init_task)(void), int init_task_priority, int debug) {
 		unsigned kernel_runtime = total_time_useconds;
 		for (int i = 0; i < max; i++) {
 			unsigned runtime = task_from_tid(i)->user_time_useconds;
-			printf("Task %d ran for %d us" EOL, i, runtime);
+			kprintf("Task %d ran for %d us" EOL, i, runtime);
 			kernel_runtime -= runtime;
 		}
-		printf("Kernel ran for %d us" EOL, kernel_runtime);
-		printf("Ran for %d us total" EOL, total_time_useconds);
+		kprintf("Kernel ran for %d us" EOL, kernel_runtime);
+		kprintf("Ran for %d us total" EOL, total_time_useconds);
 	}
 	return 0;
 }

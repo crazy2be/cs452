@@ -1,6 +1,7 @@
 #include "io_server.h"
 
-#include "nameserver.h"
+#include "../user/nameserver.h"
+#include "../kernel/drivers/uart.h"
 #include <io_rbuf.h>
 #undef RBUF_SIZE
 #undef RBUF_ELE
@@ -267,18 +268,49 @@ static int iosrv_put_buf(const int channel, const char *buf, int buflen) {
 	return (err < 0) ? -1 : 0;
 }
 
+// bw analogues to the functions below
+int bw_putc(const int channel, const char c) {
+	ASSERT(!usermode());
+	while(!uart_canwrite(channel));
+	uart_write(channel, c);
+	return 0;
+}
+
+int bw_puts(const int channel, const char *str) {
+	ASSERT(!usermode());
+	while (*str) putc(channel, *str++);
+	return 0;
+}
+
+int bw_gets(const int channel, char *buf, int len) {
+	ASSERT(!usermode());
+	while (len-- > 0) {
+		while (!uart_canread(channel));
+		*buf++ = uart_read(channel);
+	}
+	return 0;
+}
+
+#define USE_BWIO(channel) ((channel) == COM2)
+
 // functions which interact with the io server
-int iosrv_puts(const int channel, const char *str) {
+int puts(const int channel, const char *str) {
+	if (USE_BWIO(channel)) return bw_puts(channel, str);
+
 	int len = strlen(str);
 	ASSERT(len <= MAX_STR_LEN);
 	return iosrv_put_buf(channel, str, len);
 }
 
-int iosrv_putc(const int channel, const char c) {
+int putc(const int channel, const char c) {
+	if (USE_BWIO(channel)) return bw_putc(channel, c);
+
 	return iosrv_put_buf(channel, &c, 1);
 }
 
-int iosrv_gets(const int channel, char *buf, int len) {
+int gets(const int channel, char *buf, int len) {
+	if (USE_BWIO(channel)) return bw_gets(channel, buf, len);
+
 	struct io_request req;
 
 	req.type = IO_RX;
@@ -291,8 +323,8 @@ int iosrv_gets(const int channel, char *buf, int len) {
 	return err;
 }
 
-int iosrv_getc(int channel) {
+int getc(int channel) {
 	char c;
-	int err = iosrv_gets(channel, &c, 1);
+	int err = gets(channel, &c, 1);
 	return (err < 0) ? err : c;
 }

@@ -4,7 +4,6 @@
 #include "min_heap.h"
 
 #include <kernel.h>
-#include <io.h>
 #include <assert.h>
 
 struct clockserver_request {
@@ -25,7 +24,7 @@ static void clocknotifier(void) {
 				return;
 			}
 		} else {
-			printf("Got error response %d from await()" EOL, ticks);
+			printf(COM2, "Got error response %d from await()" EOL, ticks);
 			ASSERT(0);
 			break;
 		}
@@ -51,7 +50,7 @@ void clockserver(void) {
 			// we shouldn't be skipping any ticks
 			// a weaker form of this assertion would be to check that time never goes backwards
 			if (num_ticks + 1 != req.ticks) {
-				printf("num_ticks = %d, req.ticks = %d" EOL, num_ticks, req.ticks);
+				printf(COM2, "num_ticks = %d, req.ticks = %d" EOL, num_ticks, req.ticks);
 			}
 			ASSERT(num_ticks + 1 == req.ticks);
 			num_ticks = req.ticks;
@@ -79,7 +78,7 @@ void clockserver(void) {
 			return;
 		default:
 			resp = -1;
-			printf("UNKNOWN REQ" EOL);
+			printf(COM2, "UNKNOWN REQ" EOL);
 			reply(tid, &resp, sizeof(resp));
 			break;
 		}

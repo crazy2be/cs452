@@ -1,9 +1,8 @@
 #include <kernel.h>
-#include <io.h>
 #include <assert.h>
 #include "nameserver.h"
 #include "clockserver.h"
-#include "io_server.h"
+#include <io_server.h>
 #include "rps.h"
 #include "signal.h"
 #include <util.h>
@@ -20,7 +19,7 @@ void client_task(void) {
 	send(1, NULL, 0, &rpy, sizeof(rpy));
 	for (int i = 0; i < rpy.delay_count; i++) {
 		delay(rpy.delay_time);
-		printf("tid: %d, interval: %d, round: %d" EOL, tid(), rpy.delay_time, i);
+		printf(COM2, "tid: %d, interval: %d, round: %d" EOL, tid(), rpy.delay_time, i);
 	}
 	signal_send(parent_tid());
 }
@@ -46,17 +45,21 @@ void test_init(void) {
 	ioserver(LOWER(PRIORITY_MAX, 3), COM1);
 	create(LOWER(PRIORITY_MAX, 1), clockserver);
 
-	int switches[] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 153, 154, 155, 156};
+	puts(COM1, "BEEP" EOL);
+	printf(COM1, "Hello, world! \"%s\"" EOL, "boop");
+	puts(COM1, "BOOP" EOL);
 
-	for (int i = 0; i < sizeof(switches) / sizeof(switches[0]); i++) {
-		set_switch_state(switches[i], CURVED);
-		if (i % 8 == 7) {
-			delay(10);
-			disable_switch_solenoid();
-		}
-	}
-	delay(10);
-	disable_switch_solenoid();
+	/* int switches[] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 153, 154, 155, 156}; */
+
+	/* for (int i = 0; i < sizeof(switches) / sizeof(switches[0]); i++) { */
+	/* 	set_switch_state(switches[i], CURVED); */
+	/* 	if (i % 8 == 7) { */
+	/* 		delay(10); */
+	/* 		disable_switch_solenoid(); */
+	/* 	} */
+	/* } */
+	/* delay(10); */
+	/* disable_switch_solenoid(); */
 }
 
 #include "benchmark.h"

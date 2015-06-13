@@ -1,7 +1,5 @@
 #include "await_io.h"
 
-#include <io.h>
-
 #include "await.h"
 #include "../tasks.h"
 #include "../kassert.h"
@@ -106,7 +104,7 @@ static int mask_is_tx(int irq_mask) {
 	if (UART_IRQ_IS_TX(irq_mask) || UART_IRQ_IS_MODEM(irq_mask)) return 1;
 	else if (UART_IRQ_IS_RX(irq_mask)) return 0;
 	else {
-		printf("irq_mask: %d\r\n", irq_mask);
+		kprintf("irq_mask: %d\r\n", irq_mask);
 		KASSERT(0 && "UNKNOWN UART IRQ");
 		return -1;
 	}

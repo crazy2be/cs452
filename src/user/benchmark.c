@@ -1,6 +1,5 @@
 #include "benchmark.h"
 #include <kernel.h>
-#include <io.h>
 #include <assert.h>
 #include "../kernel/drivers/timer.h"
 
@@ -62,6 +61,6 @@ void benchmark(void) {
 
 	unsigned end = debug_timer_useconds();
 
-	printf("Benchmark took %d ns (msg_size = %d, iterations = %d, pdelta = %d)" EOL,
+	printf(COM2, "Benchmark took %d ns (msg_size = %d, iterations = %d, pdelta = %d)" EOL,
 	       (end - start) * 1000 / ITERATIONS, BENCHMARK_MSG_SIZE, ITERATIONS, SEND_PRIORITY - RECV_PRIORITY);
 }

@@ -8,8 +8,6 @@
 
 void exited_main(void);
 
-#include <io.h>
-
 void sleep(int n);
 void *memset(void *ptr, int value, int num);
 // non-traditional name b/c of conflict with built-in function
@@ -21,3 +19,9 @@ int modi(int a, int b);
 int strlen(const char *s);
 char* strcpy(char *dst, const char *src);
 int strcmp(const char *a, const char *b);
+
+static inline int usermode(void) {
+	int psr;
+	__asm__("msr %0, cpsr" : "=r"(psr));
+	return (psr | 0x1f) == 0x10;
+}
