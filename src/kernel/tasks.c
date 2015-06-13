@@ -17,6 +17,9 @@ void tasks_init(void) {
 	priority_task_queue_init(&queue);
 }
 
+int tasks_full() {
+	return task_queue_empty(&free_tds);
+}
 // Does *not* schedule the newly created task for execution.
 struct task_descriptor *task_create(void *entrypoint, int priority, int parent_tid) {
 	struct task_descriptor *task = task_queue_pop(&free_tds);
@@ -54,17 +57,6 @@ struct task_descriptor *task_create(void *entrypoint, int priority, int parent_t
 
 	return task;
 }
-
-int tasks_full() {
-	return task_queue_empty(&free_tds);
-}
-struct task_descriptor *task_from_tid(int tid) {
-	KASSERT(tid >= 0);
-	struct task_descriptor *task = &tasks.task_buf[tid % NUM_TID];
-	KASSERT(task->tid == tid); // Call tid_valid first to handle this gracefully.
-	return &tasks.task_buf[tid % NUM_TID];
-}
-
 // WARNING: This doesn't look through the pending queues for the given task,
 // so killing a task which is already scheduled to execute will not work out
 // well.
@@ -77,7 +69,6 @@ void task_kill(struct task_descriptor *task) {
 void task_schedule(struct task_descriptor *task) {
 	priority_task_queue_push(&queue, task);
 }
-
 struct task_descriptor *task_next_scheduled() {
 	return priority_task_queue_pop(&queue);
 }
@@ -90,7 +81,12 @@ int tid_valid(int tid) {
 int tid_possible(int tid) {
 	return 1; // TODO: What should this be?
 }
-
 int tid_next(void) {
 	return 256; // TODO: Should be task_queue_top()->tid + NUM_TID or something?
+}
+struct task_descriptor *task_from_tid(int tid) {
+	KASSERT(tid >= 0);
+	struct task_descriptor *task = &tasks.task_buf[tid % NUM_TID];
+	KASSERT(task->tid == tid); // Call tid_valid first to handle this gracefully.
+	return &tasks.task_buf[tid % NUM_TID];
 }
