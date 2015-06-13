@@ -17,25 +17,17 @@ void tasks_init(void) {
 	priority_task_queue_init(&queue);
 }
 
-/**
- * Internal kernel utility for creating a task, and allocating the necessary resources
- *
- * Allocates space on the task buffer as a side-effect, and increments the count
- * of created tasks.
- * It initializes the task descriptor for the newly created task.
- *
- * It also allocates memory for the tasks stack, and initializes it.
- * After the stack has been initalized, in can be context switched to normally by
- * using `exit_kernel()`, and will start executing at the entrypoint.
- *
- * Notedly, this does *not* schedule the newly created task for execution.
- */
+// Does *not* schedule the newly created task for execution.
 struct task_descriptor *task_create(void *entrypoint, int priority, int parent_tid) {
 	struct task_descriptor *task = task_queue_pop(&free_tds);
+	// Syscalls should check tasks_full() first if they want to handle this
+	// case gracefully.
+	KASSERT(task);
+	KFASSERT(task->state == DEAD, "%d", task->state);
 	int tid = task->tid + NUM_TID;
 	// TODO: Are stacks ascending or descending in memory? One of those makes
 	// this wrong (although it seems to _work_, but it might break other things)
-	void *sp = tasks.stacks[tid%NUM_TID];
+	void *sp = tasks.stacks[tid%NUM_TID + 1];
 	*task = (struct task_descriptor) {
 		.tid = tid,
 		.parent_tid = parent_tid,
@@ -68,7 +60,7 @@ int tasks_full() {
 struct task_descriptor *task_from_tid(int tid) {
 	KASSERT(tid >= 0);
 	struct task_descriptor *task = &tasks.task_buf[tid % NUM_TID];
-	KASSERT(task->tid == tid); // TODO: Better error handling?
+	KASSERT(task->tid == tid); // Call tid_valid first to handle this gracefully.
 	return &tasks.task_buf[tid % NUM_TID];
 }
 
