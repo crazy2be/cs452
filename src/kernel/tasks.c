@@ -9,9 +9,6 @@ static struct priority_task_queue queue;
 
 void tasks_init(void) {
 	memset(&tasks, sizeof(tasks), 0);
-	extern int stack_top;
-	tasks.memory_alloc = (void*) &stack_top + USER_STACK_SIZE;
-
 	task_queue_init(&free_tds);
 	for (int i = 0; i < NUM_TID; i++) {
 		tasks.task_buf[i].tid = i - NUM_TID; // Is this the best way to do this?
@@ -34,11 +31,13 @@ void tasks_init(void) {
  * Notedly, this does *not* schedule the newly created task for execution.
  */
 struct task_descriptor *task_create(void *entrypoint, int priority, int parent_tid) {
-	void *sp = tasks.memory_alloc;
-	tasks.memory_alloc += USER_STACK_SIZE;
 	struct task_descriptor *task = task_queue_pop(&free_tds);
+	int tid = task->tid + NUM_TID;
+	// TODO: Are stacks ascending or descending in memory? One of those makes
+	// this wrong (although it seems to _work_, but it might break other things)
+	void *sp = tasks.stacks[tid%NUM_TID];
 	*task = (struct task_descriptor) {
-		.tid = task->tid + NUM_TID,
+		.tid = tid,
 		.parent_tid = parent_tid,
 		.priority = priority,
 		.state = READY,
@@ -100,5 +99,5 @@ int tid_possible(int tid) {
 }
 
 int tid_next(void) {
-	return tasks.next_tid;
+	return 256; // TODO: Should be task_queue_top()->tid + NUM_TID or something?
 }

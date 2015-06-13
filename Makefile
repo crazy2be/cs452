@@ -204,7 +204,8 @@ test-run: $(TEST_BIN)
 
 test-start: $(TEST_BIN)
 	@echo "Starting tests in suspended mode for debugging... Press Ctrl+A x to quit."
-	qemu-system-arm -M versatilepb -m 32M -nographic -s -S -kernel $(TEST_BIN)
+	qemu-system-arm -M versatilepb -m 32M -nographic -s -S \
+		-serial null -serial stdio -kernel $(TEST_BIN)
 
 test-debug: $(TEST_ELF)
 	arm-none-eabi-gdb -ex "target remote localhost:1234" $(TEST_ELF)
