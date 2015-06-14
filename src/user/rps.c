@@ -2,7 +2,6 @@
 // make it into a test, but have not yet. To use:
 //     boot(rps_init_task, 0);
 #include <kernel.h>
-#include <io.h>
 #include <assert.h>
 #include "nameserver.h"
 #include "clockserver.h"

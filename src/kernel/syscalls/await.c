@@ -2,7 +2,6 @@
 
 #include <kernel.h>
 #include <util.h>
-#include <io.h>
 
 #include "../kassert.h"
 #include "../tasks.h"
@@ -50,23 +49,12 @@ void irq_handler(struct task_descriptor *current_task) {
 	unsigned irq_mask_lo = irq_mask;
 	unsigned irq_mask_hi = irq_mask >> 32;
 
-	extern void uart_print_ctrl(int);
-	if (clock_ticks % 100 == 0) {
-		printf("As of tick %d...\r\n", clock_ticks);
-		uart_print_ctrl(COM1);
-		uart_print_ctrl(COM2);
-		printf("\r\n");
-	}
-
 	if (IRQ_TEST(IRQ_TIMER, irq_mask_lo, irq_mask_hi)) {
 		tick_timer_clear_interrupt();
 		await_event_occurred(EID_TIMER_TICK, ++clock_ticks & 0x7fffffff);
 	} else if (IRQ_TEST(IRQ_COM1, irq_mask_lo, irq_mask_hi)) {
-		uart_print_ctrl(COM1);
 		io_irq_handler(COM1);
-		printf("\r\n");
 	} else if (IRQ_TEST(IRQ_COM2, irq_mask_lo, irq_mask_hi)) {
-		uart_print_ctrl(COM1);
 		io_irq_handler(COM2);
 	} else {
 		KASSERT(0 && "UNKNOWN INTERRUPT!");

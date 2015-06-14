@@ -4,7 +4,6 @@
 #include <least_significant_set_bit.h>
 #include <prng.h>
 
-#include "io.h"
 #include "drivers/timer.h"
 #include "drivers/uart.h"
 #include "drivers/irq.h"
@@ -52,38 +51,34 @@ void clear_bss(void) {
 void setup(void) {
 	// write to the control registers of the UARTs to properly configure them
 	// for transmission
-	uart_configure(COM1, 2400, ON);
-	uart_configure(COM2, 115200, OFF);
+	uart_configure(COM1, 2400, OFF);
+	uart_configure(COM2, 115200, ON);
 
 	// clear UART errors
 	uart_clrerr(COM1);
 	uart_clrerr(COM2);
 
-	while (!uart_canwrite(COM2)) {} uart_write(COM2, 'B');
-	while (!uart_canwrite(COM2)) {} uart_write(COM2, 'o');
-	while (!uart_canwrite(COM2)) {} uart_write(COM2, 'o');
-	while (!uart_canwrite(COM2)) {} uart_write(COM2, 't');
+	fputs(COM2_DEBUG, "Boot");
 
 	clear_bss();
-	while (!uart_canwrite(COM2)) {} uart_write(COM2, '.');
+	fputc(COM2_DEBUG, '.');
+
 	setup_irq_table();
-	while (!uart_canwrite(COM2)) {} uart_write(COM2, '.');
+	fputc(COM2_DEBUG, '.');
+
 	await_init();
+	fputc(COM2_DEBUG, '.');
+
 	irq_setup();
-	while (!uart_canwrite(COM2)) {} uart_write(COM2, '.');
+	fputc(COM2_DEBUG, '.');
+
 	setup_cache();
-	while (!uart_canwrite(COM2)) {} uart_write(COM2, '.');
+	fputc(COM2_DEBUG, '.');
+
 	timer_init();
-	while (!uart_canwrite(COM2)) {} uart_write(COM2, '.');
-	io_init();
-	while (!uart_canwrite(COM2)) {} uart_write(COM2, '.');
+	fputc(COM2_DEBUG, '.');
 
-	io_puts(COM2, "IO..." EOL);
-	io_flush(COM2);
-
-	/* printf("e1:%x" EOL, uart_err(COM1)); */
-	/* printf("e2:%x" EOL, uart_err(COM2)); */
-	io_flush(COM2);
+	fputs(COM2_DEBUG, "IO..." EOL);
 
 	rand_init(0xdeadbeef);
 
@@ -126,6 +121,7 @@ int boot(void (*init_task)(void), int init_task_priority, int debug) {
 
 	task_schedule(task_create(idle_task, PRIORITY_IDLE, 0));
 	struct task_descriptor *current_task = task_create(init_task, init_task_priority, 0);
+	int running = 1;
 	do {
 		KASSERT(current_task->state == READY);
 		struct syscall_context sc;
@@ -158,17 +154,18 @@ int boot(void (*init_task)(void), int init_task_priority, int debug) {
 		case SYSCALL_RAND:        rand_handler(current_task);        break;
 		case SYSCALL_SHOULD_IDLE: should_idle_handler(current_task); break;
 		case SYSCALL_IRQ:         irq_handler(current_task);         break;
+		case SYSCALL_HALT:        running = 0;                       break;
 		default:
 			KASSERT(0 && "UNKNOWN SYSCALL NUMBER");
 			break;
 		}
 		current_task = task_next_scheduled();
-	} while (current_task);
+	} while (running && current_task);
 
 	unsigned ts_end = debug_timer_useconds();
 	unsigned total_time_useconds = ts_end - ts_start;
 
-	printf("Exiting kernel..." EOL);
+	kprintf("Exiting kernel..." EOL);
 	cleanup();
 
 	if (debug) {

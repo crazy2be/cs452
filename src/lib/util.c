@@ -1,7 +1,5 @@
 #include "util.h"
 
-#include "io.h"
-
 void sleep(int n) {
 	for (volatile int i = 0; i < n*10000; i++);
 }

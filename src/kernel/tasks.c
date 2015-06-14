@@ -116,14 +116,14 @@ void tasks_print_runtime(int total_runtime_us) {
 	for (int i = 0; i < NUM_TD; i++) {
 		int runtime = tasks[i].user_time_useconds;
 		if (runtime == 0) continue;
-		printf("Task ");
+		kprintf("Task ");
 		for (int j = 0; j <= tasks[i].tid / NUM_TD; j++) {
-			if (j > 0) printf(", ");
-			printf("%d", tasks[i].tid%NUM_TD + j*NUM_TD);
+			if (j > 0) kprintf(", ");
+			kprintf("%d", tasks[i].tid%NUM_TD + j*NUM_TD);
 		}
-		printf(" ran for %d us" EOL, runtime);
+		kprintf(" ran for %d us" EOL, runtime);
 		tasks_runtime_us += runtime;
 	}
-	printf("Kernel ran for %d us" EOL, total_runtime_us - tasks_runtime_us);
-	printf("Ran for %d us total" EOL, total_runtime_us);
+	kprintf("Kernel ran for %d us" EOL, total_runtime_us - tasks_runtime_us);
+	kprintf("Ran for %d us total" EOL, total_runtime_us);
 }

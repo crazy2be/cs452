@@ -1,6 +1,6 @@
 /* Note that most of this file is inspired by
 https://balau82.wordpress.com/2010/02/28/hello-world-for-bare-metal-arm-using-qemu/ */
-ENTRY(main)
+ENTRY(Reset_Handler)
 SECTIONS
 {
  . = 0x10000;

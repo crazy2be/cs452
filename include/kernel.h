@@ -35,7 +35,7 @@ void pass(void);
  * resources.
  */
 #define Exit exitk
-void exitk(void);
+void exitk(void) __attribute__((noreturn));
 
 /**
  * @return The task id of the calling task
@@ -94,5 +94,7 @@ int await(unsigned eid, char *buf, unsigned buflen);
 unsigned rand(void);
 
 int should_idle(void); // Just for the idle task.
+
+void halt(void) __attribute__((noreturn)); // stop the kernel immediately, does not return
 
 #define NULL (void*)0

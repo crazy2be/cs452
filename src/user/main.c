@@ -1,11 +1,12 @@
 #include <kernel.h>
-#include <io.h>
 #include <assert.h>
-#include "nameserver.h"
+#include <io_server.h>
 #include "clockserver.h"
 #include "rps.h"
 #include "signal.h"
 #include <util.h>
+#include "track_control.h"
+#include "servers.h"
 #include "../kernel/drivers/timer.h"
 
 struct init_reply {
@@ -24,8 +25,7 @@ void client_task(void) {
 }
 
 void init(void) {
-	create(LOWER(PRIORITY_MAX, 2), nameserver);
-	create(LOWER(PRIORITY_MAX, 1), clockserver);
+	start_servers();
 
 	for (int i = 0; i < 4; i++) {
 		create(LOWER(PRIORITY_MAX, i + 3), client_task);
@@ -36,23 +36,33 @@ void init(void) {
 	for (int i = 0; i < 4; i++) reply(tids[i], &rpys[i], sizeof(rpys[i]));
 
 	for (int i = 0; i < 4; i++) signal_recv();
-	shutdown_clockserver();
+
+	stop_servers();
 }
 
 void test_init(void) {
-	char *str = "Hello, world!" EOL "Here is a very long string which will overflow the FIFO!" EOL;
-	printf("Writing %d bytes" EOL, strlen(str));
-	await(EID_COM1_WRITE, str, strlen(str));
-	for (;;) {
-		char c[2];
-		await(EID_COM1_READ, c, sizeof(c) - 1);
-		c[sizeof(c) - 1] = 0;
-		printf("Got %s" EOL, c);
-		await(EID_COM1_WRITE, c, strlen(c));
+	start_servers();
+
+	printf("Hello world" EOL);
+
+	int switches[] = {4, 12};
+
+	for (int i = 0; i < sizeof(switches) / sizeof(switches[0]); i++) {
+		set_switch_state(switches[i], CURVED);
+		if (i % 8 == 7) {
+			delay(10);
+			disable_switch_solenoid();
+		}
 	}
+	delay(10);
+	disable_switch_solenoid();
+
+	printf("Goodbye, world" EOL);
+
+	stop_servers();
 }
 
 #include "benchmark.h"
 int main(int argc, char *argv[]) {
-	boot(test_init, 0, 1);
+	boot(test_init, PRIORITY_MIN, 1);
 }

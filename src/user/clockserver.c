@@ -4,7 +4,6 @@
 #include "min_heap.h"
 
 #include <kernel.h>
-#include <io.h>
 #include <assert.h>
 
 struct clockserver_request {
@@ -18,17 +17,9 @@ static void clocknotifier(void) {
 	req.type = TICK_HAPPENED;
 	for (;;) {
 		int ticks = await(EID_TIMER_TICK, NULL, 0);
-		if (ticks >= 0) {
-			req.ticks = ticks;
-			if (send(clockserver_tid, &req, sizeof(req), NULL, 0) != 0) {
-				// the server shut down, so simply exit
-				return;
-			}
-		} else {
-			printf("Got error response %d from await()" EOL, ticks);
-			ASSERT(0);
-			break;
-		}
+		ASSERT(ticks >= 0);
+		req.ticks = ticks;
+		ASSERT(send(clockserver_tid, &req, sizeof(req), NULL, 0) == 0);
 	}
 }
 
@@ -50,6 +41,9 @@ void clockserver(void) {
 			reply(tid, NULL, 0);
 			// we shouldn't be skipping any ticks
 			// a weaker form of this assertion would be to check that time never goes backwards
+			if (num_ticks + 1 != req.ticks) {
+				printf("num_ticks = %d, req.ticks = %d" EOL, num_ticks, req.ticks);
+			}
 			ASSERT(num_ticks + 1 == req.ticks);
 			num_ticks = req.ticks;
 			resp = 0;
@@ -68,12 +62,6 @@ void clockserver(void) {
 			resp = num_ticks;
 			reply(tid, &resp, sizeof(resp));
 			break;
-		case SHUTDOWN:
-			// after shutdown request, keep serving requests until the notifier
-			// signals us, and we can tell the notifier to shut down
-			resp = 0;
-			reply(tid, &resp, sizeof(resp));
-			return;
 		default:
 			resp = -1;
 			printf("UNKNOWN REQ" EOL);
@@ -118,13 +106,6 @@ int delay_until(int ticks) {
 	struct clockserver_request req = (struct clockserver_request) {
 		.type = DELAY_UNTIL,
 		 .ticks = ticks,
-	};
-	return clockserver_send(&req);
-}
-
-int shutdown_clockserver(void) {
-	struct clockserver_request req = (struct clockserver_request) {
-		.type = SHUTDOWN,
 	};
 	return clockserver_send(&req);
 }
