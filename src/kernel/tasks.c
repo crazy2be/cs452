@@ -1,18 +1,35 @@
 #include "tasks.h"
 
 #include <util.h>
+#include <prng.h>
 #include "kassert.h"
 
-static struct task_collection tasks;
+#define NUM_TID 256
+// TODO: eventually, we may want to have variable stack sizes, controlled by some
+// parameter to create
+#define USER_STACK_SIZE 0x10000 // 64K stack
+
+static struct task_descriptor tasks[NUM_TID];
+static char stacks[NUM_TID][USER_STACK_SIZE];
 static struct task_queue free_tds;
 static struct priority_task_queue queue;
 
 void tasks_init(void) {
 	memset(&tasks, sizeof(tasks), 0);
+
+	struct prng prng;
+	// TODO: Could make this some sort of less-deterministic value.
+	prng_init(&prng, 37);
+	for (int i = 0; i < NUM_TID; i++) {
+		for (int j = 0; j < USER_STACK_SIZE; j++) {
+			stacks[i][j] = prng_gen(&prng);
+		}
+	}
+
 	task_queue_init(&free_tds);
 	for (int i = 0; i < NUM_TID; i++) {
-		tasks.task_buf[i].tid = i - NUM_TID; // Is this the best way to do this?
-		task_queue_push(&free_tds, &tasks.task_buf[i]);
+		tasks[i].tid = i - NUM_TID; // Is this the best way to do this?
+		task_queue_push(&free_tds, &tasks[i]);
 	}
 	priority_task_queue_init(&queue);
 }
@@ -30,15 +47,12 @@ struct task_descriptor *task_create(void *entrypoint, int priority, int parent_t
 
 	int tid = task->tid + NUM_TID;
 	KFASSERT(tid_possible(tid), "%d", tid);
-	KASSERT((tid % NUM_TID) == (task - tasks.task_buf));
+	KASSERT((tid % NUM_TID) == (task - tasks));
 
 	// Full descending stack, so we actually initialize the sp to point one
 	// element past the end of the stack allocated for the task, where the
 	// stack will grow "backwards" from there (never touching that space).
-	void *sp = tasks.stacks[tid%NUM_TID + 1];
-	// TODO: Measure performance of this. It would be nice to avoid some
-	// potentially nefarious bugs, but may be too slow to be practical.
-	memset(sp - sizeof(tasks.stacks[0]), 0, sizeof(tasks.stacks[0]));
+	void *sp = stacks[tid%NUM_TID + 1];
 
 	unsigned cpsr;
 	__asm__ ("mrs %0, cpsr" : "=r" (cpsr));
@@ -83,8 +97,8 @@ struct task_descriptor *task_next_scheduled() {
 
 int tid_valid(int tid) {
 	return tid >= 0
-			&& tasks.task_buf[tid % NUM_TID].tid == tid
-			&& tasks.task_buf[tid % NUM_TID].state != DEAD;
+			&& tasks[tid % NUM_TID].tid == tid
+			&& tasks[tid % NUM_TID].state != DEAD;
 }
 int tid_possible(int tid) {
 	return tid >= 0; // TODO: What should this be?
@@ -94,7 +108,7 @@ int tid_next(void) {
 }
 struct task_descriptor *task_from_tid(int tid) {
 	KASSERT(tid >= 0);
-	struct task_descriptor *task = &tasks.task_buf[tid % NUM_TID];
+	struct task_descriptor *task = &tasks[tid % NUM_TID];
 	KASSERT(task->tid == tid); // Call tid_valid first to handle this gracefully.
 	return task;
 }
