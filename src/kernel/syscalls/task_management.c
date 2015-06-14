@@ -39,7 +39,7 @@ void exit_handler(struct task_descriptor *current_task) {
 	// that the send/receive has failed
 	// Should we signal when the task exits after receiving, but before replying?
 	// some other task might still reply to the message, according to the spec
-	current_task->state = ZOMBIE;
+	task_kill(current_task);
 	struct task_descriptor *td;
 	while ((td = task_queue_pop(&current_task->waiting_for_replies))) {
 		// signal to the sending task that the send failed

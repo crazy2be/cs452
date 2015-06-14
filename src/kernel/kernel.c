@@ -172,15 +172,7 @@ int boot(void (*init_task)(void), int init_task_priority, int debug) {
 	cleanup();
 
 	if (debug) {
-		int max = tid_next();
-		unsigned kernel_runtime = total_time_useconds;
-		for (int i = 0; i < max; i++) {
-			unsigned runtime = task_from_tid(i)->user_time_useconds;
-			printf("Task %d ran for %d us" EOL, i, runtime);
-			kernel_runtime -= runtime;
-		}
-		printf("Kernel ran for %d us" EOL, kernel_runtime);
-		printf("Ran for %d us total" EOL, total_time_useconds);
+		tasks_print_runtime(total_time_useconds);
 	}
 	return 0;
 }
