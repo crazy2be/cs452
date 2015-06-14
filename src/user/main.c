@@ -42,29 +42,22 @@ void init(void) {
 
 void test_init(void) {
 	start_servers();
-	fputs(COM1, "BEEP" EOL);
-	fprintf(COM1, "Hello, world! \"%s\"" EOL, "boop");
-	fputs(COM1, "BOOP" EOL);
 
-	for (int i = 0; i < 10; i++) {
-		const int sz = 1;
-		char buf[sz + 1];
-		fgets(COM2, buf, sz);
-		buf[sz] = '\0';
-		printf("Got input \"%s\"" EOL, buf);
+	printf("HELLO WORLD" EOL);
+
+	int switches[] = {4, 12};
+
+	for (int i = 0; i < sizeof(switches) / sizeof(switches[0]); i++) {
+		set_switch_state(switches[i], STRAIGHT);
+		if (i % 8 == 7) {
+			delay(10);
+			disable_switch_solenoid();
+		}
 	}
+	delay(10);
+	disable_switch_solenoid();
 
-	/* int switches[] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 153, 154, 155, 156}; */
-
-	/* for (int i = 0; i < sizeof(switches) / sizeof(switches[0]); i++) { */
-	/* 	set_switch_state(switches[i], CURVED); */
-	/* 	if (i % 8 == 7) { */
-	/* 		delay(10); */
-	/* 		disable_switch_solenoid(); */
-	/* 	} */
-	/* } */
-	/* delay(10); */
-	/* disable_switch_solenoid(); */
+	stop_servers();
 }
 
 #include "benchmark.h"

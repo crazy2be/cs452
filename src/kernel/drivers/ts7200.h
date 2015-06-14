@@ -30,11 +30,9 @@
 #ifdef QEMU
 #define UART0_BASE 0x101F1000
 #define UART1_BASE 0x101F2000
-#define UART2_BASE 0x101F3000
 #else
 #define UART0_BASE	0x808c0000
 #define UART1_BASE	0x808d0000
-#define UART2_BASE	0x808e0000
 #endif
 
 // All the below registers for UART1

@@ -51,36 +51,34 @@ void clear_bss(void) {
 void setup(void) {
 	// write to the control registers of the UARTs to properly configure them
 	// for transmission
-	uart_configure(COM1, 2400, ON);
-	uart_configure(COM2, 115200, OFF);
-	uart_configure(COM3, 115200, OFF);
+	uart_configure(COM1, 2400, OFF);
+	uart_configure(COM2, 115200, ON);
 
 	// clear UART errors
 	uart_clrerr(COM1);
 	uart_clrerr(COM2);
-	uart_clrerr(COM3);
 
-	fputs(COM3, "Boot");
+	fputs(COM2_DEBUG, "Boot");
 
 	clear_bss();
-	fputc(COM3, '.');
+	fputc(COM2_DEBUG, '.');
 
 	setup_irq_table();
-	fputc(COM3, '.');
+	fputc(COM2_DEBUG, '.');
 
 	await_init();
-	fputc(COM3, '.');
+	fputc(COM2_DEBUG, '.');
 
 	irq_setup();
-	fputc(COM3, '.');
+	fputc(COM2_DEBUG, '.');
 
 	setup_cache();
-	fputc(COM3, '.');
+	fputc(COM2_DEBUG, '.');
 
 	timer_init();
-	fputc(COM3, '.');
+	fputc(COM2_DEBUG, '.');
 
-	fputs(COM3, "IO..." EOL);
+	fputs(COM2_DEBUG, "IO..." EOL);
 
 	rand_init(0xdeadbeef);
 
