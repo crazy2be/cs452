@@ -45,17 +45,22 @@ void test_init(void) {
 
 	printf("HELLO WORLD" EOL);
 
-	int switches[] = {4, 12};
+	/* int switches[] = {4}; */
 
-	for (int i = 0; i < sizeof(switches) / sizeof(switches[0]); i++) {
-		set_switch_state(switches[i], STRAIGHT);
-		if (i % 8 == 7) {
-			delay(10);
-			disable_switch_solenoid();
-		}
-	}
-	delay(10);
-	disable_switch_solenoid();
+	/* for (int i = 0; i < sizeof(switches) / sizeof(switches[0]); i++) { */
+	/* 	set_switch_state(switches[i], STRAIGHT); */
+	/* 	if (i % 8 == 7) { */
+	/* 		delay(10); */
+	/* 		disable_switch_solenoid(); */
+	/* 	} */
+	/* } */
+	/* delay(10); */
+	/* disable_switch_solenoid(); */
+	set_train_speed(45, 8);
+	printf("time = %d" EOL, time());
+	delay(300);
+	printf("time = %d" EOL, time());
+	set_train_speed(45, 0);
 
 	stop_servers();
 }

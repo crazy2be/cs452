@@ -38,10 +38,17 @@ static int transmit_cts_ready(int channel, int irq_mask) {
 		// transition the CTS state machine
 		if (states[channel].cts == CTS_WAITING_TO_DEASSERT && !uart_cts(channel)) {
 			states[channel].cts = CTS_WAITING_TO_ASSERT;
-			// ready if TX is high
-			return uart_canwrite(channel);
+			return 0;
 		} else if (states[channel].cts == CTS_WAITING_TO_ASSERT && uart_cts(channel)) {
-			return 1;
+			states[channel].cts = CTS_READY;
+			if (uart_canwrite(channel)) {
+				// ready if TX is high
+				return 1;
+			} else {
+				// otherwise, we're waiting on TX, so shut off modem interrupts
+				uart_disable_irq(channel, MSIEN_MASK);
+				return 0;
+			}
 		} else {
 			// ignore any changes to the modem bits which aren't to the CTS bit
 			return 0;
@@ -52,46 +59,61 @@ static int transmit_cts_ready(int channel, int irq_mask) {
 			return 1;
 		} else {
 			// turn TX interrupt off in order to wait for CTS
-			uart_disable_tx_irq(channel);
+			uart_disable_irq(channel, TIEN_MASK);
 			return 0;
 		}
 	}
 }
 
-// td is possibly null (meaning nothing to output, so we'd just transition the output
-// state machine).
-// return 1 if the task waiting for the output is done, and should exit (should always
-// return 0 if the task is null).
-static int tx_handler(int channel, int irq_mask, struct task_descriptor *td) {
-	char *buf;
-	int buflen;
-	unsigned leaving_irq_mask; // the interrupts we want enabled/disabled when we leave
-	if (USE_FIFO(channel)) {
-		// we shouldn't be able to get modem interrupts, or interrupts without a waiting
-		// task, when doing IO configured in FIFO mode
-		KASSERT(td && UART_IRQ_IS_TX(irq_mask));
+static int tx_fifo_handler(int channel, int irq_mask, struct task_descriptor *td) {
+	// we shouldn't be able to get modem interrupts, or interrupts without a waiting
+	// task, when doing IO configured in FIFO mode
+	KASSERT(td && UART_IRQ_IS_TX(irq_mask));
 
-		buf = (char*) syscall_arg(td->context, 1);
-		buflen = (int) syscall_arg(td->context, 2);
+	char* buf = (char*) syscall_arg(td->context, 1);
+	int buflen = (int) syscall_arg(td->context, 2);
 
-		do {
-			uart_write(channel, *buf++);
-			buflen--;
-		} while(uart_canwritefifo(channel) && buflen > 0);
+	do {
+		uart_write(channel, *buf++);
+		buflen--;
+	} while(uart_canwritefifo(channel) && buflen > 0);
 
-		leaving_irq_mask = TIEN_MASK;
-	} else if (transmit_cts_ready(channel, irq_mask)) {
-		// if there is output ready
+	if (buflen <= 0) {
+		uart_disable_irq(channel, TIEN_MASK);
+		return 1;
+	}
+
+	td->context->r1 = (unsigned) buf;
+	td->context->r2 = (unsigned) buflen;
+	return 0;
+}
+
+static int tx_cts_handler(int channel, int irq_mask, struct task_descriptor *td) {
+	if (transmit_cts_ready(channel, irq_mask)) {
 		if (td) {
-			buf = (char*) syscall_arg(td->context, 1);
-			buflen = (int) syscall_arg(td->context, 2);
+			// if there is output ready
+			char *buf = (char*) syscall_arg(td->context, 1);
+			int buflen = (int) syscall_arg(td->context, 2);
 
+			KASSERT(uart_canwrite(channel) && states[channel].cts == CTS_READY);
 			// if there is IO we can do immediately, do it, then restart CTS state machine
 			uart_write(channel, *buf++);
 			buflen--;
 
 			states[channel].cts = CTS_WAITING_TO_DEASSERT;
-			leaving_irq_mask = TIEN_MASK | MSIEN_MASK;
+
+			// should leave with just MIS interrupts enabled if no more output,
+			// or TX & MIS enabled if there is
+			uart_enable_irq(channel, TIEN_MASK | MSIEN_MASK);
+
+			if (buflen <= 0) {
+				uart_disable_irq(channel, TIEN_MASK);
+				return 1;
+			}
+
+			td->context->r1 = (unsigned) buf;
+			td->context->r2 = (unsigned) buflen;
+			return 0;
 		} else {
 			// change state so we are ready to output when next requested to do so
 			states[channel].cts = CTS_READY;
@@ -101,18 +123,21 @@ static int tx_handler(int channel, int irq_mask, struct task_descriptor *td) {
 		}
 	} else {
 		// CTS / non-fifo isn't ready
+		// any necessary changes to interrupts were done in transmit_cts_ready
 		return 0;
 	}
+}
 
-	if (buflen <= 0) {
-		uart_disable_irq(channel, leaving_irq_mask);
-		return 1;
+// td is possibly null (meaning nothing to output, so we'd just transition the output
+// state machine).
+// return 1 if the task waiting for the output is done, and should exit (should always
+// return 0 if the task is null).
+static int tx_handler(int channel, int irq_mask, struct task_descriptor *td) {
+	if (USE_FIFO(channel)) {
+		return tx_fifo_handler(channel, irq_mask, td);
+	} else {
+		return tx_cts_handler(channel, irq_mask, td);
 	}
-
-	uart_enable_irq(channel, leaving_irq_mask);
-	td->context->r1 = (unsigned) buf;
-	td->context->r2 = (unsigned) buflen;
-	return 0;
 }
 
 static int rx_handler(int channel, struct task_descriptor *td) {

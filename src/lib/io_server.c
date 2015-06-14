@@ -88,14 +88,14 @@ static int notifier_get_channel(int server_tid) {
 
 static void tx_notifier(void) {
 	int parent = parent_tid();
-	const int evt = (notifier_get_channel(parent) * 2) + EID_COM1_WRITE;
+	int channel = notifier_get_channel(parent);
+	const int evt = (channel* 2) + EID_COM1_WRITE;
 	char buf[TX_BUFSZ];
 	const char req = IO_TX_NTFY;
 
 	for (;;) {
 		int len = send(parent, &req, sizeof(req), buf, TX_BUFSZ);
-		ASSERT(len >= 0); // shouldn't have gotten an error
-		// if (len <= 0) break; // quit if no work left TODO
+		if (len < 0) break; // quit if the server shut down
 		await(evt, buf, len);
 	}
 }
@@ -109,8 +109,8 @@ static void rx_notifier(void) {
 	for (;;) {
 		await(evt, buf + 4, RX_BUFSZ);
 		buf[0] = IO_RX_NTFY;
-		send(parent, buf, sizeof(buf), &resp, sizeof(resp));
-		// if (resp) break; // quit if no work left TODO
+		int err = send(parent, buf, sizeof(buf), &resp, sizeof(resp));
+		if (err < 0) break; // quit if the server shut down
 	}
 }
 
@@ -134,7 +134,7 @@ static void io_server_run() {
 	char_rbuf_init(&rx_buf);
 	io_rbuf_init(&rx_waiters);
 
-	while (shutdown_tid < 0 || !char_rbuf_empty(&tx_buf)) {
+	for (;;) {
 		struct io_request req;
 		int tid;
 
@@ -166,6 +166,7 @@ static void io_server_run() {
 			} else {
 				tx_ntfy = tid;
 			}
+			if (shutdown_tid >= 0 && char_rbuf_empty(&tx_buf)) goto cleanup;
 			break;
 		case IO_RX:
 			ASSERT(shutdown_tid < 0 && "Got new RX request while shutting down");
@@ -210,8 +211,8 @@ static void io_server_run() {
 			break;
 		case IO_STOP:
 			ASSERT(shutdown_tid < 0 && "Got new shutdown request while shutting down");
-			kprintf("Got shutdown request" EOL);
 			shutdown_tid = tid;
+			if (char_rbuf_empty(&tx_buf)) goto cleanup;
 			// we now need to wait for all characters of output to be flushed
 			break;
 		default:
@@ -220,7 +221,7 @@ static void io_server_run() {
 		}
 	}
 
-	kprintf("All bytes flushed; done" EOL);
+cleanup:
 	reply(shutdown_tid, NULL, 0);
 }
 
@@ -275,20 +276,6 @@ static int io_server_tid(int channel) {
 	return tids[channel];
 }
 
-static int iosrv_put_buf(const int channel, const char *buf, int buflen) {
-	struct io_request req;
-	unsigned resp;
-
-	req.type = IO_TX;
-	memcpy(req.u.buf, buf, buflen);
-
-	// TODO: offsetof() ?
-	unsigned msg_len = 4 + buflen; // need to worry about alignment when doing this calculation
-	int err = send(io_server_tid(channel), &req, msg_len, &resp, sizeof(resp));
-	ASSERT(err >= 0);
-
-	return (err < 0) ? -1 : 0;
-}
 
 // bw analogues to the functions below
 int bw_putc(const int channel, const char c) {
@@ -313,6 +300,20 @@ int bw_gets(const int channel, char *buf, int len) {
 	return 0;
 }
 
+int fput_buf(const int channel, const char *buf, int buflen) {
+	struct io_request req;
+	unsigned resp;
+
+	req.type = IO_TX;
+	memcpy(req.u.buf, buf, buflen);
+
+	// TODO: offsetof() ?
+	unsigned msg_len = 4 + buflen; // need to worry about alignment when doing this calculation
+	int err = send(io_server_tid(channel), &req, msg_len, &resp, sizeof(resp));
+	ASSERT(err >= 0);
+
+	return (err < 0) ? -1 : 0;
+}
 // functions which interact with the io server
 int fputs(const int channel, const char *str) {
 	if (channel == COM2_DEBUG) return bw_puts(COM2, str);
@@ -320,14 +321,14 @@ int fputs(const int channel, const char *str) {
 	KASSERT(usermode());
 	int len = strlen(str);
 	ASSERT(len <= MAX_STR_LEN);
-	return iosrv_put_buf(channel, str, len);
+	return fput_buf(channel, str, len);
 }
 
 int fputc(const int channel, const char c) {
 	if (channel == COM2_DEBUG) return bw_putc(COM2, c);
 
 	KASSERT(usermode());
-	return iosrv_put_buf(channel, &c, 1);
+	return fput_buf(channel, &c, 1);
 }
 
 int fgets(const int channel, char *buf, int len) {

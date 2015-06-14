@@ -4,12 +4,12 @@
 
 void set_train_speed(int train, int speed) {
 	ASSERT(1 <= train && train <= 80);
-	ASSERT(1 <= speed && speed <= 15);
+	ASSERT(0 <= speed && speed <= 14);
 #ifdef QEMU
 	ASSERT(fputs(COM1, "Changing train speed" EOL) == 0);
 #else
-	char train_command[3] = {speed - 1, train, 0};
-	ASSERT(fputs(COM1, train_command) == 0);
+	char train_command[2] = {speed, train};
+	ASSERT(fput_buf(COM1, train_command, sizeof(train_command)) == 0);
 #endif
 }
 
@@ -19,8 +19,8 @@ void set_switch_state(int sw, enum sw_direction d) {
 	ASSERT(fputs(COM1, "Changing switch position" EOL) == 0);
 #else
 	char cmd = (d == STRAIGHT) ? 0x21 : 0x22;
-	char sw_command[3] = {cmd, sw, 0};
-	ASSERT(fputs(COM1, sw_command) == 0);
+	char sw_command[2] = {cmd, sw};
+	ASSERT(fput_buf(COM1, sw_command, sizeof(sw_command)) == 0);
 #endif
 }
 

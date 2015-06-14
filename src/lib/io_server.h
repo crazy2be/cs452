@@ -11,6 +11,7 @@
 #endif
 
 // all of these functions are blocking
+int fput_buf(const int channel, const char *buf, int buflen);
 int fputs(const int channel, const char *str);
 int fputc(const int channel, const char c);
 
