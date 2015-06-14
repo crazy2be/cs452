@@ -28,10 +28,97 @@ void io_irq_init(void) {
 #define USE_FIFO(channel) (channel == COM2)
 #endif
 
-// TODO: I think we can dedupe some more of this code from rx/tx handler
-static void rx_handler(int channel, char **ppbuf, int *pbuflen) {
-	char *buf = *ppbuf;
-	int buflen = *pbuflen;
+// if ready to transmit, according to CTS state machine
+static int transmit_cts_ready(int channel, int irq_mask) {
+	if (UART_IRQ_IS_MODEM(irq_mask)) {
+		// modem bits changed; including possible changes to CTS
+		// unlike the other interrupts, we have to explicitly clear the modem interrupt
+		uart_clear_modem_irq(channel);
+
+		// transition the CTS state machine
+		if (states[channel].cts == CTS_WAITING_TO_DEASSERT && !uart_cts(channel)) {
+			states[channel].cts = CTS_WAITING_TO_ASSERT;
+			// ready if TX is high
+			return uart_canwrite(channel);
+		} else if (states[channel].cts == CTS_WAITING_TO_ASSERT && uart_cts(channel)) {
+			return 1;
+		} else {
+			// ignore any changes to the modem bits which aren't to the CTS bit
+			return 0;
+		}
+	} else {
+		// TX interrupt
+		if (states[channel].cts == CTS_READY) {
+			return 1;
+		} else {
+			// turn TX interrupt off in order to wait for CTS
+			uart_disable_tx_irq(channel);
+			return 0;
+		}
+	}
+}
+
+// td is possibly null (meaning nothing to output, so we'd just transition the output
+// state machine).
+// return 1 if the task waiting for the output is done, and should exit (should always
+// return 0 if the task is null).
+static int tx_handler(int channel, int irq_mask, struct task_descriptor *td) {
+	char *buf;
+	int buflen;
+	unsigned leaving_irq_mask; // the interrupts we want enabled/disabled when we leave
+	if (USE_FIFO(channel)) {
+		// we shouldn't be able to get modem interrupts, or interrupts without a waiting
+		// task, when doing IO configured in FIFO mode
+		KASSERT(td && UART_IRQ_IS_TX(irq_mask));
+
+		buf = (char*) syscall_arg(td->context, 1);
+		buflen = (int) syscall_arg(td->context, 2);
+
+		do {
+			uart_write(channel, *buf++);
+			buflen--;
+		} while(uart_canwritefifo(channel) && buflen > 0);
+
+		leaving_irq_mask = TIEN_MASK;
+	} else if (transmit_cts_ready(channel, irq_mask)) {
+		// if there is output ready
+		if (td) {
+			buf = (char*) syscall_arg(td->context, 1);
+			buflen = (int) syscall_arg(td->context, 2);
+
+			// if there is IO we can do immediately, do it, then restart CTS state machine
+			uart_write(channel, *buf++);
+			buflen--;
+
+			states[channel].cts = CTS_WAITING_TO_DEASSERT;
+			leaving_irq_mask = TIEN_MASK | MSIEN_MASK;
+		} else {
+			// change state so we are ready to output when next requested to do so
+			states[channel].cts = CTS_READY;
+			// turn off interrupts so we don't infinite loop
+			uart_disable_irq(channel, TIEN_MASK | MSIEN_MASK);
+			return 0;
+		}
+	} else {
+		// CTS / non-fifo isn't ready
+		return 0;
+	}
+
+	if (buflen <= 0) {
+		uart_disable_irq(channel, leaving_irq_mask);
+		return 1;
+	}
+
+	uart_enable_irq(channel, leaving_irq_mask);
+	td->context->r1 = (unsigned) buf;
+	td->context->r2 = (unsigned) buflen;
+	return 0;
+}
+
+static int rx_handler(int channel, struct task_descriptor *td) {
+	char *buf = (char*) syscall_arg(td->context, 1);
+	int buflen = (int) syscall_arg(td->context, 2);
+
 	if (USE_FIFO(channel)) {
 		// use the RX FIFO
 		do {
@@ -43,61 +130,15 @@ static void rx_handler(int channel, char **ppbuf, int *pbuflen) {
 		*buf++ = uart_read(channel);
 		buflen--;
 	}
-	*ppbuf = buf;
-	*pbuflen = buflen;
-}
-static void tx_handler(int channel, char **ppbuf, int *pbuflen) {
-	char *buf = *ppbuf;
-	int buflen = *pbuflen;
-	if (USE_FIFO(channel)) {
-		// use the TX FIFO, and don't use CTS
-		do {
-			uart_write(channel, *buf++);
-			buflen--;
-		} while(uart_canwritefifo(channel) && buflen > 0);
-	} else {
-		// don't use the FIFO, and do use CTS
-		if (states[channel].cts == CTS_READY) {
-			uart_write(channel, *buf++);
-			buflen--;
-			states[channel].cts = CTS_WAITING_TO_DEASSERT;
-			uart_restore_modem_irq(channel);
-		} else {
-			uart_disable_tx_irq(channel);
-		}
+
+	if (buflen <= 0) {
+		uart_disable_rx_irq(channel);
+		return 1;
 	}
-	*ppbuf = buf;
-	*pbuflen = buflen;
-}
 
-// watch for changes to the status register of the UART
-// this is used to wait for CTS to deassert, then assert again in order
-// to properly output to COM1 / the train controller
-static void modem_handler(int channel, char **ppbuf, int *pbuflen) {
-	KASSERT(channel == COM1 && "We shouldn't receive modem interrupts for COM2");
-
-	// unlike the other interrupts, we have to explicitly clear the modem interrupt
-	uart_clear_modem_irq(channel);
-
-	// transition the CTS state machine
-	if (states[channel].cts == CTS_WAITING_TO_DEASSERT && !uart_cts(channel)) {
-		states[channel].cts = CTS_WAITING_TO_ASSERT;
-	} else if (states[channel].cts == CTS_WAITING_TO_ASSERT && uart_cts(channel)) {
-		if (*ppbuf && uart_canwrite(channel)) {
-			// if there is IO we can do immediately, do it, then restart CTS state machine
-			uart_write(channel, *(*ppbuf)++);
-			(*pbuflen)--;
-			states[channel].cts = CTS_WAITING_TO_DEASSERT;
-			// make sure the tx interrupt is activated again, so we notice when TX -> 1
-			uart_restore_tx_irq(channel);
-		} else {
-			// change state so we are ready to output when next requested to do so
-			states[channel].cts = CTS_READY;
-			// turn off modem interrupts so we don't infinite loop
-			uart_disable_modem_irq(channel);
-		}
-	}
-	// ignore any changes to the modem bits which aren't to the CTS bit
+	td->context->r1 = (unsigned) buf;
+	td->context->r2 = buflen;
+	return 0;
 }
 
 static int mask_is_tx(int irq_mask) {
@@ -108,10 +149,6 @@ static int mask_is_tx(int irq_mask) {
 		KASSERT(0 && "UNKNOWN UART IRQ");
 	}
 }
-static void disable_irq(int channel, int is_tx) {
-	if (is_tx) uart_disable_tx_irq(channel);
-	else uart_disable_rx_irq(channel);
-}
 void io_irq_handler(int channel) {
 	int irq_mask = uart_irq_mask(channel);
 	int is_tx = mask_is_tx(irq_mask);
@@ -119,38 +156,13 @@ void io_irq_handler(int channel) {
 
 	int eid = eid_for_uart(channel, is_tx);
 	struct task_descriptor *td = get_awaiting_task(eid);
-	// interrupts should be turned off if there is no waiting task
-	// so we shouldn't even get this interrupt if there is no waiting task
 
-	char *buf;
-	int buflen;
-	if (td) {
-		buf = (char*) syscall_arg(td->context, 1);
-		buflen = (int) syscall_arg(td->context, 2);
-		KASSERT(buflen != 0);
-	} else {
-		// we switch off TX & RX interrupts when there is no waiting task, so
-		// since there isn't a waiting task, this must be a modem interrupt
-		KASSERT(UART_IRQ_IS_MODEM(irq_mask));
-		// set buf to NULL - modem_handler uses this to infer that there is no
-		// waiting task, which is a bit of a hack-job
-		// TODO: we should refactor that
-		buf = NULL;
-		buflen = 0;
-	}
+	int done = is_tx ? tx_handler(channel, irq_mask, td) : rx_handler(channel, td);
 
-	if (UART_IRQ_IS_MODEM(irq_mask)) modem_handler(channel, &buf, &buflen);
-	else if (is_tx) tx_handler(channel, &buf, &buflen);
-	else rx_handler(channel, &buf, &buflen);
-
-	if (buflen > 0) {
-		td->context->r1 = (unsigned) buf;
-		td->context->r2 = buflen;
-	} else if (td) {
+	if (done){
 		syscall_set_return(td->context, 0);
 		task_schedule(td);
 		clear_awaiting_task(eid);
-		disable_irq(channel, is_tx);
 	}
 }
 void io_irq_mask_add(int channel, int is_tx) {

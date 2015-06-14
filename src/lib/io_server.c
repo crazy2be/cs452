@@ -197,6 +197,7 @@ static void io_server_run() {
 				ASSERT(!char_rbuf_full(&rx_buf));
 				char_rbuf_put(&rx_buf, req.u.buf[i]);
 			}
+
 			bytes_rx += msg_len;
 
 			for (;;) {

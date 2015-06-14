@@ -122,6 +122,17 @@ int uart_cts(int channel) {
 // All interrupt sources are OR'd into a single interrupt line on the ICU.
 //
 
+void uart_enable_irq(int channel, unsigned mask) {
+	volatile int *ctrl = reg(channel, UART_CTLR_OFFSET);
+	*ctrl |= mask;
+}
+
+void uart_disable_irq(int channel, unsigned mask) {
+	volatile int *ctrl = reg(channel, UART_CTLR_OFFSET);
+	*ctrl &= ~mask;
+}
+
+// deprecated...
 void uart_disable_rx_irq(int channel) {
 	volatile int *ctrl = reg(channel, UART_CTLR_OFFSET);
 	*ctrl &= ~(RIEN_MASK | RTIEN_MASK);

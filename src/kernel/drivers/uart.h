@@ -22,13 +22,19 @@ int uart_canwritefifo(int channel);
 int uart_cts(int channel);
 
 // interrupt related things
+void uart_enable_irq(int channel, unsigned mask);
+void uart_disable_irq(int channel, unsigned mask);
+
+// individual irq controls deprecated
 void uart_disable_rx_irq(int channel);
 void uart_restore_tx_irq(int channel);
 void uart_disable_tx_irq(int channel);
 void uart_restore_rx_irq(int channel);
 void uart_disable_modem_irq(int channel);
 void uart_restore_modem_irq(int channel);
+
 void uart_clear_modem_irq(int channel);
+
 int uart_irq_mask(int channel);
 void uart_cleanup(int channel); // disable interrupts
 
