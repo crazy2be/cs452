@@ -4,13 +4,13 @@
 #include <prng.h>
 #include "kassert.h"
 
-#define NUM_TID 256
+#define NUM_TD 256
 // TODO: eventually, we may want to have variable stack sizes, controlled by some
 // parameter to create
 #define USER_STACK_SIZE 0x10000 // 64K stack
 
-static struct task_descriptor tasks[NUM_TID];
-static char stacks[NUM_TID][USER_STACK_SIZE];
+static struct task_descriptor tasks[NUM_TD];
+static char stacks[NUM_TD][USER_STACK_SIZE];
 static struct task_queue free_tds;
 static struct priority_task_queue queue;
 
@@ -20,15 +20,15 @@ void tasks_init(void) {
 	struct prng prng;
 	// TODO: Could make this some sort of less-deterministic value.
 	prng_init(&prng, 37);
-	for (int i = 0; i < NUM_TID; i++) {
+	for (int i = 0; i < NUM_TD; i++) {
 		for (int j = 0; j < USER_STACK_SIZE; j++) {
 			stacks[i][j] = prng_gen(&prng);
 		}
 	}
 
 	task_queue_init(&free_tds);
-	for (int i = 0; i < NUM_TID; i++) {
-		tasks[i].tid = i - NUM_TID; // Is this the best way to do this?
+	for (int i = 0; i < NUM_TD; i++) {
+		tasks[i].tid = i - NUM_TD; // Is this the best way to do this?
 		task_queue_push(&free_tds, &tasks[i]);
 	}
 	priority_task_queue_init(&queue);
@@ -45,14 +45,14 @@ struct task_descriptor *task_create(void *entrypoint, int priority, int parent_t
 	KASSERT(task);
 	KFASSERT(task->state == DEAD, "%d", task->state);
 
-	int tid = task->tid + NUM_TID;
+	int tid = task->tid + NUM_TD;
 	KFASSERT(tid_possible(tid), "%d", tid);
-	KASSERT((tid % NUM_TID) == (task - tasks));
+	KASSERT((tid % NUM_TD) == (task - tasks));
 
 	// Full descending stack, so we actually initialize the sp to point one
 	// element past the end of the stack allocated for the task, where the
 	// stack will grow "backwards" from there (never touching that space).
-	void *sp = stacks[tid%NUM_TID + 1];
+	void *sp = stacks[tid%NUM_TD + 1];
 
 	unsigned cpsr;
 	__asm__ ("mrs %0, cpsr" : "=r" (cpsr));
@@ -98,31 +98,28 @@ struct task_descriptor *task_next_scheduled() {
 
 int tid_valid(int tid) {
 	return tid >= 0
-			&& tasks[tid % NUM_TID].tid == tid
-			&& tasks[tid % NUM_TID].state != DEAD;
+			&& tasks[tid % NUM_TD].tid == tid
+			&& tasks[tid % NUM_TD].state != DEAD;
 }
 int tid_possible(int tid) {
-	return tid >= 0; // TODO: What should this be?
-}
-int tid_next(void) {
-	return 256; // TODO: Should be task_queue_top()->tid + NUM_TID or something?
+	return tid >= 0;
 }
 struct task_descriptor *task_from_tid(int tid) {
 	KASSERT(tid >= 0);
-	struct task_descriptor *task = &tasks[tid % NUM_TID];
+	struct task_descriptor *task = &tasks[tid % NUM_TD];
 	KASSERT(task->tid == tid); // Call tid_valid first to handle this gracefully.
 	return task;
 }
 
 void tasks_print_runtime(int total_runtime_us) {
 	int tasks_runtime_us = 0;
-	for (int i = 0; i < NUM_TID; i++) {
+	for (int i = 0; i < NUM_TD; i++) {
 		int runtime = tasks[i].user_time_useconds;
 		if (runtime == 0) continue;
 		printf("Task ");
-		for (int j = 0; j <= tasks[i].tid / NUM_TID; j++) {
+		for (int j = 0; j <= tasks[i].tid / NUM_TD; j++) {
 			if (j > 0) printf(", ");
-			printf("%d", tasks[i].tid%NUM_TID + j*NUM_TID);
+			printf("%d", tasks[i].tid%NUM_TD + j*NUM_TD);
 		}
 		printf(" ran for %d us" EOL, runtime);
 		tasks_runtime_us += runtime;
