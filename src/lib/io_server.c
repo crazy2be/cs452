@@ -71,10 +71,11 @@ static void transmit(int notifier_tid, struct char_rbuf *buf) {
 
 static int receive_data(int tid, struct char_rbuf *buf, int len) {
 	char reply_buf[MAX_STR_LEN];
-	for (unsigned i = 0; i < len && buf->l > 0; i++) {
+	int i;
+	for (i = 0; i < len && buf->l > 0; i++) {
 		reply_buf[i] = char_rbuf_take(buf);
 	}
-	reply(tid, reply_buf, len);
+	reply(tid, reply_buf, i);
 	return len;
 }
 
