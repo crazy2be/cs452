@@ -255,5 +255,5 @@ int main(int argc, char *argv[]) {
 	//boot(init_task, PRIORITY_MAX, 0);
 	//boot(messages_basic, PRIORITY_MAX);
 	//boot(message_suite, PRIORITY_MAX, 0);
-	boot(destroy_init, PRIORITY_MIN, 0);
+	boot(destroy_init, PRIORITY_MIN, 1);
 }

@@ -14,5 +14,6 @@ struct task_descriptor *task_next_scheduled();
 
 int tid_valid(int tid); // Does TID refer to a living task?
 int tid_possible(int tid);
-int tid_next(void);
 struct task_descriptor *task_from_tid(int tid);
+
+void tasks_print_runtime(int total_runtime_us);

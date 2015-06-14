@@ -75,6 +75,7 @@ struct task_descriptor *task_create(void *entrypoint, int priority, int parent_t
 		.priority = priority,
 		.state = READY,
 		.context = uc,
+		.user_time_useconds = task->user_time_useconds, // Preserve
 	};
 
 	return task;
@@ -111,4 +112,21 @@ struct task_descriptor *task_from_tid(int tid) {
 	struct task_descriptor *task = &tasks[tid % NUM_TID];
 	KASSERT(task->tid == tid); // Call tid_valid first to handle this gracefully.
 	return task;
+}
+
+void tasks_print_runtime(int total_runtime_us) {
+	int tasks_runtime_us = 0;
+	for (int i = 0; i < NUM_TID; i++) {
+		int runtime = tasks[i].user_time_useconds;
+		if (runtime == 0) continue;
+		printf("Task ");
+		for (int j = 0; j <= tasks[i].tid / NUM_TID; j++) {
+			if (j > 0) printf(", ");
+			printf("%d", tasks[i].tid%NUM_TID + j*NUM_TID);
+		}
+		printf(" ran for %d us" EOL, runtime);
+		tasks_runtime_us += runtime;
+	}
+	printf("Kernel ran for %d us" EOL, total_runtime_us - tasks_runtime_us);
+	printf("Ran for %d us total" EOL, total_runtime_us);
 }
