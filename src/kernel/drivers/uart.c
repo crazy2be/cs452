@@ -2,10 +2,10 @@
 #include <util.h>
 #include "../kassert.h"
 
-static int uart_bases[3] = {UART0_BASE, UART1_BASE, UART2_BASE};
+static int uart_bases[2] = {UART0_BASE, UART1_BASE};
 
 static int* reg(int channel, int off) {
-	if (COM1 <= channel && channel <= COM3) {
+	if (COM1 <= channel && channel <= COM2) {
 		return (int*)(uart_bases[channel] + off);
 	} else {
 		KASSERT(0 && "Invalid channel");
@@ -40,7 +40,8 @@ void uart_configure(int channel, int speed, int fifo) {
 	buf = fifo ? buf | FEN_MASK : buf & ~FEN_MASK;
 	if (channel == COM1) {
 		// 2 bits stop, 8 bit data, no parity
-		buf = buf | STP2_MASK; buf = buf & ~PEN_MASK;
+		buf |= STP2_MASK;
+		buf &= ~PEN_MASK;
 	}
 	*reg(channel, UART_LCRH_OFFSET) = buf;
 

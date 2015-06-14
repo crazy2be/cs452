@@ -1,4 +1,5 @@
 #include "irq.h"
+#include <io_server.h>
 
 // TS7200 has 64 possible interrupts, where as we only support the first 32
 // on versatile PB. Depending on which specific interrupts we need to listen
@@ -22,9 +23,9 @@ void dump_irq(void) {
 #else
 	volatile unsigned* data = (unsigned*) VIC1_BASE;
 	for (unsigned i = 0; i < 32; i++) {
-		printf("%x ", data[i]);
+		kprintf("%x ", data[i]);
 	}
-	printf(EOL);
+	kprintf(EOL);
 #endif
 }
 

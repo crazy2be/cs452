@@ -8,6 +8,6 @@
 
 #define ASSERT(stmt) {\
     if (!(stmt)) { \
-        fputs(COM3, "ASSERTION FAILED (" __FILE__ ":" STRINGIFY1(__LINE__) ") : " STRINGIFY2(stmt) EOL); \
+        fputs(COM2_DEBUG, "ASSERTION FAILED (" __FILE__ ":" STRINGIFY1(__LINE__) ") : " STRINGIFY2(stmt) EOL); \
         exitk(); \
     }}

@@ -2,7 +2,7 @@
 
 #define COM1 0
 #define COM2 1
-#define COM3 2 // kernel debug channel, uses BWIO
+#define COM2_DEBUG 2 // kernel debug channel, uses BWIO
 
 #ifdef QEMU
 #define EOL "\n\r" // This is the same now that we use telnet.
@@ -29,7 +29,7 @@ int fprintf(int channel, const char *format, ...);
 #define getc(...) fgetc(COM2, __VA_ARGS__)
 #define printf(...) fprintf(COM2, __VA_ARGS__)
 
-#define kprintf(...) fprintf(COM3, __VA_ARGS__)
+#define kprintf(...) fprintf(COM2_DEBUG, __VA_ARGS__)
 
 // do all of the initialization needed to start an IO server with the given parameters
 // (because we need to pass data in, we need to do some message passing in addition

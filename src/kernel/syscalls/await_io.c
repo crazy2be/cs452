@@ -106,6 +106,7 @@ static int mask_is_tx(int irq_mask) {
 	else {
 		kprintf("irq_mask: %d\r\n", irq_mask);
 		KASSERT(0 && "UNKNOWN UART IRQ");
+		return -1; // unreachable
 	}
 }
 static void disable_irq(int channel, int is_tx) {

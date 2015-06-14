@@ -292,7 +292,7 @@ static int iosrv_put_buf(const int channel, const char *buf, int buflen) {
 // bw analogues to the functions below
 int bw_putc(const int channel, const char c) {
 	/* KASSERT(!usermode()); */
-	while(!uart_canwrite(channel));
+	while(!uart_canwritefifo(channel));
 	uart_write(channel, c);
 	return 0;
 }
@@ -312,11 +312,9 @@ int bw_gets(const int channel, char *buf, int len) {
 	return 0;
 }
 
-#define USE_BWIO(channel) ((channel) == COM3)
-
 // functions which interact with the io server
 int fputs(const int channel, const char *str) {
-	if (USE_BWIO(channel)) return bw_puts(channel, str);
+	if (channel == COM2_DEBUG) return bw_puts(COM2, str);
 
 	KASSERT(usermode());
 	int len = strlen(str);
@@ -325,14 +323,14 @@ int fputs(const int channel, const char *str) {
 }
 
 int fputc(const int channel, const char c) {
-	if (USE_BWIO(channel)) return bw_putc(channel, c);
+	if (channel == COM2_DEBUG) return bw_putc(COM2, c);
 
 	KASSERT(usermode());
 	return iosrv_put_buf(channel, &c, 1);
 }
 
 int fgets(const int channel, char *buf, int len) {
-	if (USE_BWIO(channel)) return bw_gets(channel, buf, len);
+	if (channel == COM2_DEBUG) return bw_gets(COM2, buf, len);
 
 	KASSERT(usermode());
 	struct io_request req;
