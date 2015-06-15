@@ -163,10 +163,11 @@ static void io_server_run() {
 		case IO_TX_NTFY:
 			if (!char_rbuf_empty(&tx_buf)) {
 				transmit(tid, &tx_buf);
-			} else {
+			} else if (shutdown_tid < 0) {
 				tx_ntfy = tid;
+			} else {
+				goto cleanup;
 			}
-			if (shutdown_tid >= 0 && char_rbuf_empty(&tx_buf)) goto cleanup;
 			break;
 		case IO_RX:
 			ASSERT(shutdown_tid < 0 && "Got new RX request while shutting down");
@@ -222,6 +223,7 @@ static void io_server_run() {
 	}
 
 cleanup:
+	ASSERT(char_rbuf_empty(&tx_buf));
 	reply(shutdown_tid, NULL, 0);
 }
 

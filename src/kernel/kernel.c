@@ -83,6 +83,7 @@ void setup(void) {
 
 	timer_init();
 	fputc(COM2_DEBUG, '.');
+	fputs(COM2_DEBUG, EOL);
 
 }
 
