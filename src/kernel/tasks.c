@@ -3,28 +3,23 @@
 #include <util.h>
 #include <prng.h>
 #include "kassert.h"
-
-#define NUM_TD 256
-// TODO: eventually, we may want to have variable stack sizes, controlled by some
-// parameter to create
-#define USER_STACK_SIZE 0x10000 // 64K stack
+#include "stack.h"
 
 static struct task_descriptor tasks[NUM_TD];
-static char stacks[NUM_TD][USER_STACK_SIZE];
 static struct task_queue free_tds;
 static struct priority_task_queue queue;
 
 void tasks_init(void) {
 	memset(&tasks, sizeof(tasks), 0);
 
-	struct prng prng;
+	/* struct prng prng; */
 	// TODO: Could make this some sort of less-deterministic value.
-	prng_init(&prng, 37);
-	for (int i = 0; i < NUM_TD; i++) {
-		for (int j = 0; j < USER_STACK_SIZE; j++) {
-			stacks[i][j] = prng_gen(&prng);
-		}
-	}
+	/* prng_init(&prng, 37); */
+	/* for (int i = 0; i < NUM_TD; i++) { */
+	/* 	for (int j = 0; j < USER_STACK_SIZE; j++) { */
+	/* 		stacks[i][j] = prng_gen(&prng); */
+	/* 	} */
+	/* } */
 
 	task_queue_init(&free_tds);
 	for (int i = 0; i < NUM_TD; i++) {

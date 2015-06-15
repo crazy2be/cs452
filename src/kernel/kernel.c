@@ -75,14 +75,15 @@ void setup(void) {
 	setup_cache();
 	fputc(COM2_DEBUG, '.');
 
+	rand_init(0xdeadbeef);
+	fputc(COM2_DEBUG, '.');
+
+	tasks_init();
+	fputc(COM2_DEBUG, '.');
+
 	timer_init();
 	fputc(COM2_DEBUG, '.');
 
-	fputs(COM2_DEBUG, "IO..." EOL);
-
-	rand_init(0xdeadbeef);
-
-	tasks_init();
 }
 
 static void cleanup(void) {

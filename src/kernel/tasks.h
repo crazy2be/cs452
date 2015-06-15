@@ -1,6 +1,11 @@
 #pragma once
 #include "task_descriptor.h"
 
+#define NUM_TD 256
+// TODO: eventually, we may want to have variable stack sizes, controlled by some
+// parameter to create
+#define USER_STACK_SIZE 0x10000 // 64K stack
+
 void tasks_init(void);
 
 int tasks_full(); // Space for more tasks?
