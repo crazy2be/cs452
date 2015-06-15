@@ -7,7 +7,7 @@
 // this panics, and stops execution of the kernel, if the assertion fails
 #define KFASSERT(stmt,fmt,...) {\
     if (!(stmt)) { \
-        kprintf("KERNEL ASSERTION FAILED (" __FILE__ ":" STRINGIFY1(__LINE__) ") : " STRINGIFY2(stmt) EOL fmt EOL, ##__VA_ARGS__); \
+        kprintf("%s: " fmt EOL, "KERNEL ASSERTION FAILED (" __FILE__ ":" STRINGIFY1(__LINE__) ") : " STRINGIFY2(stmt) EOL, ##__VA_ARGS__); \
 		exited_main(); \
     } }
 
