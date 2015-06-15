@@ -7,6 +7,8 @@
 #include <util.h>
 #include "track_control.h"
 #include "servers.h"
+#include "commandsrv.h"
+#include "displaysrv.h"
 #include "../kernel/drivers/timer.h"
 
 struct init_reply {
@@ -43,23 +45,36 @@ void init(void) {
 void test_init(void) {
 	start_servers();
 
-	printf("Hello world" EOL);
+	displaysrv();
+	commandsrv();
+	/* printf("Hello world" EOL); */
+	/* char buf[] = {0xE2, 0x94, 0x90}; */
+	/* char buf[128]; */
+	/* for (int i = 0; i < 128; i++) { */
+	/* 	buf[i] = 128 + i; */
+	/* } */
+	/* fput_buf(COM2, buf, sizeof(buf)); */
+	/* fput_buf(COM2, buf, sizeof(buf)); */
+	/* fput_buf(COM2, buf, sizeof(buf)); */
+	/* fput_buf(COM2, buf, sizeof(buf)); */
+	/* printf("Hello world" EOL); */
 
-	int switches[] = {4, 12};
+	/* int switches[] = {4, 12}; */
 
-	for (int i = 0; i < sizeof(switches) / sizeof(switches[0]); i++) {
-		set_switch_state(switches[i], CURVED);
-		if (i % 8 == 7) {
-			delay(10);
-			disable_switch_solenoid();
-		}
-	}
-	delay(10);
-	disable_switch_solenoid();
+	/* for (int i = 0; i < sizeof(switches) / sizeof(switches[0]); i++) { */
+	/* 	set_switch_state(switches[i], CURVED); */
+	/* 	if (i % 8 == 7) { */
+	/* 		delay(10); */
+	/* 		disable_switch_solenoid(); */
+	/* 	} */
+	/* } */
+	/* delay(10); */
+	/* disable_switch_solenoid(); */
 
-	printf("Goodbye, world" EOL);
+	/* printf("Goodbye, world" EOL); */
 
-	stop_servers();
+	/* delay(100); */
+	/* stop_servers(); */
 }
 
 #include "benchmark.h"

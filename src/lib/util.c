@@ -34,3 +34,11 @@ int strcmp(const char *a, const char *b) {
 	}
 	return *a - *b;
 }
+
+int strncmp(const char *a, const char *b, int n) {
+	while (*a && *a == *b && n-- > 0) {
+		a++;
+		b++;
+	}
+	return n > 0 && *a - *b;
+}

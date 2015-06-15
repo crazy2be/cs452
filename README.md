@@ -38,6 +38,7 @@ Useful links:
 ### General
 
  - [ARMv4 Manual](http://www.cgl.uwaterloo.ca/~wmcowan/teaching/cs452/pdf/arm-architecture.pdf)
+ - [Terminal escape sequences](http://ascii-table.com/ansi-escape-sequences.php)
 
 ### TS7200 hardware
 

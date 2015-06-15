@@ -6,6 +6,8 @@
 #define STRINGIFY2(STR) #STR
 #define STRINGIFY1(STR) STRINGIFY2(STR)
 
+#define offsetof(type, member) __builtin_offsetof(type, member)
+
 void exited_main(void);
 
 void sleep(int n);
@@ -19,6 +21,7 @@ int modi(int a, int b);
 int strlen(const char *s);
 char* strcpy(char *dst, const char *src);
 int strcmp(const char *a, const char *b);
+int strncmp(const char *a, const char *b, int n);
 
 static inline int usermode(void) {
 	unsigned cpsr;

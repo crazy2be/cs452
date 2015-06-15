@@ -27,7 +27,7 @@ int fprintf(int channel, const char *format, ...);
 #define puts(...) fputs(COM2, __VA_ARGS__)
 #define putc(...) fputc(COM2, __VA_ARGS__)
 #define gets(...) fgets(COM2, __VA_ARGS__)
-#define getc(...) fgetc(COM2, __VA_ARGS__)
+#define getc() fgetc(COM2)
 #define printf(...) fprintf(COM2, __VA_ARGS__)
 
 #define kprintf(...) fprintf(COM2_DEBUG, __VA_ARGS__)
