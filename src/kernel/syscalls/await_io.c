@@ -89,41 +89,41 @@ static int tx_fifo_handler(int channel, int irq_mask, struct task_descriptor *td
 }
 
 static int tx_cts_handler(int channel, int irq_mask, struct task_descriptor *td) {
-	if (transmit_cts_ready(channel, irq_mask)) {
-		if (td) {
-			// if there is output ready
-			char *buf = (char*) syscall_arg(td->context, 1);
-			int buflen = (int) syscall_arg(td->context, 2);
-
-			KASSERT(uart_canwrite(channel) && states[channel].cts == CTS_READY);
-			// if there is IO we can do immediately, do it, then restart CTS state machine
-			uart_write(channel, *buf++);
-			buflen--;
-
-			states[channel].cts = CTS_WAITING_TO_DEASSERT;
-
-			// should leave with just MIS interrupts enabled if no more output,
-			// or TX & MIS enabled if there is
-			uart_enable_irq(channel, TIEN_MASK | MSIEN_MASK);
-
-			if (buflen <= 0) {
-				uart_disable_irq(channel, TIEN_MASK);
-				return 1;
-			}
-
-			td->context->r1 = (unsigned) buf;
-			td->context->r2 = (unsigned) buflen;
-			return 0;
-		} else {
-			// change state so we are ready to output when next requested to do so
-			states[channel].cts = CTS_READY;
-			// turn off interrupts so we don't infinite loop
-			uart_disable_irq(channel, TIEN_MASK | MSIEN_MASK);
-			return 0;
-		}
-	} else {
+	if (!transmit_cts_ready(channel, irq_mask)) {
 		// CTS / non-fifo isn't ready
 		// any necessary changes to interrupts were done in transmit_cts_ready
+		return 0;
+	}
+
+	if (td) {
+		// if there is output ready
+		char *buf = (char*) syscall_arg(td->context, 1);
+		int buflen = (int) syscall_arg(td->context, 2);
+
+		KASSERT(uart_canwrite(channel) && states[channel].cts == CTS_READY);
+		// if there is IO we can do immediately, do it, then restart CTS state machine
+		uart_write(channel, *buf++);
+		buflen--;
+
+		states[channel].cts = CTS_WAITING_TO_DEASSERT;
+
+		// should leave with just MIS interrupts enabled if no more output,
+		// or TX & MIS enabled if there is
+		uart_enable_irq(channel, TIEN_MASK | MSIEN_MASK);
+
+		if (buflen <= 0) {
+			uart_disable_irq(channel, TIEN_MASK);
+			return 1;
+		}
+
+		td->context->r1 = (unsigned) buf;
+		td->context->r2 = (unsigned) buflen;
+		return 0;
+	} else {
+		// change state so we are ready to output when next requested to do so
+		states[channel].cts = CTS_READY;
+		// turn off interrupts so we don't infinite loop
+		uart_disable_irq(channel, TIEN_MASK | MSIEN_MASK);
 		return 0;
 	}
 }
