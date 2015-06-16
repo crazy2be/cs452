@@ -46,9 +46,9 @@ void init(void) {
 void test_init(void) {
 	start_servers();
 
-	/* sensorsrv(); */
 	displaysrv();
 	commandsrv();
+	sensorsrv();
 	start_trains();
 	trains_set_speed(12, 5);
 
@@ -67,7 +67,7 @@ void test_init(void) {
 	/* int switches[] = {4, 12}; */
 
 	/* for (int i = 0; i < sizeof(switches) / sizeof(switches[0]); i++) { */
-	/* 	set_switch_state(switches[i], CURVED); */
+	/* 	set_switch_state(switches[i], STRAIGHT); */
 	/* 	if (i % 8 == 7) { */
 	/* 		delay(10); */
 	/* 		disable_switch_solenoid(); */

@@ -104,6 +104,16 @@ int get_integer(char *cmd, int *ip, int *out) {
 // High level interface
 //
 
+void handle_tr(int displaysrv, int train, int speed) {
+	trains_set_speed(train, speed);
+	displaysrv_console_feedback(displaysrv, "");
+}
+
+void handle_sw(int displaysrv, int sw, enum sw_direction pos) {
+	displaysrv_update_switch(displaysrv, sw, pos);
+	displaysrv_console_feedback(displaysrv, "");
+}
+
 void process_command(char *cmd, int displaysrv) {
 	int i = 0;
 	enum command_type type = get_command_type(cmd, &i);
@@ -121,7 +131,7 @@ void process_command(char *cmd, int displaysrv) {
 			if (get_integer(cmd, &i, &speed)) {
 				break;
 			}
-			displaysrv_console_feedback(displaysrv, "");
+			handle_tr(displaysrv, train, speed);
 			return;
 		}
 	case SW:
@@ -146,8 +156,7 @@ void process_command(char *cmd, int displaysrv) {
 			}
 			if (cmd[i] != '\0') break;
 			/* printf("Parsed command SW %d %d" EOL, sw, pos); */
-			displaysrv_update_switch(displaysrv, sw, pos);
-			displaysrv_console_feedback(displaysrv, "");
+			handle_sw(displaysrv, sw, pos);
 			return;
 		}
 	case RV:
