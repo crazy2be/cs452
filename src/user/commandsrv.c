@@ -105,8 +105,7 @@ int get_integer(char *cmd, int *ip, int *out) {
 
 void handle_tr(int displaysrv, int train, int speed) {
 	set_train_speed(train, speed);
-	printf("TR %d %d" EOL, train, speed);
-	displaysrv_console_feedback(displaysrv, "TR received");
+	displaysrv_console_feedback(displaysrv, "");
 }
 
 void handle_sw(int displaysrv, int sw, enum sw_direction pos) {

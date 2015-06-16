@@ -8,3 +8,5 @@ void set_train_speed(int train, int speed);
 void set_switch_state(int sw, enum sw_direction d);
 void disable_switch_solenoid(void);
 void send_sensor_poll(void);
+
+#define SENSOR_COUNT 80

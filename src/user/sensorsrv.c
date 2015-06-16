@@ -1,5 +1,7 @@
 #include "sensorsrv.h"
 #include "track_control.h"
+#include "displaysrv.h"
+#include "nameserver.h"
 #include <assert.h>
 #include <io_server.h>
 #include <kernel.h>
@@ -42,26 +44,12 @@ void sensor_repr(int n, char *buf) {
 }
 
 void start_sensorsrv(void) {
-	struct sensor_state sensors, old_sensors;
-	char buf[4];
-
-	memset(&old_sensors, 0, sizeof(old_sensors));
-
-	printf("Starting sensorsrv" EOL);
-
+	int displaysrv = whois(DISPLAYSRV_NAME);
+	struct sensor_state sensors;
 	for (;;) {
 		send_sensor_poll();
-		fgets(COM1, (char*) &sensors, 10);
-
-		for (int i = 0; i < 80; i++) {
-			int status = sensor_get(&sensors, i);
-			if (status != sensor_get(&old_sensors, i)) {
-				sensor_repr(i, buf);
-				printf("Saw sensor %s change to %d" EOL, buf, status);
-			}
-		}
-
-		old_sensors = sensors;
+		ASSERT(fgets(COM1, (char*) &sensors, 10) >= 0);
+		displaysrv_update_sensor(displaysrv, &sensors);
 	}
 }
 

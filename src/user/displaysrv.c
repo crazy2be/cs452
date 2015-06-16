@@ -53,6 +53,8 @@ struct sw3_display {
 	unsigned char lx, ly, sx, sy, rx, ry;
 };
 
+// TODO: handle 3-way switches
+
 static const struct sw2_display switch_display_info[] = {
 	{ 45, 7,  '\\', 45, 6,  '_'  }, // 1
 	{ 42, 4,  '\\', 42, 3,  '_'  }, // 2
@@ -74,6 +76,54 @@ static const struct sw2_display switch_display_info[] = {
 	{ 30, 0,  '_',  30, 1,  '\\' }, // 18
 };
 
+struct sensor_display {
+	// coordinates of first letter of sensor id on the map
+	unsigned char x, y;
+};
+
+static const struct sensor_display sensor_display_info[] = {
+	{ 44, 25 }, // A1 & A2
+	{ 35, 18 }, // A3 & A4
+	{ 42, 1  }, // A5 & A6
+	{ 44, 4  }, // A7 & A8
+	{ 47, 7  }, // A9 & A10
+	{ 50, 10 }, // A11 & A12
+	{ 47, 22 }, // A13 & A14
+	{ 50, 18 }, // A15 & A15
+	{ 24, 7  }, // B1 & B2
+	{ 28, 8  }, // B3 & B4
+	{ 24, 22 }, // B5 & B6
+	{ 51, 7  }, // B7 & B8
+	{ 51, 1  }, // B9 & B10
+	{ 51, 4  }, // B11 & B12
+	{ 16, 10 }, // B13 & B14
+	{ 34, 10 }, // B15 & B15
+	{ 26, 10 },
+	{ 10, 1  },
+	{ 33, 4  },
+	{ 32, 1  },
+	{ 33, 8  },
+	{ 32, 20 },
+	{ 32, 25 },
+	{ 27, 4  },
+	{ 17, 18 },
+	{ 19, 22 },
+	{ 8,  18 },
+	{ 3,  23 },
+	{ 1,  8  },
+	{ 14, 4  },
+	{ 19, 7  },
+	{ 14, 8  },
+	{ 26, 18 },
+	{ 15, 20 },
+	{ 10, 20 },
+	{ 10, 25 },
+	{ 8,  10 },
+	{ 4,  3  },
+	{ 10, 8  },
+	{ 28, 20 },
+};
+
 #define HLINE "\xe2\x94\x80"
 #define VLINE "\xe2\x94\x82"
 #define ULCORNER "\xe2\x94\x8c"
@@ -90,7 +140,7 @@ static const struct sw2_display switch_display_info[] = {
 #define TRAIN_X_OFFSET (1 + 1)
 #define TRAIN_Y_OFFSET (1 + 1)
 #define FEEDBACK_X_OFFSET TRAIN_X_OFFSET
-#define FEEDBACK_Y_OFFSET (1 + 2 + TRACK_DISPLAY_HEIGHT)
+#define FEEDBACK_Y_OFFSET (1 + 2 + TRACK_DISPLAY_HEIGHT + 1)
 #define CONSOLE_X_OFFSET TRAIN_X_OFFSET
 #define CONSOLE_Y_OFFSET (FEEDBACK_Y_OFFSET + 2)
 
@@ -124,6 +174,7 @@ void initial_draw(void) {
 	for (int i = 0; i < TRACK_DISPLAY_HEIGHT; i++) {
 		printf(VLINE "%s                     " VLINE EOL, track_repr[i]);
 	}
+	vbox(1);
 
 	hline(LTEE, RTEE);
 
@@ -147,8 +198,7 @@ struct displaysrv_req {
 			enum sw_direction pos;
 		} sw;
 		struct {
-			unsigned char num;
-			unsigned char tripped;
+			struct sensor_state state;
 		} sensor;
 		struct {
 			char input;
@@ -159,6 +209,34 @@ struct displaysrv_req {
 		} feedback;
 	} data;
 };
+
+void update_sensor(struct sensor_state *sensors, struct sensor_state *old_sensors) {
+	char buf[4];
+	for (int i = 0; i < SENSOR_COUNT; i += 2) {
+		int s1 = sensor_get(sensors, i);
+		int s2 = sensor_get(sensors, i + 1);
+		if (s1 != sensor_get(old_sensors, i) || s2 != sensor_get(old_sensors, i + 1)) {
+			struct sensor_display coords = sensor_display_info[i / 2];
+			if (s1 || s2) {
+				int to_draw = s1 ? i : i + 1;
+				sensor_repr(to_draw, buf);
+				if (!buf[2]) {
+					buf[2] = ' ';
+					buf[3] = '\0';
+				}
+			} else {
+				// clear sensor from display
+				buf[0] = buf[1] = buf[2] = ' ';
+				buf[3] = '\0';
+			}
+
+			printf("\e[s\e[%d;%dH%s\e[u", coords.y + TRAIN_Y_OFFSET,
+					coords.x + TRAIN_X_OFFSET, buf);
+			/* printf("Saw sensor %s change to %d" EOL, buf, status); */
+		}
+	}
+	*old_sensors = *sensors;
+}
 
 void update_switch(int sw, enum sw_direction pos) {
 	if (sw >= 1 && sw <= 18) {
@@ -221,6 +299,8 @@ void displaysrv_start(void) {
 
 	initial_draw();
 
+	struct sensor_state old_sensors;
+	memset(&old_sensors, 0, sizeof(old_sensors));
 	struct displaysrv_req req;
 	int tid;
 
@@ -232,6 +312,9 @@ void displaysrv_start(void) {
 		switch (req.type) {
 		case UPDATE_SWITCH:
 			update_switch(req.data.sw.num, req.data.sw.pos);
+			break;
+		case UPDATE_SENSOR:
+			update_sensor(&req.data.sensor.state, &old_sensors);
 			break;
 		case CONSOLE_INPUT:
 			console_input(req.data.console_input.input);
@@ -289,6 +372,12 @@ void displaysrv_console_feedback(int displaysrv, char *fb) {
 	struct displaysrv_req req;
 	strcpy(req.data.feedback.feedback, fb);
 	displaysrv_send(displaysrv, CONSOLE_FEEDBACK, &req);
+}
+
+void displaysrv_update_sensor(int displaysrv, struct sensor_state *state) {
+	struct displaysrv_req req;
+	req.data.sensor.state = *state;
+	displaysrv_send(displaysrv, UPDATE_SENSOR, &req);
 }
 
 void displaysrv_update_switch(int displaysrv, int sw, enum sw_direction pos) {

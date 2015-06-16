@@ -46,9 +46,9 @@ void init(void) {
 void test_init(void) {
 	start_servers();
 
+	displaysrv();
+	commandsrv();
 	sensorsrv();
-	/* displaysrv(); */
-	/* commandsrv(); */
 
 	/* printf("Hello world" EOL); */
 	/* char buf[] = {0xE2, 0x94, 0x90}; */
