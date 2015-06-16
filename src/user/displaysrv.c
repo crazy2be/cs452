@@ -119,7 +119,8 @@ void initial_draw(void) {
 }
 
 #define MAX_FEEDBACK_LEN 80
-enum displaysrv_req_type { UPDATE_SWITCH, UPDATE_SENSOR, CONSOLE_INPUT, CONSOLE_CLEAR, CONSOLE_FEEDBACK };
+enum displaysrv_req_type { UPDATE_SWITCH, UPDATE_SENSOR, CONSOLE_INPUT,
+	CONSOLE_BACKSPACE, CONSOLE_CLEAR, CONSOLE_FEEDBACK };
 struct displaysrv_req {
 	enum displaysrv_req_type type;
 	// the data associated with each request
@@ -135,7 +136,7 @@ struct displaysrv_req {
 		struct {
 			char input;
 		} console_input;
-		// nothing for console clear
+		// nothing for console clear or backspace
 		struct {
 			char feedback[MAX_FEEDBACK_LEN + 1]; // null terminated string
 		} feedback;
@@ -171,7 +172,7 @@ void update_switch(int sw, enum sw_direction pos) {
 			filler_char = (pos == STRAIGHT) ? '_' : ' ';
 			last_x += (disp.cr == '/') ? 1 : -1;
 		}
-		printf("\e[s\e[%d;%dH%c\e[%d;%dH%c\e[u",
+		printf("\e[s\e[%d;%dH\e[1;31m%c\e[0m\e[%d;%dH%c\e[u",
 			current_y + TRAIN_Y_OFFSET, current_x + TRAIN_X_OFFSET, switch_char,
 			last_y + TRAIN_Y_OFFSET, last_x + TRAIN_X_OFFSET, filler_char);
 	} else {
@@ -181,6 +182,10 @@ void update_switch(int sw, enum sw_direction pos) {
 
 void console_input(char c) {
 	putc(c);
+}
+
+void console_backspace(void) {
+	puts("\b \b");
 }
 
 void console_clear(void) {
@@ -210,6 +215,9 @@ void displaysrv_start(void) {
 		case CONSOLE_INPUT:
 			console_input(req.data.console_input.input);
 			break;
+		case CONSOLE_BACKSPACE:
+			console_backspace();
+			break;
 		case CONSOLE_CLEAR:
 			console_clear();
 			break;
@@ -235,6 +243,13 @@ void displaysrv_console_input(int displaysrv, char c) {
 	req.data.console_input.input = c;
 	ASSERT(send(displaysrv, &req, sizeof(req), NULL, 0) == 0);
 }
+
+void displaysrv_console_backspace(int displaysrv) {
+	struct displaysrv_req req;
+	req.type = CONSOLE_BACKSPACE;
+	ASSERT(send(displaysrv, &req, sizeof(req), NULL, 0) == 0);
+}
+
 void displaysrv_console_clear(int displaysrv) {
 	struct displaysrv_req req;
 	req.type = CONSOLE_CLEAR;

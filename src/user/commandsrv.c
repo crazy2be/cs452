@@ -13,10 +13,16 @@ void get_command(char *buf, int buflen, int displaysrv) {
 		if (c == '\r') {
 			displaysrv_console_clear(displaysrv);
 			break;
+		} else if (c == '\b') {
+			if (i > 0) {
+				i--;
+				displaysrv_console_backspace(displaysrv);
+			}
+		} else {
+			displaysrv_console_input(displaysrv, c);
+			buf[i++] = c;
+			ASSERT(i < buflen && "We are about to overflow the command buffer");
 		}
-		displaysrv_console_input(displaysrv, c);
-		buf[i++] = c;
-		ASSERT(i < buflen && "We are about to overflow the command buffer");
 	}
 	buf[i++] = '\0';
 }
@@ -53,7 +59,6 @@ char *command_listing[] = { "tr", "sw", "rv", "q" };
 enum command_type get_command_type(char *cmd, int *ip) {
 	int i = *ip;
 	while (is_alpha(cmd[i])) {
-		putc(cmd[i]);
 		i++;
 	}
 	for (int c = 0; c < sizeof(command_listing) / sizeof(command_listing[0]); c++) {
