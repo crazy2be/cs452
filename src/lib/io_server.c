@@ -60,7 +60,6 @@ struct io_request {
 static void transmit(int notifier_tid, struct char_rbuf *buf) {
 	// we do a little bit of nastiness to pull the message directly out
 	// of the rbuf
-	if (char_rbuf_empty(buf)) return; // TODO: this shouldn't be necessary...
 	char *msg_start = &buf->buf[buf->i];
 	// let the msg go either to the end of the rbuf, or to the max size of the notifier buf
 	int msg_len = MIN(sizeof(buf->buf) - buf->i, buf->l);
@@ -96,7 +95,8 @@ static void tx_notifier(void) {
 
 	for (;;) {
 		int len = send(parent, &req, sizeof(req), buf, TX_BUFSZ);
-		if (len < 0) break; // quit if the server shut down
+		if (len == 0) continue; // await behaves badly if you send an empty buffer
+		else if (len < 0) break; // quit if the server shut down
 		await(evt, buf, len);
 	}
 }

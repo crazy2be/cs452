@@ -152,6 +152,7 @@ void process_command(char *cmd, int displaysrv) {
 	case RV:
 		break;
 	case QUIT:
+		displaysrv_quit(displaysrv);
 		stop_servers();
 		break;
 	default:
