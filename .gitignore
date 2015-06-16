@@ -1,6 +1,7 @@
 /build
 /src/gen
-/test_output
+/scripts/test_com1_output
+/scripts/test_com2_output
 /docs
 /writeup/*/*.aux
 /writeup/*/*.out

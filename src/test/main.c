@@ -101,7 +101,7 @@ void misbehaving_sending_task(void) {
 
 	// check sending to impossible tasks
 	ASSERT(send(-6, &msg, sizeof(msg), &rep, sizeof(rep)) == SEND_IMPOSSIBLE_TID);
-	ASSERT(send(267, &msg, sizeof(msg), &rep, sizeof(rep)) == SEND_IMPOSSIBLE_TID);
+	ASSERT(send(267, &msg, sizeof(msg), &rep, sizeof(rep)) == SEND_INVALID_TID);
 	ASSERT(send(254, &msg, sizeof(msg), &rep, sizeof(rep)) == SEND_INVALID_TID);
 	ASSERT(send(tid(), &msg, sizeof(msg), &rep, sizeof(rep)) == SEND_INVALID_TID);
 
@@ -123,7 +123,7 @@ void misbehaving_receiving_task(void) {
 	struct Reply rep;
 
 	ASSERT(reply(-6, &rep, sizeof(rep)) == REPLY_IMPOSSIBLE_TID);
-	ASSERT(reply(267, &rep, sizeof(rep)) == REPLY_IMPOSSIBLE_TID);
+	ASSERT(reply(267, &rep, sizeof(rep)) == REPLY_INVALID_TID);
 	ASSERT(reply(254, &rep, sizeof(rep)) == REPLY_INVALID_TID);
 	ASSERT(reply(tid(), &rep, sizeof(rep)) == REPLY_INVALID_TID);
 
@@ -192,8 +192,6 @@ void init_task(void) {
 
 	while (create(PRIORITY_MIN, &nop) < 255);
 
-	ASSERT(create(4, child) == CREATE_INSUFFICIENT_RESOURCES);
-
 	stop_servers();
 }
 
@@ -221,34 +219,48 @@ void io_suite(void) {
 	stop_servers();
 }
 
-struct ReverserStruct {
-	int train_id;
-	int reverse_speed;
-};
 void destroy_worker(void) {
-	printf("Destroyering worker... %d"EOL, tid());
-	struct ReverserStruct msg = {};
-	int tid;
-	receive(&tid, &msg, sizeof(msg));
-	reply(tid, NULL, 0);
-	printf("Sending stop command to %d..." EOL);
-	for (int i = 0; i < 200; i++) await(EID_TIMER_TICK, NULL, 0);
-	printf("Sending reverse command..." EOL);
+	int r, tid;
+
+	ASSERT(receive(&tid, &r, sizeof(r)) == sizeof(r));
+	ASSERT(reply(tid, NULL, 0) == REPLY_SUCCESSFUL);
+
+	ASSERT(receive(&tid, NULL, 0) == 0);
+	ASSERT(reply(tid, &r, sizeof(r)) == REPLY_SUCCESSFUL);
 }
+
 void destroy_init(void) {
-	for (int i = 0; i < 500; i++) {
-		printf("Starting destroy... %d"EOL, i);
-		struct ReverserStruct msg = (struct ReverserStruct) {
-			.train_id = i, .reverse_speed = 7};
-		int reverser = create(PRIORITY_MAX, destroy_worker);
-		printf("Created task... %d"EOL, reverser);
-		send(reverser, &msg, sizeof(msg), NULL, 0);
+	start_servers();
+	int tids[256];
+	int rands[256];
+	for (int round = 0; round < 10; round++) {
+		int n = 0;
+		// make tasks until we run out
+		for (;;) {
+			int tid = create(PRIORITY_MIN, destroy_worker);
+			ASSERT(tid >= 0 || tid == CREATE_INSUFFICIENT_RESOURCES);
+			if (tid < 0) break;
+			tids[n++] = tid;
+		}
+
+		for (int i = 0; i < n; i++) {
+			rands[i] = rand();
+			ASSERT(send(tids[i], &rands[i], sizeof(rands[i]), NULL, 0) == 0);
+		}
+
+		for (int i = n - 1; i >= 0; i--) {
+			int resp;
+			ASSERT(send(tids[i], NULL, 0, &resp, sizeof(resp)) == 4);
+			ASSERT(resp == rands[i]);
+		}
 	}
+	printf("Done destroy stress test" EOL);
+	stop_servers();
 }
 
 int main(int argc, char *argv[]) {
 	boot(init_task, PRIORITY_MIN, 0);
 	boot(message_suite, PRIORITY_MIN, 0);
 	boot(io_suite, PRIORITY_MIN, 0);
-	boot(destroy_init, PRIORITY_MIN, 1);
+	boot(destroy_init, HIGHER(PRIORITY_MIN, 1), 0);
 }
