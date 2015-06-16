@@ -97,6 +97,7 @@ static void tx_notifier(void) {
 		int len = send(parent, &req, sizeof(req), buf, TX_BUFSZ);
 		if (len == 0) continue; // await behaves badly if you send an empty buffer
 		else if (len < 0) break; // quit if the server shut down
+		ASSERT(evt == EID_COM1_WRITE || evt == EID_COM2_WRITE);
 		await(evt, buf, len);
 	}
 }
@@ -108,6 +109,7 @@ static void rx_notifier(void) {
 	unsigned resp;
 
 	for (;;) {
+		ASSERT(evt == EID_COM1_READ || evt == EID_COM2_READ);
 		await(evt, buf + 4, RX_BUFSZ);
 		buf[0] = IO_RX_NTFY;
 		int err = send(parent, buf, sizeof(buf), &resp, sizeof(resp));

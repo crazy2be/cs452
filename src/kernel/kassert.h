@@ -8,7 +8,7 @@
 #define KASSERTF(stmt,fmt,...) {\
 	if (!(stmt)) { \
 		kprintf("%s: " fmt EOL, "KERNEL ASSERTION FAILED (" __FILE__ ":" STRINGIFY1(__LINE__) ") : " STRINGIFY2(stmt) EOL, ##__VA_ARGS__); \
-		exited_main(); \
+		for (;;); \
 	}}
 
 #define KASSERT(stmt) KASSERTF(stmt, "No details provided")

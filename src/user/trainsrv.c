@@ -70,6 +70,50 @@ void tc_deactivate_switch(void) {
 #endif
 }
 
+struct reverse_info { int train; int speed; };
+void reverse_task(void) {
+	int tid;
+	struct reverse_info info;
+	// our parent immediately sends us some bootstrap info
+	receive(&tid, &info, sizeof(info));
+	reply(tid, NULL, 0);
+
+	tc_stop(info.train);
+	// TODO: Probably don't want to actually delay this task itself
+	delay(500);
+	tc_toggle_reverse(info.train);
+	tc_set_speed(info.train, info.speed);
+}
+void start_reverse(int train, int speed) {
+	int tid = create(HIGHER(PRIORITY_MIN, 2), reverse_task);
+	struct reverse_info info = (struct reverse_info) {
+		.train = train,
+		.speed = speed,
+	};
+	send(tid, &info, sizeof(info), NULL, 0);
+}
+
+struct switch_info { int sw; enum sw_direction d; };
+void switch_task(void) {
+	int tid;
+	struct switch_info info;
+	// our parent immediately sends us some bootstrap info
+	receive(&tid, &info, sizeof(info));
+	reply(tid, NULL, 0);
+
+	tc_switch_switch(info.sw, info.d);
+	delay(100);
+	tc_deactivate_switch();
+}
+void start_switch(int sw, enum sw_direction d) {
+	int tid = create(HIGHER(PRIORITY_MIN, 2), switch_task);
+	struct switch_info info = (struct switch_info) {
+		.sw = sw,
+		.d = d,
+	};
+	send(tid, &info, sizeof(info), NULL, 0);
+}
+
 void trains_server(void) {
 	register_as("trains");
 	static int train_speeds[NUM_TRAIN] = {};
@@ -80,6 +124,7 @@ void trains_server(void) {
 		struct trains_request req;
 		receive(&tid, &req, sizeof(req));
 
+		printf("Trains server got message! %d"EOL, req.type);
 		switch (req.type) {
 		case SET_SPEED:
 			// TODO: What do we do if we are already reversing or something?
@@ -87,16 +132,10 @@ void trains_server(void) {
 			train_speeds[req.train_number - MIN_TRAIN] = req.speed;
 			break;
 		case REVERSE:
-			tc_stop(req.train_number);
-			// TODO: Probably don't want to actually delay this task itself
-			delay(100);
-			tc_toggle_reverse(req.train_number);
-			tc_set_speed(req.train_number, train_speeds[req.train_number]);
+			start_reverse(req.train_number, train_speeds[req.train_number - MIN_TRAIN]);
 			break;
 		case SWITCH_SWITCH:
-			tc_switch_switch(req.switch_number, req.direction);
-			delay(100);
-			tc_deactivate_switch();
+			start_switch(req.switch_number, req.direction);
 			break;
 		default:
 			resp = -1;
@@ -135,7 +174,6 @@ int trains_set_speed(int train, int speed) {
 }
 
 int trains_reverse(int train) {
-	kprintf("Sending reverse...");
 	return trains_send((struct trains_request) {
 		.type = REVERSE,
 		.train_number = train,

@@ -8,7 +8,7 @@ static int* reg(int channel, int off) {
 	if (COM1 <= channel && channel <= COM2) {
 		return (int*)(uart_bases[channel] + off);
 	} else {
-		KASSERT(0 && "Invalid channel");
+		KASSERTF(0 && "Invalid channel", "%d", channel);
 	}
 }
 
