@@ -11,3 +11,4 @@ void displaysrv_console_clear(int displaysrv);
 void displaysrv_console_backspace(int displaysrv);
 void displaysrv_console_input(int displaysrv, char c);
 void displaysrv_console_feedback(int displaysrv, char *fb);
+void displaysrv_quit(int displaysrv);

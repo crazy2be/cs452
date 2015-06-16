@@ -137,7 +137,7 @@ void initial_draw(void) {
 
 #define MAX_FEEDBACK_LEN 80
 enum displaysrv_req_type { UPDATE_SWITCH, UPDATE_SENSOR, CONSOLE_INPUT,
-	CONSOLE_BACKSPACE, CONSOLE_CLEAR, CONSOLE_FEEDBACK };
+	CONSOLE_BACKSPACE, CONSOLE_CLEAR, CONSOLE_FEEDBACK, QUIT };
 struct displaysrv_req {
 	enum displaysrv_req_type type;
 	// the data associated with each request
@@ -153,7 +153,7 @@ struct displaysrv_req {
 		struct {
 			char input;
 		} console_input;
-		// nothing for console clear or backspace
+		// nothing for console clear, backspace, or quit
 		struct {
 			char feedback[MAX_FEEDBACK_LEN + 1]; // null terminated string
 		} feedback;
@@ -245,7 +245,11 @@ void displaysrv_start(void) {
 		case CONSOLE_FEEDBACK:
 			console_feedback(req.data.feedback.feedback);
 			break;
+		case QUIT:
+			return;
 		default:
+			printf("Got request type %d" EOL, req.type);
+			ASSERT(0 && "Unknown request type in displaysrv");
 			break;
 		}
 	}
@@ -259,38 +263,42 @@ void displaysrv(void) {
 
 // external interface to displaysrv
 
+static void displaysrv_send(int displaysrv, enum displaysrv_req_type type, struct displaysrv_req *req) {
+	req->type = type;
+	ASSERT(send(displaysrv, req, sizeof(*req), NULL, 0) == 0);
+}
+
 void displaysrv_console_input(int displaysrv, char c) {
 	struct displaysrv_req req;
-	req.type = CONSOLE_INPUT;
 	req.data.console_input.input = c;
-	ASSERT(send(displaysrv, &req, sizeof(req), NULL, 0) == 0);
+	displaysrv_send(displaysrv, CONSOLE_INPUT, &req);
 }
 
 void displaysrv_console_backspace(int displaysrv) {
 	struct displaysrv_req req;
-	req.type = CONSOLE_BACKSPACE;
-	ASSERT(send(displaysrv, &req, sizeof(req), NULL, 0) == 0);
+	displaysrv_send(displaysrv, CONSOLE_BACKSPACE, &req);
 }
 
 void displaysrv_console_clear(int displaysrv) {
 	struct displaysrv_req req;
-	req.type = CONSOLE_CLEAR;
-	ASSERT(send(displaysrv, &req, sizeof(req), NULL, 0) == 0);
+	displaysrv_send(displaysrv, CONSOLE_CLEAR, &req);
 }
 
 void displaysrv_console_feedback(int displaysrv, char *fb) {
 	ASSERT(strlen(fb) <= MAX_FEEDBACK_LEN);
-
 	struct displaysrv_req req;
-	req.type = CONSOLE_FEEDBACK;
 	strcpy(req.data.feedback.feedback, fb);
-	ASSERT(send(displaysrv, &req, sizeof(req), NULL, 0) == 0);
+	displaysrv_send(displaysrv, CONSOLE_FEEDBACK, &req);
 }
 
 void displaysrv_update_switch(int displaysrv, int sw, enum sw_direction pos) {
 	struct displaysrv_req req;
-	req.type = UPDATE_SWITCH;
 	req.data.sw.num = sw;
 	req.data.sw.pos = pos;
-	ASSERT(send(displaysrv, &req, sizeof(req), NULL, 0) == 0);
+	displaysrv_send(displaysrv, UPDATE_SWITCH, &req);
+}
+
+void displaysrv_quit(int displaysrv) {
+	struct displaysrv_req req;
+	displaysrv_send(displaysrv, QUIT, &req);
 }
