@@ -31,3 +31,7 @@ void disable_switch_solenoid(void) {
 	ASSERT(fputc(COM1, 0x20) == 0);
 #endif
 }
+
+void send_sensor_poll(void) {
+	fputc(COM1, 0x85);
+}
