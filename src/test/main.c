@@ -264,7 +264,19 @@ void destroy_init(void) {
 	stop_servers();
 }
 
+#include "../user/trains.h"
+void trains_init(void) {
+	start_servers();
+	start_trains();
+	trains_set_speed(14, 6);
+	trains_reverse(14);
+	printf("Done trains test" EOL);
+	stop_servers();
+}
+
 int main(int argc, char *argv[]) {
+	boot(trains_init, PRIORITY_MIN, 0);
+	return 0;
 	boot(init_task, PRIORITY_MIN, 0);
 	boot(message_suite, PRIORITY_MIN, 0);
 	boot(io_suite, PRIORITY_MIN, 0);
