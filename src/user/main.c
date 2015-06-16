@@ -5,11 +5,11 @@
 #include "rps.h"
 #include "signal.h"
 #include <util.h>
-#include "track_control.h"
 #include "servers.h"
 #include "commandsrv.h"
 #include "displaysrv.h"
 #include "sensorsrv.h"
+#include "trainsrv.h"
 #include "../kernel/drivers/timer.h"
 
 struct init_reply {
@@ -49,6 +49,8 @@ void test_init(void) {
 	/* sensorsrv(); */
 	displaysrv();
 	commandsrv();
+	start_trains();
+	trains_set_speed(12, 5);
 
 	/* printf("Hello world" EOL); */
 	/* char buf[] = {0xE2, 0x94, 0x90}; */

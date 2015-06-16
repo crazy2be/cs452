@@ -5,6 +5,7 @@
 #include "servers.h"
 #include "nameserver.h"
 #include "displaysrv.h"
+#include "trainsrv.h"
 
 void get_command(char *buf, int buflen, int displaysrv) {
 	int i = 0;

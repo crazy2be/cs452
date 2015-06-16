@@ -1,6 +1,6 @@
 #pragma once
 
-#include "track_control.h"
+#include "trainsrv.h"
 
 #define DISPLAYSRV_NAME "displaysrv"
 
