@@ -220,28 +220,34 @@ void io_suite(void) {
 }
 
 void destroy_worker(void) {
-	int r, tid;
+	int r, tid2;
 
-	ASSERT(receive(&tid, &r, sizeof(r)) == sizeof(r));
-	ASSERT(reply(tid, NULL, 0) == REPLY_SUCCESSFUL);
+	ASSERT(receive(&tid2, &r, sizeof(r)) == sizeof(r));
+	ASSERT(reply(tid2, NULL, 0) == REPLY_SUCCESSFUL);
 
-	ASSERT(receive(&tid, NULL, 0) == 0);
-	ASSERT(reply(tid, &r, sizeof(r)) == REPLY_SUCCESSFUL);
+	ASSERT(receive(&tid2, NULL, 0) == 0);
+	ASSERT(reply(tid2, &r, sizeof(r)) == REPLY_SUCCESSFUL);
 }
 
 void destroy_init(void) {
 	start_servers();
 	int tids[256];
 	int rands[256];
+	int prev_n = -1;
 	for (int round = 0; round < 10; round++) {
 		int n = 0;
 		// make tasks until we run out
 		for (;;) {
-			int tid = create(PRIORITY_MIN, destroy_worker);
+			int tid = create(HIGHER(PRIORITY_MIN, 2), destroy_worker);
 			ASSERT(tid >= 0 || tid == CREATE_INSUFFICIENT_RESOURCES);
 			if (tid < 0) break;
 			tids[n++] = tid;
 		}
+		// We should generate the same number of tasks every time.
+		if (prev_n > 0) ASSERTF(prev_n == n, "%d %d", prev_n, n);
+		// And always generate more than zero tasks.
+		ASSERT(n > 0);
+		prev_n = n;
 
 		for (int i = 0; i < n; i++) {
 			rands[i] = rand();
