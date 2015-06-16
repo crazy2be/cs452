@@ -62,7 +62,7 @@ void test_init(void) {
 	/* int switches[] = {4, 12}; */
 
 	/* for (int i = 0; i < sizeof(switches) / sizeof(switches[0]); i++) { */
-	/* 	set_switch_state(switches[i], CURVED); */
+	/* 	set_switch_state(switches[i], STRAIGHT); */
 	/* 	if (i % 8 == 7) { */
 	/* 		delay(10); */
 	/* 		disable_switch_solenoid(); */
