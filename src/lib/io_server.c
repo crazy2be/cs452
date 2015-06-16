@@ -60,6 +60,7 @@ struct io_request {
 static void transmit(int notifier_tid, struct char_rbuf *buf) {
 	// we do a little bit of nastiness to pull the message directly out
 	// of the rbuf
+	if (char_rbuf_empty(buf)) return; // TODO: this shouldn't be necessary...
 	char *msg_start = &buf->buf[buf->i];
 	// let the msg go either to the end of the rbuf, or to the max size of the notifier buf
 	int msg_len = MIN(sizeof(buf->buf) - buf->i, buf->l);
@@ -145,7 +146,7 @@ static void io_server_run() {
 		case IO_TX:
 			ASSERT(shutdown_tid < 0 && "Got new TX request while shutting down");
 			msg_len -= 4; // don't count the initial type in the length
-			ASSERT(msg_len > 0); // TODO make this an error message
+			ASSERT(msg_len >= 0); // TODO make this an error message
 
 			resp = 0;
 			reply(tid, &resp, sizeof(resp));

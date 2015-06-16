@@ -120,7 +120,7 @@ void process_command(char *cmd, int displaysrv) {
 			if (get_integer(cmd, &i, &speed)) {
 				break;
 			}
-			/* printf("Parsed command TR %d %d" EOL, train, speed); */
+			displaysrv_console_feedback(displaysrv, "");
 			return;
 		}
 	case SW:
@@ -146,6 +146,7 @@ void process_command(char *cmd, int displaysrv) {
 			if (cmd[i] != '\0') break;
 			/* printf("Parsed command SW %d %d" EOL, sw, pos); */
 			displaysrv_update_switch(displaysrv, sw, pos);
+			displaysrv_console_feedback(displaysrv, "");
 			return;
 		}
 	case RV:
@@ -157,7 +158,8 @@ void process_command(char *cmd, int displaysrv) {
 		break;
 	}
 unknown:
-	printf("Unknown command \"%s\"" EOL, cmd);
+	// TODO: we need to have sprintf so that we can pass proper feedback in
+	displaysrv_console_feedback(displaysrv, "Unknown command");
 }
 
 void commandsrv_start(void) {

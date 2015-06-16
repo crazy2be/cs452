@@ -10,8 +10,10 @@
 #define PRINTF_BUFSZ 80
 
 static int flush_buffer(int channel, char *buf, int i) {
-	buf[i] = '\0';
-	fputs(channel, buf);
+	if (i != 0) {
+		buf[i] = '\0';
+		fputs(channel, buf);
+	}
 	return 0;
 }
 

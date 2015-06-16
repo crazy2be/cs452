@@ -87,33 +87,50 @@ static const struct sw2_display switch_display_info[] = {
 #define CROSS "\xe2\x94\xbc"
 
 #define SCREEN_WIDTH 80
-#define TRAIN_X_OFFSET 1 + 1
-#define TRAIN_Y_OFFSET 1 + 1
-#define CONSOLE_X_OFFSET 1 + 1
-#define CONSOLE_Y_OFFSET (1 + 1 + TRACK_DISPLAY_HEIGHT + 1)
+#define TRAIN_X_OFFSET (1 + 1)
+#define TRAIN_Y_OFFSET (1 + 1)
+#define FEEDBACK_X_OFFSET TRAIN_X_OFFSET
+#define FEEDBACK_Y_OFFSET (1 + 2 + TRACK_DISPLAY_HEIGHT)
+#define CONSOLE_X_OFFSET TRAIN_X_OFFSET
+#define CONSOLE_Y_OFFSET (FEEDBACK_Y_OFFSET + 2)
 
-void reset_console_cursor(void) {
+static inline void reset_console_cursor(void) {
 	printf("\e[%d;%dH", CONSOLE_Y_OFFSET, CONSOLE_X_OFFSET);
 }
 
-void initial_draw(void) {
-	puts("\e[2J\e[;H" ULCORNER);
+static inline void hline(const char *left, const char *right) {
+	puts(left);
 	for (int i = 0; i < SCREEN_WIDTH - 2; i++) puts(HLINE);
-	puts(URCORNER EOL);
+	printf("%s" EOL, right);
+}
+
+static inline void vbox(int h) {
+	for (int i = 0; i < h; i++) {
+		puts(VLINE "\e[78C" VLINE EOL);
+	}
+}
+
+static void clear_line(int line) {
+	char buf[SCREEN_WIDTH - 2 + 1];
+	memset(buf, ' ', sizeof(buf));
+	buf[sizeof(buf) - 1] = '\0';
+	printf("\e[%d;%dH%s\e[%d;%dH", line, CONSOLE_X_OFFSET, buf, line, CONSOLE_X_OFFSET);
+}
+
+void initial_draw(void) {
+	puts("\e[2J\e[;H");
+	hline(ULCORNER, URCORNER);
 
 	for (int i = 0; i < TRACK_DISPLAY_HEIGHT; i++) {
 		printf(VLINE "%s                     " VLINE EOL, track_repr[i]);
 	}
 
-	puts(LTEE);
-	for (int i = 0; i < SCREEN_WIDTH - 2; i++) puts(HLINE);
-	puts(RTEE EOL);
+	hline(LTEE, RTEE);
 
-	puts(VLINE "\e[78C" VLINE EOL);
-
-	puts(BLCORNER);
-	for (int i = 0; i < SCREEN_WIDTH - 2; i++) puts(HLINE);
-	puts(BRCORNER EOL);
+	vbox(1);
+	hline(LTEE, RTEE);
+	vbox(1);
+	hline(BLCORNER, BRCORNER);
 
 	reset_console_cursor();
 }
@@ -188,10 +205,14 @@ void console_backspace(void) {
 	puts("\b \b");
 }
 
+void console_feedback(char *fb) {
+	clear_line(FEEDBACK_Y_OFFSET);
+	puts(fb);
+	reset_console_cursor();
+}
+
 void console_clear(void) {
-	reset_console_cursor();
-	puts("                                                                              ");
-	reset_console_cursor();
+	clear_line(CONSOLE_Y_OFFSET);
 }
 
 void displaysrv_start(void) {
@@ -222,6 +243,7 @@ void displaysrv_start(void) {
 			console_clear();
 			break;
 		case CONSOLE_FEEDBACK:
+			console_feedback(req.data.feedback.feedback);
 			break;
 		default:
 			break;
@@ -256,7 +278,7 @@ void displaysrv_console_clear(int displaysrv) {
 	ASSERT(send(displaysrv, &req, sizeof(req), NULL, 0) == 0);
 }
 
-void displaysrv_feedback(int displaysrv, char *fb) {
+void displaysrv_console_feedback(int displaysrv, char *fb) {
 	ASSERT(strlen(fb) <= MAX_FEEDBACK_LEN);
 
 	struct displaysrv_req req;
