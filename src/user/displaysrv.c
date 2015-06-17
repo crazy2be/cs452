@@ -2,7 +2,6 @@
 #include "signal.h"
 #include "nameserver.h"
 #include "util.h"
-#include "track_control.h"
 
 #include <assert.h>
 #include <kernel.h>

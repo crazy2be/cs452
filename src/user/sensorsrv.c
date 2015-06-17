@@ -1,5 +1,4 @@
 #include "sensorsrv.h"
-#include "track_control.h"
 #include "displaysrv.h"
 #include "nameserver.h"
 #include <assert.h>
@@ -19,7 +18,7 @@ void sensor_set(struct sensor_state *s, int num, int tripped) {
 	s->packed[word_num] = mask;
 }
 
-int sensor_get(struct sensor_state *s, int num) {
+int sensor_get(const struct sensor_state *s, int num) {
 	const int word_num = num / 8;
 	const int offset = 7 - num % 8;
 	const int bit = 0x1 << offset;
@@ -41,6 +40,10 @@ void sensor_repr(int n, char *buf) {
 	}
 	*buf++ = '0' + number;
 	*buf++ = '\0';
+}
+
+static void send_sensor_poll(void) {
+	fputc(COM1, 0x85);
 }
 
 void start_sensorsrv(void) {
