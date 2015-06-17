@@ -49,27 +49,27 @@ static void send_sensor_poll(void) {
 
 void start_sensorsrv(void) {
 	// discard sensor input stuck in the train controller from the last run
-	delay(100);
-	printf("%d bytes in the buffer after the initial delay" EOL, fbuflen(COM1));
-	fdump(COM1);
+	/* delay(100); */
+	/* printf("%d bytes in the buffer after the initial delay" EOL, fbuflen(COM1)); */
+	/* fdump(COM1); */
 
-	delay(100);
-	printf("%d bytes in the buffer after the second delay" EOL, fbuflen(COM1));
+	/* delay(100); */
+	/* printf("%d bytes in the buffer after the second delay" EOL, fbuflen(COM1)); */
 
-	fputc(COM1, 0x61);
-	fputc(COM1, 0x60);
+	/* fputc(COM1, 0x61); */
+	/* fputc(COM1, 0x60); */
 
 	int displaysrv = whois(DISPLAYSRV_NAME);
 	struct sensor_state sensors;
-	for (int i = 0; i < 100; i++) {
+	for (;;) {
 		send_sensor_poll();
 		/* printf("%d bytes in the buffer before" EOL, fbuflen(COM1)); */
 		ASSERT(fgets(COM1, (char*) &sensors, 10) >= 0);
 		/* printf("%d bytes in the buffer after" EOL, fbuflen(COM1)); */
 		displaysrv_update_sensor(displaysrv, &sensors);
 	}
-	delay(100);
-	printf("%d bytes in the buffer after stop" EOL, fbuflen(COM1));
+	/* delay(100); */
+	/* printf("%d bytes in the buffer after stop" EOL, fbuflen(COM1)); */
 }
 
 void sensorsrv(void) {
