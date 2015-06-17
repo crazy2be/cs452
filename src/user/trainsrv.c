@@ -20,7 +20,7 @@ struct trains_request {
 #define MAX_TRAIN 80
 #define MIN_TRAIN 1
 #define NUM_TRAIN ((MAX_TRAIN) - (MIN_TRAIN) + 1)
-void tc_set_speed(int train, int speed) {
+static void tc_set_speed(int train, int speed) {
 	ASSERT(1 <= train && train <= 80);
 	ASSERT(0 <= speed && speed <= 14);
 #ifdef QEMU
@@ -31,7 +31,7 @@ void tc_set_speed(int train, int speed) {
 #endif
 }
 
-void tc_toggle_reverse(int train) {
+static void tc_toggle_reverse(int train) {
 	ASSERT(1 <= train && train <= 80);
 #ifdef QEMU
 	ASSERT(fputs(COM1, "Reversing train" EOL) == 0);
@@ -41,7 +41,7 @@ void tc_toggle_reverse(int train) {
 #endif
 }
 
-void tc_stop(int train) {
+static void tc_stop(int train) {
 	ASSERT(1 <= train && train <= 80);
 #ifdef QEMU
 	ASSERT(fputs(COM1, "Stopping train" EOL) == 0);
@@ -51,7 +51,7 @@ void tc_stop(int train) {
 #endif
 }
 
-void tc_switch_switch(int sw, enum sw_direction d) {
+static void tc_switch_switch(int sw, enum sw_direction d) {
 	ASSERT((1 <= sw && sw <= 18) || (153 <= sw && sw <= 156));
 #ifdef QEMU
 	ASSERT(fputs(COM1, "Changing switch position" EOL) == 0);
@@ -62,7 +62,7 @@ void tc_switch_switch(int sw, enum sw_direction d) {
 #endif
 }
 
-void tc_deactivate_switch(void) {
+static void tc_deactivate_switch(void) {
 #ifdef QEMU
 	ASSERT(fputs(COM1, "Resetting solenoid" EOL) == 0);
 #else
@@ -71,7 +71,7 @@ void tc_deactivate_switch(void) {
 }
 
 struct reverse_info { int train; int speed; };
-void reverse_task(void) {
+static void reverse_task(void) {
 	int tid;
 	struct reverse_info info;
 	// our parent immediately sends us some bootstrap info
@@ -84,7 +84,7 @@ void reverse_task(void) {
 	tc_toggle_reverse(info.train);
 	tc_set_speed(info.train, info.speed);
 }
-void start_reverse(int train, int speed) {
+static void start_reverse(int train, int speed) {
 	int tid = create(HIGHER(PRIORITY_MIN, 2), reverse_task);
 	struct reverse_info info = (struct reverse_info) {
 		.train = train,
@@ -94,7 +94,7 @@ void start_reverse(int train, int speed) {
 }
 
 struct switch_info { int sw; enum sw_direction d; };
-void switch_task(void) {
+static void switch_task(void) {
 	int tid;
 	struct switch_info info;
 	// our parent immediately sends us some bootstrap info
@@ -105,7 +105,7 @@ void switch_task(void) {
 	delay(100);
 	tc_deactivate_switch();
 }
-void start_switch(int sw, enum sw_direction d) {
+static void start_switch(int sw, enum sw_direction d) {
 	int tid = create(HIGHER(PRIORITY_MIN, 2), switch_task);
 	struct switch_info info = (struct switch_info) {
 		.sw = sw,
@@ -114,7 +114,7 @@ void start_switch(int sw, enum sw_direction d) {
 	send(tid, &info, sizeof(info), NULL, 0);
 }
 
-void trains_server(void) {
+static void trains_server(void) {
 	register_as("trains");
 	static int train_speeds[NUM_TRAIN] = {};
 	//static int switch_states[NUM_SWITCH] = {}; // TODO
