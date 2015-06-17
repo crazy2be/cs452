@@ -46,10 +46,9 @@ void clockserver(void) {
 			}
 			ASSERT(num_ticks + 1 == req.ticks);
 			num_ticks = req.ticks;
-			resp = 0;
 			while (!min_heap_empty(&delayed) && min_heap_top_key(&delayed) <= num_ticks) {
 				int awoken_tid = min_heap_pop(&delayed);
-				reply(awoken_tid, &resp, sizeof(resp));
+				reply(awoken_tid, &num_ticks, sizeof(num_ticks));
 			}
 			break;
 		case DELAY:

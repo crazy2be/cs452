@@ -2,6 +2,7 @@
 #include "signal.h"
 #include "nameserver.h"
 #include "util.h"
+#include "clockserver.h"
 
 #include <assert.h>
 #include <kernel.h>
@@ -131,15 +132,18 @@ static const struct sensor_display sensor_display_info[] = {
 #define BRCORNER "\xe2\x94\x98"
 #define LTEE "\xe2\x94\x9c"
 #define RTEE "\xe2\x94\xa4"
-#define UTEE "\xe2\x94\xac"
-#define DTEE "\xe2\x94\xb4"
+#define DTEE "\xe2\x94\xac"
+#define UTEE "\xe2\x94\xb4"
 #define CROSS "\xe2\x94\xbc"
 
 #define SCREEN_WIDTH 80
 #define TRAIN_X_OFFSET (1 + 1)
 #define TRAIN_Y_OFFSET (1 + 1)
+#define RIGHT_BAR_X_OFFSET (TRAIN_X_OFFSET + TRACK_DISPLAY_WIDTH - 3)
+#define CLOCK_X_OFFSET (TRAIN_X_OFFSET + TRACK_DISPLAY_WIDTH)
+#define CLOCK_Y_OFFSET TRAIN_Y_OFFSET
 #define FEEDBACK_X_OFFSET TRAIN_X_OFFSET
-#define FEEDBACK_Y_OFFSET (1 + 2 + TRACK_DISPLAY_HEIGHT + 1)
+#define FEEDBACK_Y_OFFSET (1 + TRACK_DISPLAY_HEIGHT + 1)
 #define CONSOLE_X_OFFSET TRAIN_X_OFFSET
 #define CONSOLE_Y_OFFSET (FEEDBACK_Y_OFFSET + 2)
 
@@ -147,15 +151,19 @@ static inline void reset_console_cursor(void) {
 	printf("\e[%d;%dH", CONSOLE_Y_OFFSET, CONSOLE_X_OFFSET);
 }
 
-static inline void hline(const char *left, const char *right) {
+static inline void hline(int l, const char *left, const char *right) {
 	puts(left);
-	for (int i = 0; i < SCREEN_WIDTH - 2; i++) puts(HLINE);
-	printf("%s" EOL, right);
+	for (int i = 0; i < l - 2; i++) puts(HLINE);
+	puts(right);
 }
 
-static inline void vbox(int h) {
+static inline void vbox(int h, int w, int xoffset) {
 	for (int i = 0; i < h; i++) {
-		puts(VLINE "\e[78C" VLINE EOL);
+		if (xoffset != 0) {
+			printf("\e[%dC" VLINE "\e[%dC" VLINE EOL, xoffset, w);
+		} else {
+			printf(VLINE "\e[%dC" VLINE EOL, w);
+		}
 	}
 }
 
@@ -166,27 +174,42 @@ static void clear_line(int line) {
 	printf("\e[%d;%dH%s\e[%d;%dH", line, CONSOLE_X_OFFSET, buf, line, CONSOLE_X_OFFSET);
 }
 
-void initial_draw(void) {
+static void initial_draw(void) {
 	puts("\e[2J\e[;H");
-	hline(ULCORNER, URCORNER);
+	hline(TRACK_DISPLAY_WIDTH, ULCORNER, DTEE);
+	hline(SCREEN_WIDTH - TRACK_DISPLAY_WIDTH, HLINE, URCORNER);
+	puts(EOL);
 
+	// print out the starting track
 	for (int i = 0; i < TRACK_DISPLAY_HEIGHT; i++) {
 		printf(VLINE "%s                     " VLINE EOL, track_repr[i]);
 	}
-	vbox(1);
+	vbox(1, SCREEN_WIDTH - 2, 0);
 
-	hline(LTEE, RTEE);
+	// reset the cursor to where the track is, then print out the right menu
+	printf("\e[%d;%dH", 2, 1);
+	vbox(1, SCREEN_WIDTH - 2 - TRACK_DISPLAY_WIDTH + 1, RIGHT_BAR_X_OFFSET);
+	printf("\e[%dC", RIGHT_BAR_X_OFFSET);
+	hline(SCREEN_WIDTH - TRACK_DISPLAY_WIDTH + 1, LTEE, RTEE);
+	vbox(TRACK_DISPLAY_HEIGHT - 2, SCREEN_WIDTH - 2 - TRACK_DISPLAY_WIDTH + 1,
+		RIGHT_BAR_X_OFFSET);
 
-	vbox(1);
-	hline(LTEE, RTEE);
-	vbox(1);
-	hline(BLCORNER, BRCORNER);
+	hline(TRACK_DISPLAY_WIDTH, LTEE, UTEE);
+	hline(SCREEN_WIDTH - TRACK_DISPLAY_WIDTH, HLINE, RTEE);
+	puts(EOL);
+
+	vbox(1, SCREEN_WIDTH - 2, 0);
+	hline(SCREEN_WIDTH, LTEE, RTEE);
+	puts(EOL);
+	vbox(1, SCREEN_WIDTH - 2, 0);
+	hline(SCREEN_WIDTH, BLCORNER, BRCORNER);
+	puts(EOL);
 
 	reset_console_cursor();
 }
 
 #define MAX_FEEDBACK_LEN 80
-enum displaysrv_req_type { UPDATE_SWITCH, UPDATE_SENSOR, CONSOLE_INPUT,
+enum displaysrv_req_type { UPDATE_SWITCH, UPDATE_SENSOR, UPDATE_TIME, CONSOLE_INPUT,
 	CONSOLE_BACKSPACE, CONSOLE_CLEAR, CONSOLE_FEEDBACK, QUIT };
 struct displaysrv_req {
 	enum displaysrv_req_type type;
@@ -206,10 +229,13 @@ struct displaysrv_req {
 		struct {
 			char feedback[MAX_FEEDBACK_LEN + 1]; // null terminated string
 		} feedback;
+		struct {
+			unsigned millis;
+		} time;
 	} data;
 };
 
-void update_sensor(struct sensor_state *sensors, struct sensor_state *old_sensors) {
+static void update_sensor(struct sensor_state *sensors, struct sensor_state *old_sensors) {
 	char buf[4];
 	for (int i = 0; i < SENSOR_COUNT; i += 2) {
 		int s1 = sensor_get(sensors, i);
@@ -237,7 +263,7 @@ void update_sensor(struct sensor_state *sensors, struct sensor_state *old_sensor
 	*old_sensors = *sensors;
 }
 
-void update_switch(int sw, enum sw_direction pos) {
+static void update_switch(int sw, enum sw_direction pos) {
 	if (sw >= 1 && sw <= 18) {
 		ASSERT(pos == STRAIGHT || pos == CURVED);
 		struct sw2_display disp = switch_display_info[sw - 1];
@@ -274,26 +300,49 @@ void update_switch(int sw, enum sw_direction pos) {
 	}
 }
 
-void console_input(char c) {
+static void update_time(unsigned millis) {
+	int tenths = (millis % 1000) / 100;
+	int seconds = millis / 1000;
+	int minutes = seconds / 60;
+
+	seconds %= 60;
+	minutes %= 60;
+
+	printf("\e[s\e[%d;%dH%02d:%02d:%d\e[u", CLOCK_Y_OFFSET, CLOCK_X_OFFSET, minutes, seconds, tenths);
+}
+
+static void console_input(char c) {
 	putc(c);
 }
 
-void console_backspace(void) {
+static void console_backspace(void) {
 	puts("\b \b");
 }
 
-void console_feedback(char *fb) {
+static void console_feedback(char *fb) {
 	clear_line(FEEDBACK_Y_OFFSET);
 	puts(fb);
 	reset_console_cursor();
 }
 
-void console_clear(void) {
+static void console_clear(void) {
 	clear_line(CONSOLE_Y_OFFSET);
+}
+
+static void displaysrv_update_time(int displaysrv, unsigned millis);
+
+static void clock_update_task(void) {
+	int ticks = 0;
+	int displaysrv = parent_tid();
+	for (;;) {
+		ticks = delay_until(ticks + 10);
+		displaysrv_update_time(displaysrv, ticks * 10);
+	}
 }
 
 void displaysrv_start(void) {
 	register_as(DISPLAYSRV_NAME);
+	create(HIGHER(PRIORITY_MIN, 2), clock_update_task);
 	signal_recv();
 
 	initial_draw();
@@ -314,6 +363,9 @@ void displaysrv_start(void) {
 			break;
 		case UPDATE_SENSOR:
 			update_sensor(&req.data.sensor.state, &old_sensors);
+			break;
+		case UPDATE_TIME:
+			update_time(req.data.time.millis);
 			break;
 		case CONSOLE_INPUT:
 			console_input(req.data.console_input.input);
@@ -389,4 +441,10 @@ void displaysrv_update_switch(int displaysrv, int sw, enum sw_direction pos) {
 void displaysrv_quit(int displaysrv) {
 	struct displaysrv_req req;
 	displaysrv_send(displaysrv, QUIT, &req);
+}
+
+static void displaysrv_update_time(int displaysrv, unsigned millis) {
+	struct displaysrv_req req;
+	req.data.time.millis = millis;
+	displaysrv_send(displaysrv, UPDATE_TIME, &req);
 }

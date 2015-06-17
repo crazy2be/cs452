@@ -124,7 +124,7 @@ void trains_server(void) {
 		struct trains_request req;
 		receive(&tid, &req, sizeof(req));
 
-		printf("Trains server got message! %d"EOL, req.type);
+		/* printf("Trains server got message! %d"EOL, req.type); */
 		switch (req.type) {
 		case SET_SPEED:
 			// TODO: What do we do if we are already reversing or something?
