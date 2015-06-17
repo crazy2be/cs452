@@ -143,7 +143,7 @@ static const struct sensor_display sensor_display_info[] = {
 #define CLOCK_X_OFFSET (TRAIN_X_OFFSET + TRACK_DISPLAY_WIDTH)
 #define CLOCK_Y_OFFSET TRAIN_Y_OFFSET
 #define FEEDBACK_X_OFFSET TRAIN_X_OFFSET
-#define FEEDBACK_Y_OFFSET (1 + TRACK_DISPLAY_HEIGHT + 1)
+#define FEEDBACK_Y_OFFSET (1 + TRACK_DISPLAY_HEIGHT + 1 + 2)
 #define CONSOLE_X_OFFSET TRAIN_X_OFFSET
 #define CONSOLE_Y_OFFSET (FEEDBACK_Y_OFFSET + 2)
 
@@ -191,7 +191,7 @@ static void initial_draw(void) {
 	vbox(1, SCREEN_WIDTH - 2 - TRACK_DISPLAY_WIDTH + 1, RIGHT_BAR_X_OFFSET);
 	printf("\e[%dC", RIGHT_BAR_X_OFFSET);
 	hline(SCREEN_WIDTH - TRACK_DISPLAY_WIDTH + 1, LTEE, RTEE);
-	vbox(TRACK_DISPLAY_HEIGHT - 2, SCREEN_WIDTH - 2 - TRACK_DISPLAY_WIDTH + 1,
+	vbox(TRACK_DISPLAY_HEIGHT, SCREEN_WIDTH - 2 - TRACK_DISPLAY_WIDTH + 1,
 		RIGHT_BAR_X_OFFSET);
 
 	hline(TRACK_DISPLAY_WIDTH, LTEE, UTEE);
@@ -296,7 +296,7 @@ static void update_switch(int sw, enum sw_direction pos) {
 			current_y + TRAIN_Y_OFFSET, current_x + TRAIN_X_OFFSET, switch_char,
 			last_y + TRAIN_Y_OFFSET, last_x + TRAIN_X_OFFSET, filler_char);
 	} else {
-		ASSERT(0 && "Unknown switch number");
+		//ASSERT(0 && "Unknown switch number");
 	}
 }
 

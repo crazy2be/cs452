@@ -18,7 +18,8 @@
 #define IO_TX_NTFY 2
 #define IO_RX_NTFY 3
 #define IO_STOP 4
-#define IO_INFO 5
+#define IO_DUMP 5
+#define IO_RXBUFLEN 6
 
 #define MAX_STR_LEN 256
 
@@ -219,6 +220,13 @@ static void io_server_run() {
 			if (char_rbuf_empty(&tx_buf)) goto cleanup;
 			// we now need to wait for all characters of output to be flushed
 			break;
+		case IO_DUMP:
+			reply(tid, &rx_buf.l, sizeof(rx_buf.l));
+			char_rbuf_init(&rx_buf);
+			break;
+		case IO_RXBUFLEN:
+			reply(tid, &rx_buf.l, sizeof(rx_buf.l));
+			break;
 		default:
 			ASSERT(0 && "Unknown request made to IO server");
 			break;
@@ -358,9 +366,28 @@ int fgetc(int channel) {
 	return (err < 0) ? err : c;
 }
 
+int fbuflen(const int channel) {
+	struct io_request req;
+	req.type = IO_RXBUFLEN;
+	unsigned msg_len = sizeof(req) - sizeof(req.u.buf) + sizeof(req.u.len);
+	int resp;
+	int err = send(io_server_tid(channel), &req, msg_len, &resp, sizeof(resp));
+	ASSERT(err >= 0);
+	return resp;
+}
+
+int fdump(const int channel) {
+	struct io_request req;
+	req.type = IO_DUMP;
+	unsigned msg_len = sizeof(req) - sizeof(req.u.buf) + sizeof(req.u.len);
+	int resp;
+	int err = send(io_server_tid(channel), &req, msg_len, &resp, sizeof(resp));
+	ASSERT(err >= 0);
+	return err;
+}
+
 // blocks until all output in the buffers is flushed, and the server is shutting down
 void ioserver_stop(const int channel) {
 	unsigned char msg = IO_STOP;
 	send(io_server_tid(channel), &msg, sizeof(msg), NULL, 0);
 }
-

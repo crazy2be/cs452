@@ -110,7 +110,13 @@ void handle_tr(int displaysrv, int train, int speed) {
 }
 
 void handle_sw(int displaysrv, int sw, enum sw_direction pos) {
+	trains_switch(sw, pos);
 	displaysrv_update_switch(displaysrv, sw, pos);
+	displaysrv_console_feedback(displaysrv, "");
+}
+
+void handle_rv(int displaysrv, int train) {
+	trains_reverse(train);
 	displaysrv_console_feedback(displaysrv, "");
 }
 
@@ -160,6 +166,13 @@ void process_command(char *cmd, int displaysrv) {
 			return;
 		}
 	case RV:
+		{
+			int train;
+			if (get_integer(cmd, &i, &train)) {
+				break;
+			}
+			handle_rv(displaysrv, train);
+		}
 		break;
 	case QUIT:
 		displaysrv_quit(displaysrv);
