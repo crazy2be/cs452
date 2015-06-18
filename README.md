@@ -38,6 +38,18 @@ train controller, to avoid messy state left behind by previous runs.
 In particular, this has been known to cause bugs with the sensor reads, where garbage data
 left in the UART is picked up, and misinterpreted.
 
+Commands
+--------
+
+ - `tr <train number> <speed>` sets the speed of a train
+ - `sw <switch number> (c|s)` sets a the position of a switch to curved or straight
+ - `rv <train number>` reverses a train
+ - `q` exits the program
+
+The positions of each switch is shown in the ASCII-art map of the train track.
+When a sensor is tripped, it is shown both on the ASCII-art map for as long as
+it is tripped, as well as to the right, on the list of recently-fired sensors.
+
 Useful links:
 -------------
 
