@@ -282,7 +282,9 @@ tasks which care about real-world values like time and distance.
 The clockserver runs at \texttt{LOWER(PRIORITY\_MAX, 1)}, with the only task
 that runs at higher priority being the clockserver notifier, which runs at
 \texttt{PRIORITY\_MAX}. This ensures we will almost never miss ticks, unless
-something particularly evil happens.
+something particularly evil happens. We have never observed missing ticks under
+current load, although we do check for it, so even a single tick missing would
+be immediately obvious.
 
 To keep track of tasks which requested future wakeup, we need a priority queue
 of tasks, ordered by the time at which they need to be woken up.
@@ -304,7 +306,7 @@ additional time optimizing for a problem which doesn't currently exist.
 An additional reason for the choice of this data structure was that we coincidentally
 had one from K1.
 We had initially thought we might use it for the priority queue,
-but instead chose an alternative data structure for that assignment.
+but ended up choosing a more specialized data structure for that purpose.
 
 \subsection{Interrupt-Triggered Context Switch}
 As part of this assignment, we had to write a context switching
