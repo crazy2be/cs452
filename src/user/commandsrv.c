@@ -148,7 +148,13 @@ void process_command(char *cmd, int displaysrv) {
 			if (get_integer(cmd, &i, &speed)) {
 				break;
 			}
-			handle_tr(displaysrv, train, speed);
+			if (!(0 <= speed && speed <= 14)) {
+				displaysrv_console_feedback(displaysrv, "Invalid speed");
+			} else if (!(1 <= train && train <= 80)) {
+				displaysrv_console_feedback(displaysrv, "Invalid train number");
+			} else {
+				handle_tr(displaysrv, train, speed);
+			}
 			return;
 		}
 	case SW:
@@ -173,7 +179,11 @@ void process_command(char *cmd, int displaysrv) {
 			}
 			if (cmd[i] != '\0') break;
 			/* printf("Parsed command SW %d %d" EOL, sw, pos); */
-			handle_sw(displaysrv, sw, pos);
+			if (!((1 <= sw && sw <= 18) || (146 <= sw && sw <= 156))) {
+				displaysrv_console_feedback(displaysrv, "Invalid switch");
+			} else {
+				handle_sw(displaysrv, sw, pos);
+			}
 			return;
 		}
 	case RV:
@@ -182,7 +192,12 @@ void process_command(char *cmd, int displaysrv) {
 			if (get_integer(cmd, &i, &train)) {
 				break;
 			}
-			handle_rv(displaysrv, train);
+			if (!(1 <= train && train <= 80)) {
+				displaysrv_console_feedback(displaysrv, "Invalid train number");
+			} else {
+				handle_rv(displaysrv, train);
+			}
+			return;
 		}
 		break;
 	case QUIT:
