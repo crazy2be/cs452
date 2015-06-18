@@ -50,6 +50,12 @@ static const struct track_node* next_expected_sensor(const struct track_node *n,
 static void calculate_distance_travelled(int sensor, int time, const struct switch_state *switches,
 		struct bookkeeping *bk, const struct track_node *track) {
 	const struct track_node *n;
+
+	char buf[4];
+	sensor_repr(sensor, buf);
+
+	printf("Sensor %s was hit" EOL, buf);
+
 	if (bk->next_expected_node == NULL) {
 		// first node we get, so we need to figure out where we are
 		// we don't print a data point here
@@ -126,4 +132,18 @@ void start_calibrate(void) {
 void calibratesrv(void) {
 	int tid = create(HIGHER(PRIORITY_MIN, 1), start_calibrate);
 	signal_send(tid);
+}
+
+void calibrate_send_sensors(int calibratesrv, struct sensor_state *st) {
+	struct calibrate_req req;
+	req.type = UPDATE_SENSOR;
+	req.u.sensors = *st;
+	ASSERT(0 == send(calibratesrv, &req, sizeof(req), NULL, 0));
+}
+
+void calibrate_send_switches(int calibratesrv, struct switch_state *st) {
+	struct calibrate_req req;
+	req.type = UPDATE_SWITCH;
+	req.u.switches = *st;
+	ASSERT(0 == send(calibratesrv, &req, sizeof(req), NULL, 0));
 }

@@ -46,8 +46,8 @@ void init(void) {
 void test_init(void) {
 	start_servers();
 
-	displaysrv();
-	commandsrv();
+	/* displaysrv(); */
+	/* commandsrv(); */
 	sensorsrv();
 	start_trains();
 	trains_set_speed(12, 5);

@@ -2,6 +2,7 @@
 #include "displaysrv.h"
 #include "nameserver.h"
 #include "clockserver.h"
+#include "calibrate/calibrate.h"
 #include <assert.h>
 #include <io_server.h>
 #include <kernel.h>
@@ -59,15 +60,19 @@ void start_sensorsrv(void) {
 	/* fputc(COM1, 0x61); */
 	/* fputc(COM1, 0x60); */
 
-	int displaysrv = whois(DISPLAYSRV_NAME);
+	/* int displaysrv = whois(DISPLAYSRV_NAME); */
+	int calibratesrv = whois(CALIBRATESRV_NAME);
 	struct sensor_state sensors;
 	for (;;) {
 		send_sensor_poll();
 		/* printf("%d bytes in the buffer before" EOL, fbuflen(COM1)); */
 		ASSERT(fgets(COM1, (char*) &sensors, 10) >= 0);
 		sensors.ticks = time();
+
+		// notify the tasks which need to know about sensor updates
 		/* printf("%d bytes in the buffer after" EOL, fbuflen(COM1)); */
-		displaysrv_update_sensor(displaysrv, &sensors);
+		/* displaysrv_update_sensor(displaysrv, &sensors); */
+		calibrate_send_sensors(calibratesrv, &sensors);
 	}
 	/* delay(100); */
 	/* printf("%d bytes in the buffer after stop" EOL, fbuflen(COM1)); */
