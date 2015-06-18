@@ -121,8 +121,10 @@ static void format(int channel, char *fmt, va_list va) {
 				i = produce(channel, buf, i, va_arg(va, char));
 				break;
 			case 's':
-				i = flush_buffer(channel, buf, i);
-				fputs(channel, va_arg(va, char*));
+				{
+					char *str = va_arg(va, char*);
+					while (*str) i = produce(channel, buf, i, *str++);
+				}
 				break;
 			case 'u':
 				i = bwui2a(channel, buf, i, va_arg(va, unsigned int), 10, w, lz, 0);

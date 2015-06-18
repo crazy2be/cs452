@@ -9,6 +9,7 @@
 #include "min_heap.h"
 #include "../user/servers.h"
 #include "../user/signal.h"
+#include "../user/trainsrv.h"
 
 void child(void) {
 	printf("Child task %d" EOL, tid());
@@ -213,8 +214,8 @@ void message_suite(void) {
 void io_suite(void) {
 	start_servers();
 	fputs(COM1, "Hello COM1" EOL);
-	fprintf(COM1, "Hello COM1 9 = %d, 0 = %d, -1 = %d or %u, 117 = %d, 0x7f = 0x%x" EOL,
-			9, 0, -1, -1, 117, 0x7f);
+	fprintf(COM1, "Hello COM1 9 = %d, 0 = %d, -1 = %d or %u, 117 = %d, 0x7f = 0x%x, hello = %s" EOL,
+			9, 0, -1, -1, 117, 0x7f, "hello");
 	fputs(COM2, "Hello COM2" EOL);
 	stop_servers();
 }
@@ -264,7 +265,6 @@ void destroy_init(void) {
 	stop_servers();
 }
 
-#include "../user/trains.h"
 void trains_init(void) {
 	start_servers();
 	start_trains();
@@ -275,8 +275,8 @@ void trains_init(void) {
 }
 
 int main(int argc, char *argv[]) {
-	boot(trains_init, PRIORITY_MIN, 0);
-	return 0;
+	/* boot(trains_init, PRIORITY_MIN, 0); */
+	/* return 0; */
 	boot(init_task, PRIORITY_MIN, 0);
 	boot(message_suite, PRIORITY_MIN, 0);
 	boot(io_suite, PRIORITY_MIN, 0);
