@@ -9,6 +9,7 @@
 
 void get_command(char *buf, int buflen, int displaysrv) {
 	int i = 0;
+	static int parsing_esc = 0;
 	for (;;) {
 		char c = getc();
 		if (c == '\r') {
@@ -19,6 +20,17 @@ void get_command(char *buf, int buflen, int displaysrv) {
 				i--;
 				displaysrv_console_backspace(displaysrv);
 			}
+		// Avoid echoing arrow keys. TODO: We could add line editing.
+		} else if (c == 0x1B) {
+			parsing_esc = 1;
+		} else if (parsing_esc) {
+			if (c == '[') {
+				parsing_esc = 2;
+				continue;
+			}
+			if ((c >= '0' && c <= '9') || c == ';' || c == ' ') continue;
+			parsing_esc = 0;
+			continue;
 		} else {
 			displaysrv_console_input(displaysrv, c);
 			buf[i++] = c;
