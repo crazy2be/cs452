@@ -148,11 +148,12 @@ The $b=0$ case is special to the caller anyway, and needs to be handled separate
 and doing this makes it easier to optimize the algorithm.
 
 \subsection{Destroy}
-We implemented the destroy() primitive (actually, it's just the same as exit()).
+We implemented the \texttt{destroy()} primitive (although we called it
+\texttt{exit()}).
 This allows us to create temporary tasks, which can be a convenient way to
 express many parts of the system, such as in the train server. The details of
-Destroy()'s implementation are discussed in the resource allocation section,
-below.
+\texttt{destroy()}'s implementation are discussed in the resource allocation
+section, below.
 
 \subsection{Task Resource Allocation}
 All task descriptors are simply allocated in a statically allocated table.
