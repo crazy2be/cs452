@@ -65,6 +65,7 @@ void start_sensorsrv(void) {
 		send_sensor_poll();
 		/* printf("%d bytes in the buffer before" EOL, fbuflen(COM1)); */
 		ASSERT(fgets(COM1, (char*) &sensors, 10) >= 0);
+		sensors.ticks = time();
 		/* printf("%d bytes in the buffer after" EOL, fbuflen(COM1)); */
 		displaysrv_update_sensor(displaysrv, &sensors);
 	}
