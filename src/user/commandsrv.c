@@ -111,7 +111,6 @@ void handle_tr(int displaysrv, int train, int speed) {
 
 void handle_sw(int displaysrv, int sw, enum sw_direction pos) {
 	trains_switch(sw, pos);
-	/* displaysrv_update_switch(displaysrv, sw, pos); */
 	displaysrv_console_feedback(displaysrv, "");
 }
 
