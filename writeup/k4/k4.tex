@@ -22,19 +22,21 @@ return control flow to the kernel when the task causes a software interrupt.
 When the task returns, and sends a syscall to the kernel, the loop calls
 the appropriate syscall handler in order to perform the action requested by
 the syscall.
-The loop continues running until all tasks exit.
+The loop continues running until there are no tasks which are either ready,
+or waiting on an event, or until a task calls \texttt{halt()}.
 
 Functionality is abstracted into multiple modules, listed here:
 
 \begin{itemize}
 \item A priority task queue
 \item I/O subroutines
+\item Task subroutines
 \item A context switch
 \item Handlers and callers for each syscall
 \end{itemize}
 
 There are also some miscellaneous code used for initializing the kernel's environment
-(such as exception handlers).
+(such as exception handlers), as well as various utility functions.
 
 The kernel maintains some degree of separation from the user code.
 User code is structured within its own directory.
@@ -154,7 +156,7 @@ below.
 
 \subsection{Task Resource Allocation}
 All task descriptors are simply allocated in a statically allocated table.
-A task ID, modulo \texttt{NUM_TASK}, is just an integer index into that table.
+A task ID, modulo \texttt{NUM\_TASK}, is just an integer index into that table.
 This approach makes the implementation very simple, very fast, and still allows
 the reuse of task descriptors after they are destroyed (just increment the tid
 for a given slot by 256 every time it is reused).
@@ -388,7 +390,7 @@ this to not be a problem.
 COM1 doesn't use the FIFOs, since we lack the hardware support to do CTS properly
 in hardware.
 
-\section{IO Server}
+\subsection{IO Server}
 We implement an IO server in userland, which the other user tasks interact with
 in order to perform IO.
 There is one IO server for each serial port, which handles both input and output
@@ -409,22 +411,32 @@ the hardware can buffer it for the time the notifiers aren't listening.)
 The IO notifiers have the second highest priority possible, second only to the timer notifier.
 The IO server itself has the fourth highest priority.
 
-\section{Halting}
-We have added a \textttt{halt()} syscall into the kernel.
-The kernel can no longer know when it is safe to exit from the kernel,
-because the receive notifier task is problematic.
-Previously, we would shutdown all of the servers from userland.
-When the servers' notifiers next try to communicate with the server, they would realize
-that the server exited, and they would respond by exiting as well.
+\subsection{Halting}
+We have added a \texttt{halt()} syscall into the kernel.
+This is necessary because the kernel can no longer know when it is safe to exit from the kernel.
+Previously, we would exit after there were no more tasks awaiting an event, or ready to execute.
+When we wanted to shut down, we would shut down each of the user tasks, including servers.
+This would leave only the timer notifier running, awaiting a timer event.
+When the notifier would next try to communicate with the server, it would realize
+that the server exited, and respond by exiting as well.
 Since the only notifier was the timer notifier, we could be assured that the notifier
-would wake up fairly shortly, so this approach worked.
-However, the receive notifier may never wake up, if no input is sent to the UART,
-so this approach is not viable.
+would wake up after at most a single tick.
+This means that the maximum delay between wishing to exit the program, and actually
+exiting was 10 ms, so this approach was acceptable.
+
+However, the receive notifier will never wake up if no input is sent to the UART\@..
+Introducing the receive notifier makes this approach unviable.
 The way we handled this is to allow a user task to signal to the kernel that it
 can shut down immediately.
 Another way that we could have handled this is to make the receive await time out
 periodically, so that we could guarantee that all notifiers exit shortly after
 the user tells the program to quit.
+We may actually want to switch to that approach eventually, since it may provide
+a more elegant way of deciding when the other tasks have wrapped up.
+The current approach puts this burden on the usertasks, which don't have as powerful
+primitives for deciding this.
+However, most real operating systems have some variant of \texttt{halt()},
+so there is probably some basis for this approach.
 
 \section{Source Code}
 The source code is hosted on git, at \url{git.uwaterloo.ca/pgraboud/cs452-kernel}.
