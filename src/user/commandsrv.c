@@ -167,7 +167,7 @@ void process_command(char *cmd, int displaysrv) {
 			}
 			if (cmd[i] != '\0') break;
 			/* printf("Parsed command SW %d %d" EOL, sw, pos); */
-			if (!((1 <= sw && sw <= 18) || (sw <= 146 && sw <= 156))) {
+			if (!((1 <= sw && sw <= 18) || (146 <= sw && sw <= 156))) {
 				displaysrv_console_feedback(displaysrv, "Invalid switch");
 			} else {
 				handle_sw(displaysrv, sw, pos);
