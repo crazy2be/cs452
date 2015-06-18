@@ -155,6 +155,29 @@ express many parts of the system, such as in the train server. The details of
 \texttt{destroy()}'s implementation are discussed in the resource allocation
 section, below.
 
+One thing to notice about the \texttt{destroy()} primitive is that, although
+it does support reusing td and stack slots, it's current implementation does
+not allow for the reuse of tids. This means that eventually we will face tid
+exhaustion, and crash as a result. This could be written in without much
+difficulty, but we chose not to, because it opens us up to strange behavior.
+For example, if a task stores a reference to the tid of another task, and then
+tries to send to that task at a later time, but the tid no longer corresponds
+to the same task. Raw reuse of tids in the range 0-255 with naive modulus
+would make this (relatively) likely. Thus, we didn't want to use this scheme.
+Wraparound after the integer tid overflows would make this situation much less
+likely, but is unlikely to be necessary, as there are $2^{31} = 2147483648$
+possible tids. Our allocation algorithm can accelerate this slightly if there
+are few free td slots remaining, but even in the (very unlikely) worst case of
+only 1-2 td slots remaining which keep getting mutually cycled, we would
+increment the max allocated td by 256 (\texttt{NUM\_TASK}) each time a new
+task was created and destroyed. This still gives us $2^{31 - 8} = 8388608$
+chances to create and destroy tasks, or more than 3 hours of runtime in this
+worst case, if we were creating and destroying tasks every 100ms. In the
+project, it is extremely unlikely we will use anything close to all 256 slots,
+so the real time will be some orders of magnitude larger. However, if we do
+run into this issue, it should not be too hard to implement proper tid
+wrap-around.
+
 \subsection{Task Resource Allocation}
 All task descriptors are simply allocated in a statically allocated table.
 A task ID, modulo \texttt{NUM\_TASK}, is just an integer index into that table.
