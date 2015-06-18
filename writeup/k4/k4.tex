@@ -321,6 +321,12 @@ considerably, not least of which because you would have to find a register to
 store that state in. As the context switch is only slightly more than ten
 instructions, we opted just to implement the conditions at the assembler level.
 
+% We should talk about:
+% What tasks we have in the kernel, what they do, and why.
+% What priority each of the tasks runs at.
+% How we do kernel debugging (i.e. bwio and how it just works even though the
+% assignment description says that it shouldn't).
+
 \section{Source Code}
 The source code is hosted on git, at \url{git.uwaterloo.ca/pgraboud/cs452-kernel}.
 The version we wish to submit is on the \texttt{k4} branch, specifically
