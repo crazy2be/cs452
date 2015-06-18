@@ -340,7 +340,7 @@ static void update_single_2switch(int sw, enum sw_direction pos) {
 }
 
 static void update_single_3switch(int first_switch, enum sw_direction s1, enum sw_direction s2) {
-	const struct sw3_display *coords = &switch3_display_info[first_switch / 2];
+	const struct sw3_display *coords = &switch3_display_info[(first_switch - 153)/ 2];
 
 	unsigned char tx, ty; // coords for piece of track to draw
 	unsigned char b1x, b1y, b2x, b2y; // coords for piece of track to blank out
@@ -375,9 +375,9 @@ static void update_single_3switch(int first_switch, enum sw_direction s1, enum s
 		b2y = coords->ry;
 	}
 	printf("\e[s\e[%d;%dH\e[1;31m%c\e[0m\e[%d;%dH \e[%d;%dH \e[u",
-		tx + TRAIN_Y_OFFSET, tx + TRAIN_X_OFFSET, switch_char,
+		ty + TRAIN_Y_OFFSET, tx + TRAIN_X_OFFSET, switch_char,
 		b1y + TRAIN_Y_OFFSET, b1x + TRAIN_X_OFFSET,
-		b2y + TRAIN_Y_OFFSET, b2y + TRAIN_Y_OFFSET);
+		b2y + TRAIN_Y_OFFSET, b2x + TRAIN_Y_OFFSET);
 
 }
 

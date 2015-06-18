@@ -123,14 +123,17 @@ static void trains_server(void) {
 	struct switch_state switches = {};
 	for (int i = 1; i <= 18; i++) {
 		tc_switch_switch(i, CURVED);
-		displaysrv_update_switch(displaysrv, i, CURVED);
-		delay(1); // Avoid flooding rbuf.
+		switch_set(&switches, i, CURVED);
+		// Avoid flooding rbuf. We probably shouldn't need this, since rbuf
+		// should have plenty of space, but it seems to work...
+		delay(1);
 	}
 	tc_switch_switch(153, CURVED);
-	displaysrv_update_switch(displaysrv, 153, CURVED);
+	switch_set(&switches, 153, CURVED);
 	tc_switch_switch(156, CURVED);
-	displaysrv_update_switch(displaysrv, 156, CURVED);
+	switch_set(&switches, 156, CURVED);
 	tc_deactivate_switch();
+	displaysrv_update_switch(displaysrv, &switches);
 
 	for (;;) {
 		int tid = -1, resp = -1;
@@ -150,7 +153,7 @@ static void trains_server(void) {
 		case SWITCH_SWITCH:
 			start_switch(req.switch_number, req.direction);
 			switch_set(&switches, req.switch_number, req.direction);
-			displaysrv_update_switch(displaysrv, req.switch_number, req.direction);
+			displaysrv_update_switch(displaysrv, &switches);
 			break;
 		default:
 			resp = -1;
