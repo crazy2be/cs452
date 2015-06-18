@@ -375,7 +375,7 @@ static void update_single_3switch(int first_switch, enum sw_direction s1, enum s
 		b2y = coords->ry;
 	}
 	printf("\e[s\e[%d;%dH\e[1;31m%c\e[0m\e[%d;%dH \e[%d;%dH \e[u",
-		tx + TRAIN_Y_OFFSET, ty + TRAIN_X_OFFSET, switch_char,
+		ty + TRAIN_Y_OFFSET, tx + TRAIN_X_OFFSET, switch_char,
 		b1y + TRAIN_Y_OFFSET, b1x + TRAIN_X_OFFSET,
 		b2y + TRAIN_Y_OFFSET, b2x + TRAIN_Y_OFFSET);
 
