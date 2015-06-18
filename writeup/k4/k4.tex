@@ -242,14 +242,14 @@ performance problem.
 
 \subsection{Message Passing}
 Message passing is implemented by having each task keep a queue
-of tasks that are waiting for replies from it (i.e. blocked). This allows us
+of tasks that are waiting for replies from it (i.e.\@ blocked). This allows us
 to ensure that messages are received in FIFO order, and quickly and efficiently
-find tasks that are blocked on a given task (i.e. without having to scan the
+find tasks that are blocked on a given task (i.e.\@ without having to scan the
 list of tasks).
 
 In addition to this, we keep track of the current "state" of a task in it's
 task descriptor, in order to ensure that invalid sequences of operations are
-caught (i.e. trying to reply to a task which is not waiting for a reply).
+caught (i.e.\@ trying to reply to a task which is not waiting for a reply).
 
 Our message passing routines are quite fast - Around 14us in the best case for
 a round trip send/receive/reply set, including context switching.
@@ -398,7 +398,7 @@ instructions, we opted just to implement the conditions at the assembler level.
 The syscall interface we chose to have for IO is for user tasks to pass in a buffer
 filled with data they want to output, or a buffer they wish to have filled with input.
 They also pass an event corresponding to the COM port they want to do IO with.
-The kernel runs code in response to hardware interrupts to actually do the IO.
+The kernel runs code in response to hardware interrupts to actually do the IO.\@
 This is pushes most of the hardware-specific IO logic into the kernel, as opposed to
 the alternate approach where the kernel merely signals to the user task that it is possible
 to do IO, and leaves it to the user task to actually perform the IO.
@@ -450,7 +450,7 @@ in hardware.
 
 \subsection{IO Server}
 We implemented an IO server in userland, which the other user tasks interact with
-in order to perform IO.
+in order to perform IO.\@
 There is one IO server for each serial port, which handles both input and output
 for that port.
 The IO server has a pair of notifiers, one to notify it of inbound data, and another
@@ -482,7 +482,7 @@ would wake up after at most a single tick.
 This means that the maximum delay between wishing to exit the program, and actually
 exiting was 10 ms, so this approach was acceptable.
 
-However, the receive notifier will never wake up if no input is sent to the UART.
+However, the receive notifier will never wake up if no input is sent to the UART.\@
 Thus, introducing the receive notifier makes the previous approach unviable.
 The way we handled this is to allow a user task to signal to the kernel that it
 can shut down immediately.
