@@ -154,7 +154,7 @@ below.
 
 \subsection{Task Resource Allocation}
 All task descriptors are simply allocated in a statically allocated table.
-A task ID, modulo \texttt{NUM_TASK}, is just an integer index into that table.
+A task ID, modulo \texttt{NUM\_TASK}, is just an integer index into that table.
 This approach makes the implementation very simple, very fast, and still allows
 the reuse of task descriptors after they are destroyed (just increment the tid
 for a given slot by 256 every time it is reused).
@@ -276,9 +276,9 @@ I assume this will be very useful
 when we start having trains going around the track, and we will start having
 tasks which care about real-world values like time and distance.
 
-The clockserver runs at \texttt{LOWER(PRIORITY_MAX, 1)}, with the only task
+The clockserver runs at \texttt{LOWER(PRIORITY\_MAX, 1)}, with the only task
 that runs at higher priority being the clockserver notifier, which runs at
-\texttt{PRIORITY_MAX}. This ensures we will almost never miss ticks, unless
+\texttt{PRIORITY\_MAX}. This ensures we will almost never miss ticks, unless
 something particularly evil happens.
 
 To keep track of tasks which requested future wakeup, we need a priority queue
@@ -414,7 +414,7 @@ The IO notifiers have the second highest priority possible, second only to the t
 The IO server itself has the fourth highest priority.
 
 \section{Halting}
-We have added a \textttt{halt()} syscall into the kernel.
+We have added a \texttt{halt()} syscall into the kernel.
 The kernel can no longer know when it is safe to exit from the kernel,
 because the receive notifier task is problematic.
 Previously, we would shutdown all of the servers from userland.
@@ -429,6 +429,35 @@ can shut down immediately.
 Another way that we could have handled this is to make the receive await time out
 periodically, so that we could guarantee that all notifiers exit shortly after
 the user tells the program to quit.
+
+\subsection{Train Tasks}
+As required for this assignment, we implemented several user tasks to
+reimplement a0. There are four user tasks used for this purpose:
+\begin{description}
+\item[sensorsrv] Constantly polls the sensors and feeds the updated data to
+	the displaysrv.
+\item[commandsrv] Constantly waits for user input, parses the input, feeds
+	characters as they are typed to the displaysrv, and sends parsed commands
+	to trainsrv for execution.
+\item[displaysrv] Prints the track layout to the screen, including any updates
+	that occur as a result of changes to the track (switches changing, sensors
+	getting tripped, etc).
+\item[trainsrv] Drives the trains. All requests for actions on the trains or
+	the track goes through this server, including setting the speed of trains,
+	actuating switches, etc. When things on the track change, this task tells
+	the displaysrv that things have changed, thus ensuring that the display
+	never gets out of sync. (Currently it notifies the displaysrv by way of
+	a \texttt{send()}. This currently works well enough because our i/o output
+	primitives are non-blocking, so displaysrv never takes very long to run,
+	but we may have to replace this with a courier task if this changes in
+	the future).
+\end{description}
+Of these, the trainsrv is the only only which is at all novel in it's
+implementation. In particular, it uses ephemeral tasks to reset the solenoid
+for sensors some time after they are actuated, and for properly reversing
+trains without a sudden stop. This implementation reduced explicit state, and
+makes the code easier to follow, although it does have some additional
+overhead, and required the implementation of \texttt{destroy()}.
 
 \section{Source Code}
 The source code is hosted on git, at \url{git.uwaterloo.ca/pgraboud/cs452-kernel}.
