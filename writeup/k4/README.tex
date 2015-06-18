@@ -1,0 +1,93 @@
+\subsection{Installation}\label{installation}
+
+Simply run \texttt{make ENV=ts7200 install}. This will place the
+compiled kernel in \texttt{/u/cs452/tftp/ARM/\$(USER)/k.elf} (where
+\texttt{\$(USER)} is whatever your username is on the computer which you
+are compiling it). You can then load this kernel from redboot using
+\texttt{load -b 0x00218000 -h 10.15.167.5 "ARM/\$(USER)/k.elf"}. At this
+stage, the kernel doesn't do much that is particularly interesting,
+there is no shell or other interactive elements, it simply runs the code
+which it was given.
+
+\subsection{Emulator}\label{emulator}
+
+You can run the OS on an emulated arm CPU via
+\texttt{make ENV=qemu qemu-run}. In order for this to complete
+successfully, you will need:
+
+\begin{itemize}
+\itemsep1pt\parskip0pt\parsep0pt
+\item
+  A local install of QEMU
+\item
+  A local install of an arm-none-eabi toolchain
+\end{itemize}
+
+\subsection{Tests}\label{tests}
+
+The provided kernel has some basic tests, which you can run with
+\texttt{make ENV=qemu test}. (this depends on the emulator, above).
+
+\subsection{Debugging}\label{debugging}
+
+If something goes wrong and you want to investigate deeper, you can run
+\texttt{make ENV=qemu qemu-start} in one terminal (this starts qemu in a
+suspended state), and then \texttt{make ENV=qemu qemu-debug} in another.
+You can then set breakpoints, step, inspect memory, etc- anything you
+can normally do with gdb.
+
+\subsection{Special Instructions}\label{special-instructions}
+
+Before running the program on the TS7200, it is necessary to reset both
+the TS7200 and the train controller, to avoid messy state left behind by
+previous runs. In particular, this has been known to cause bugs with the
+sensor reads, where garbage data left in the UART is picked up, and
+misinterpreted.
+
+\subsection{Useful links:}\label{useful-links}
+
+\subsubsection{General}\label{general}
+
+\begin{itemize}
+\itemsep1pt\parskip0pt\parsep0pt
+\item
+  \href{http://www.cgl.uwaterloo.ca/~wmcowan/teaching/cs452/pdf/arm-architecture.pdf}{ARMv4
+  Manual}
+\item
+  \href{http://ascii-table.com/ansi-escape-sequences.php}{Terminal
+  escape sequences}
+\end{itemize}
+
+\subsubsection{TS7200 hardware}\label{ts7200-hardware}
+
+\begin{itemize}
+\itemsep1pt\parskip0pt\parsep0pt
+\item
+  \href{http://www.cgl.uwaterloo.ca/~wmcowan/teaching/cs452/pdf/ts-7200-manual.pdf}{TS7200
+  Manual}
+\item
+  \href{http://www.cgl.uwaterloo.ca/~wmcowan/teaching/cs452/pdf/ep93xx-user-guide.pdf}{Cirrus
+  EP9302 Manual}
+\item
+  \href{http://www.cgl.uwaterloo.ca/~wmcowan/teaching/cs452/pdf/icu-pl190.pdf}{Interrupt
+  controller manual}
+\end{itemize}
+
+\subsubsection{VersatilePB hardware emulated by
+QEMU}\label{versatilepb-hardware-emulated-by-qemu}
+
+\begin{itemize}
+\itemsep1pt\parskip0pt\parsep0pt
+\item
+  \href{http://infocenter.arm.com/help/topic/com.arm.doc.dui0224i/DUI0224I_realview_platform_baseboard_for_arm926ej_s_ug.pdf}{SOC
+  manual}
+\item
+  \href{http://infocenter.arm.com/help/topic/com.arm.doc.ddi0271d/DDI0271.pdf}{Timer
+  manual}
+\item
+  \href{http://infocenter.arm.com/help/topic/com.arm.doc.ddi0181e/DDI0181.pdf}{Interrupt
+  controller manual} (Same as the TS7200 hardware)
+\item
+  \href{http://infocenter.arm.com/help/topic/com.arm.doc.ddi0183f/DDI0183.pdf}{UART
+  Manual}
+\end{itemize}
