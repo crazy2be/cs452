@@ -142,8 +142,10 @@ static const struct sensor_display sensor_display_info[] = {
 #define RIGHT_BAR_X_OFFSET (TRAIN_X_OFFSET + TRACK_DISPLAY_WIDTH - 3)
 #define CLOCK_X_OFFSET (TRAIN_X_OFFSET + TRACK_DISPLAY_WIDTH)
 #define CLOCK_Y_OFFSET TRAIN_Y_OFFSET
+#define SENSORS_X_OFFSET CLOCK_X_OFFSET
+#define SENSORS_Y_OFFSET (CLOCK_Y_OFFSET + 2)
 #define FEEDBACK_X_OFFSET TRAIN_X_OFFSET
-#define FEEDBACK_Y_OFFSET (1 + TRACK_DISPLAY_HEIGHT + 1)
+#define FEEDBACK_Y_OFFSET (1 + TRACK_DISPLAY_HEIGHT + 1 + 2)
 #define CONSOLE_X_OFFSET TRAIN_X_OFFSET
 #define CONSOLE_Y_OFFSET (FEEDBACK_Y_OFFSET + 2)
 
@@ -191,7 +193,8 @@ static void initial_draw(void) {
 	vbox(1, SCREEN_WIDTH - 2 - TRACK_DISPLAY_WIDTH + 1, RIGHT_BAR_X_OFFSET);
 	printf("\e[%dC", RIGHT_BAR_X_OFFSET);
 	hline(SCREEN_WIDTH - TRACK_DISPLAY_WIDTH + 1, LTEE, RTEE);
-	vbox(TRACK_DISPLAY_HEIGHT - 2, SCREEN_WIDTH - 2 - TRACK_DISPLAY_WIDTH + 1,
+	puts(EOL);
+	vbox(TRACK_DISPLAY_HEIGHT - 1, SCREEN_WIDTH - 2 - TRACK_DISPLAY_WIDTH + 1,
 		RIGHT_BAR_X_OFFSET);
 
 	hline(TRACK_DISPLAY_WIDTH, LTEE, UTEE);
@@ -235,29 +238,56 @@ struct displaysrv_req {
 	} data;
 };
 
-static void update_sensor(struct sensor_state *sensors, struct sensor_state *old_sensors) {
+#define SENSOR_BUF_SIZE (TRACK_DISPLAY_HEIGHT + 2 - 3)
+struct sensor_reads {
+	int start, len;
+	unsigned char sensors[SENSOR_BUF_SIZE];
+};
+
+static void record_sensor_read(struct sensor_reads *reads, int sensor) {
+	int last = (reads->start + reads->len) % SENSOR_BUF_SIZE;
+	reads->sensors[last] = sensor;
+
+	if (reads->len < SENSOR_BUF_SIZE) {
+		reads->len++;
+	} else {
+		ASSERT(reads->start == last); // we should have wrapped around to the right spot
+		reads->start = (reads->start + 1) % SENSOR_BUF_SIZE;
+	}
+
+	printf("\e[s");
+	for (int j = reads->len - 1; j >= 0; j--) {
+		char buf[4];
+		sensor_repr(reads->sensors[(reads->start + j) % SENSOR_BUF_SIZE], buf);
+		printf("\e[%d;%dH%s ", SENSORS_Y_OFFSET + reads->len - 1 - j, SENSORS_X_OFFSET, buf);
+	}
+	printf("\e[u");
+}
+
+static void update_sensor_display(int sensor, int blank) {
+	struct sensor_display coords = sensor_display_info[sensor / 2];
 	char buf[4];
+	sensor_repr(sensor, buf);
+	if (blank) {
+		// clear sensor from display
+		buf[0] = buf[1] = buf[2] = ' ';
+		buf[3] = '\0';
+	} else if (buf[2] == '\0') {
+		buf[2] = ' ';
+		buf[3] = '\0';
+	}
+	printf("\e[s\e[%d;%dH%s\e[u", coords.y + TRAIN_Y_OFFSET,
+		coords.x + TRAIN_X_OFFSET, buf);
+}
+
+static void update_sensor(struct sensor_state *sensors, struct sensor_state *old_sensors, struct sensor_reads *reads) {
 	for (int i = 0; i < SENSOR_COUNT; i += 2) {
 		int s1 = sensor_get(sensors, i);
 		int s2 = sensor_get(sensors, i + 1);
 		if (s1 != sensor_get(old_sensors, i) || s2 != sensor_get(old_sensors, i + 1)) {
-			struct sensor_display coords = sensor_display_info[i / 2];
-			if (s1 || s2) {
-				int to_draw = s1 ? i : i + 1;
-				sensor_repr(to_draw, buf);
-				if (!buf[2]) {
-					buf[2] = ' ';
-					buf[3] = '\0';
-				}
-			} else {
-				// clear sensor from display
-				buf[0] = buf[1] = buf[2] = ' ';
-				buf[3] = '\0';
-			}
-
-			printf("\e[s\e[%d;%dH%s\e[u", coords.y + TRAIN_Y_OFFSET,
-					coords.x + TRAIN_X_OFFSET, buf);
-			/* printf("Saw sensor %s change to %d" EOL, buf, status); */
+			int to_draw = s1 ? i : i + 1;
+			update_sensor_display(to_draw, !(s1 || s2));
+			if (s1 || s2) record_sensor_read(reads, to_draw);
 		}
 	}
 	*old_sensors = *sensors;
@@ -296,7 +326,7 @@ static void update_switch(int sw, enum sw_direction pos) {
 			current_y + TRAIN_Y_OFFSET, current_x + TRAIN_X_OFFSET, switch_char,
 			last_y + TRAIN_Y_OFFSET, last_x + TRAIN_X_OFFSET, filler_char);
 	} else {
-		ASSERT(0 && "Unknown switch number");
+		//ASSERT(0 && "Unknown switch number");
 	}
 }
 
@@ -348,6 +378,8 @@ void displaysrv_start(void) {
 	initial_draw();
 
 	struct sensor_state old_sensors;
+	struct sensor_reads sensor_reads;
+	sensor_reads.len = sensor_reads.start = 0;
 	memset(&old_sensors, 0, sizeof(old_sensors));
 	struct displaysrv_req req;
 	int tid;
@@ -362,7 +394,7 @@ void displaysrv_start(void) {
 			update_switch(req.data.sw.num, req.data.sw.pos);
 			break;
 		case UPDATE_SENSOR:
-			update_sensor(&req.data.sensor.state, &old_sensors);
+			update_sensor(&req.data.sensor.state, &old_sensors, &sensor_reads);
 			break;
 		case UPDATE_TIME:
 			update_time(req.data.time.millis);

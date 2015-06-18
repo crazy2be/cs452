@@ -115,6 +115,11 @@ void handle_sw(int displaysrv, int sw, enum sw_direction pos) {
 	displaysrv_console_feedback(displaysrv, "");
 }
 
+void handle_rv(int displaysrv, int train) {
+	trains_reverse(train);
+	displaysrv_console_feedback(displaysrv, "");
+}
+
 void process_command(char *cmd, int displaysrv) {
 	int i = 0;
 	enum command_type type = get_command_type(cmd, &i);
@@ -160,14 +165,15 @@ void process_command(char *cmd, int displaysrv) {
 			handle_sw(displaysrv, sw, pos);
 			return;
 		}
-	case RV: {
-		int train; // TODO: Validate train number here.
-		if (get_integer(cmd, &i, &train)) {
-			break;
+	case RV:
+		{
+			int train;
+			if (get_integer(cmd, &i, &train)) {
+				break;
+			}
+			handle_rv(displaysrv, train);
 		}
-		trains_reverse(train);
-		return;
-	}
+		break;
 	case QUIT:
 		displaysrv_quit(displaysrv);
 		stop_servers();

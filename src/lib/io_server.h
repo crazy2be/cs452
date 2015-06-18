@@ -23,6 +23,15 @@ int fgetc(const int channel);
 
 int fprintf(int channel, const char *format, ...);
 
+// Drop whatever is in the input buffer
+// This is useful for discarding garbage input produced by the train controller
+// at the start of the run
+// A more general solution might be to do a non-blocking gets which only returns stuff
+// already in the buffer, and then the client could just discard that.
+// However, we don't need this right now, so I don't want to build it.
+int fdump(const int channel);
+int fbuflen(const int channel);
+
 // shorthand for all the above
 #define puts(...) fputs(COM2, __VA_ARGS__)
 #define putc(...) fputc(COM2, __VA_ARGS__)

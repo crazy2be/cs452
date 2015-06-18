@@ -52,7 +52,7 @@ static void tc_stop(int train) {
 }
 
 static void tc_switch_switch(int sw, enum sw_direction d) {
-	ASSERT((1 <= sw && sw <= 18) || (153 <= sw && sw <= 156));
+	ASSERT((1 <= sw && sw <= 18) || (145 <= sw && sw <= 148) || (150 <= sw && sw <= 156));
 #ifdef QEMU
 	ASSERT(fputs(COM1, "Changing switch position" EOL) == 0);
 #else
