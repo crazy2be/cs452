@@ -10,7 +10,7 @@
 \maketitle
 
 \section{Instructions}
-\input{"../k1/README.tex"}
+\input{"README.tex"}
 
 \section{Design Decisions}
 \subsection{Structure}
@@ -33,17 +33,15 @@ Functionality is abstracted into multiple modules, listed here:
 \item Handlers and callers for each syscall
 \end{itemize}
 
-There are also some miscellaenous code used for initializing the kernel's environment
-(such as exception handlers), as well as some code which is currently not used (such
-as ring buffers for buffered IO).
+There are also some miscellaneous code used for initializing the kernel's environment
+(such as exception handlers).
 
 The kernel maintains some degree of separation from the user code.
 User code is structured within its own directory.
 By convention, it only includes headers from the \texttt{include} directory,
 which limits the size of the interface between the user and kernel code.
-Currently, this interface comprises the syscalls, a method to start the kernel from
-the program's entrypoint, as well as IO routines.
-(By assignment 4, the IO routines will be replaced by real IO syscalls.)
+Currently, this interface comprises the syscalls, and a method to start the
+kernel from the program's entrypoint.
 
 \subsection{Priority Queue}
 The priority queue used to implement the ready queue of the scheduler is
@@ -147,21 +145,32 @@ this case before running this algorithm to try to find the least significant set
 The $b=0$ case is special to the caller anyway, and needs to be handled separately,
 and doing this makes it easier to optimize the algorithm.
 
+\subsection{Destroy}
+We implemented the destroy() primitive (actually, it's just the same as exit()).
+This allows us to create temporary tasks, which can be a convenient way to
+express many parts of the system, such as in the train server. The details of
+Destroy()'s implementation are discussed in the resource allocation section,
+below.
+
 \subsection{Task Resource Allocation}
 All task descriptors are simply allocated in a statically allocated table.
-A task ID is just an integer index into that table.
-This approach makes the implementation very simple, but precludes the reuse
-of memory allocated for task descriptors, since task IDs themselves cannot
-be reused.
-If we should ever want to support reusing task resources after a task exits,
-we will need to switch the task descriptor table to a different implementation.
+A task ID, modulo \texttt{NUM_TASK}, is just an integer index into that table.
+This approach makes the implementation very simple, very fast, and still allows
+the reuse of task descriptors after they are destroyed (just increment the tid
+for a given slot by 256 every time it is reused).
 
-Memory allocated for task stacks is allocated in 4K blocks after the end of
-the kernel's stack.
-Each individual stack grows down, but the overall set of task stacks grows up in
-4K increments.
-Like the task descriptors themselves, memory is not currently reused after the
-task exits.
+We also have a queue of free tds from which new tasks can be allocated,
+allowing O(1) task creation and destruction. Although this is not extremely
+important at this point, since tasks are created fairly infrequently, it does
+not cost much in terms of resources or complexity (we already had a td queue
+from the scheduler), and it opens up lots of possibilities for cheaply using
+ephemeral tasks when it is a convenient way to express things.
+
+Memory allocated for task stacks is statically allocated in 64K blocks. This
+is almost certainly at least a couple orders of magnitude larger than it needs
+to be for most tasks, but we have lots of memory currently, and using memory
+for stacks is cheaper than pulling hairs when they overflow.
+Like the task descriptors themselves, stacks are reused after the task exits.
 
 \subsection{Argument Passing}
 To pass arguments and return values to and from syscalls, the kernel manipulates
@@ -205,21 +214,19 @@ way.
 Therefore, I'm not going to try to implement this solution unless it becomes a
 performance problem.
 
-\subsection{k2} % TODO: Rename/reorginize this subsection.
-Very little has changed with the architecture of the kernel since the previous assignment.
+\subsection{Message Passing}
+Message passing is implemented by having each task keep a queue
+of tasks that are waiting for replies from it (i.e. blocked). This allows us
+to ensure that messages are received in FIFO order, and quickly and efficiently
+find tasks that are blocked on a given task (i.e. without having to scan the
+list of tasks).
 
-One change was to actually store the current state of a task in it's task descriptor.
-Previously, the state of the task could be inferred, and did not need to be explicitly stored.
-(If a task was currently being executed, it is active; if in the ready queue, it is ready; otherwise
-it is a zombie. No other possible states existed.)
-We now need to store whether a task is in the \texttt{REPLY\_BLK} or \texttt{RECV\_BLK} states,
-since this cannot be inferred by whether the task is on some particular queue.
+In addition to this, we keep track of the current "state" of a task in it's
+task descriptor, in order to ensure that invalid sequences of operations are
+caught (i.e. trying to reply to a task which is not waiting for a reply).
 
-We also added a send queue attached to each task descriptor.
-This is a FIFO queue which maintains a list of task descriptors which wish to send a message
-to that task.
-The FIFO queue was actually already implemented as a subproblem of the priority queue used
-for the ready queue, and so very little new code needed to be written for this.
+Our message passing routines are quite fast - Around 14us in the best case for
+a round trip send/receive/reply set, including context switching.
 
 \subsection{Await Interface}
 The implementation of await was something that we debated for quite some time,
