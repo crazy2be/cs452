@@ -378,7 +378,7 @@ IO on COM2 uses the FIFOs, which is conceptually no different - it simply allows
 us to process multiple bytes of data each cycle, instead of a single one.
 
 We changed the signature of the await syscall to allow passing in a buffer of data,
-wheras previous signature only allowed passing in a single byte.
+whereas previous signature only allowed passing in a single byte.
 We needed to make this change when we started using the hardware FIFOs in the UARTs.
 The point of using the FIFOs is that we can check the UARTs less frequently, and have
 less overhead per byte of data transferred.
@@ -398,7 +398,7 @@ COM1 doesn't use the FIFOs, since we lack the hardware support to do CTS properl
 in hardware.
 
 \subsection{IO Server}
-We implement an IO server in userland, which the other user tasks interact with
+We implemented an IO server in userland, which the other user tasks interact with
 in order to perform IO.
 There is one IO server for each serial port, which handles both input and output
 for that port.
@@ -431,8 +431,8 @@ would wake up after at most a single tick.
 This means that the maximum delay between wishing to exit the program, and actually
 exiting was 10 ms, so this approach was acceptable.
 
-However, the receive notifier will never wake up if no input is sent to the UART\@..
-Introducing the receive notifier makes this approach unviable.
+However, the receive notifier will never wake up if no input is sent to the UART.
+Thus, introducing the receive notifier makes the previous approach unviable.
 The way we handled this is to allow a user task to signal to the kernel that it
 can shut down immediately.
 Another way that we could have handled this is to make the receive await time out
