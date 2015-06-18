@@ -10,6 +10,7 @@
 #include "displaysrv.h"
 #include "sensorsrv.h"
 #include "trainsrv.h"
+#include "calibrate/calibrate.h"
 #include "../kernel/drivers/timer.h"
 
 struct init_reply {
@@ -48,6 +49,7 @@ void test_init(void) {
 
 	/* displaysrv(); */
 	/* commandsrv(); */
+	calibratesrv();
 	sensorsrv();
 	start_trains();
 	trains_set_speed(12, 5);

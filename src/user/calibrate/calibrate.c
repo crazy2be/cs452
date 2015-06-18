@@ -34,6 +34,7 @@ static const struct track_node* node_from_sensor(int sensor, const struct track_
 static const struct track_node* next_expected_sensor(const struct track_node *n,
 		const struct switch_state *switches, int *distance) {
 	do {
+		printf("Currently at node %s" EOL, n->name);
 		ASSERT(n->type != NODE_EXIT); // we don't want to hit a dead end
 
 		int index = 0;
@@ -69,19 +70,19 @@ static void calculate_distance_travelled(int sensor, int time, const struct swit
 
 	bk->last_node = n;
 	bk->next_expected_node = next_expected_sensor(n, switches, &bk->distance_to_next_sensor);
+	printf("Current tracked sensor is %s, next is %s" EOL, n->name, bk->next_expected_node->name);
 	bk->time_at_last_sensor = time;
 }
 
 static void handle_sensor_update(struct sensor_state *sensors, struct sensor_state *old_sensors,
 		const struct switch_state *switches, struct bookkeeping *bk, const struct track_node *track) {
 
-	for (int i = 1; i <= 18; i++) {
-		calculate_distance_travelled(i, sensors->ticks, switches, bk, track);
-		return;
-	}
-	for (int i = 153; i <= 156; i++) {
-		calculate_distance_travelled(i, sensors->ticks, switches, bk, track);
-		return;
+	for (int i = 0; i <= SENSOR_COUNT; i++) {
+		int s = sensor_get(sensors, i);
+		if (s && s != sensor_get(old_sensors, i)) {
+			calculate_distance_travelled(i, sensors->ticks, switches, bk, track);
+			return;
+		}
 	}
 }
 
@@ -94,13 +95,14 @@ void start_calibrate(void) {
 	memset(&switches, 0, sizeof(switches)); // mostly to make the compiler happy
 
 	int has_switch_data = 0;
+	int has_sensor_data = 0;
 	int tid;
 	struct bookkeeping bk;
 	// need to set bk.next_expected_node = NULL, but the rest is to make the compiler happy
 	memset(&bk, 0, sizeof(bk));
 
 	struct track_node track[TRACK_MAX];
-	init_trackb(track);
+	init_tracka(track);
 
 	struct calibrate_req req;
 
@@ -112,6 +114,10 @@ void start_calibrate(void) {
 		case UPDATE_SENSOR:
 			if (!has_switch_data) {
 				printf("Discarding sensor data since we don't know the switch positions yet" EOL);
+			} else if (!has_sensor_data) {
+				printf("Getting sensor baseline" EOL);
+				old_sensors = req.u.sensors;
+				has_sensor_data = 1;
 			} else {
 				handle_sensor_update(&req.u.sensors, &old_sensors, &switches, &bk, track);
 				old_sensors = req.u.sensors;

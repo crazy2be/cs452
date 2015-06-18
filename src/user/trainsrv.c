@@ -1,10 +1,11 @@
-#include "trainsrv.h"
 
+#include "trainsrv.h"
 #include "clockserver.h"
 #include "nameserver.h"
 #include "request_type.h"
 #include "switch_state.h"
 #include "displaysrv.h"
+#include "calibrate/calibrate.h"
 
 #include <kernel.h>
 #include <assert.h>
@@ -118,7 +119,7 @@ static void start_switch(int sw, enum sw_direction d) {
 static void trains_server(void) {
 	register_as("trains");
 	// TODO: displaysrv_* functions should do this automatically?
-	int displaysrv = whois(DISPLAYSRV_NAME);
+	/* int displaysrv = whois(DISPLAYSRV_NAME); */
 	static int train_speeds[NUM_TRAIN] = {};
 	struct switch_state switches = {};
 	for (int i = 1; i <= 18; i++) {
@@ -133,7 +134,9 @@ static void trains_server(void) {
 	tc_switch_switch(156, CURVED);
 	switch_set(&switches, 156, CURVED);
 	tc_deactivate_switch();
-	displaysrv_update_switch(displaysrv, &switches);
+	/* displaysrv_update_switch(displaysrv, &switches); */
+
+	calibrate_send_switches(whois(CALIBRATESRV_NAME), &switches);
 
 	for (;;) {
 		int tid = -1, resp = -1;
@@ -153,7 +156,7 @@ static void trains_server(void) {
 		case SWITCH_SWITCH:
 			start_switch(req.switch_number, req.direction);
 			switch_set(&switches, req.switch_number, req.direction);
-			displaysrv_update_switch(displaysrv, &switches);
+			/* displaysrv_update_switch(displaysrv, &switches); */
 			break;
 		default:
 			resp = -1;
