@@ -83,7 +83,7 @@ static const struct sw2_display switch_display_info[] = {
 
 static const struct sw3_display switch3_display_info[] = {
 	{ 21, 11, '\\', 22, 11, '|', 23, 11, '/' },
-	{ 21, 17, '/', 22, 17, '|', 23, 17, '\\' },
+	{ 23, 17, '\\', 22, 17, '|', 21, 17, '/' },
 };
 
 struct sensor_display {
