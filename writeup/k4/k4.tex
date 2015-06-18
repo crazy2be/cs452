@@ -276,13 +276,17 @@ currently a problem, because we only ever have a single task at a time
 awaiting an event.
 
 \subsection{Clockserver}
-% TODO: Add something about ClockServer priority RE feedback from k3!
 As part of this assignment, we implemented a clock server as a user task, which
 allows other user tasks to request the current time, or schedule themselves to run
 after some delay.
 I assume this will be very useful
 when we start having trains going around the track, and we will start having
 tasks which care about real-world values like time and distance.
+
+The clockserver runs at \texttt{LOWER(PRIORITY_MAX, 1)}, with the only task
+that runs at higher priority being the clockserver notifier, which runs at
+\texttt{PRIORITY_MAX}. This ensures we will almost never miss ticks, unless
+something particularly evil happens.
 
 To keep track of tasks which requested future wakeup, we need a priority queue
 of tasks, ordered by the time at which they need to be woken up.
