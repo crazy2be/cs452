@@ -41,6 +41,27 @@ previous runs. In particular, this has been known to cause bugs with the
 sensor reads, where garbage data left in the UART is picked up, and
 misinterpreted.
 
+\subsection{Commands}\label{commands}
+
+\begin{itemize}
+\itemsep1pt\parskip0pt\parsep0pt
+\item
+  \texttt{tr \textless{}train number\textgreater{} \textless{}speed\textgreater{}}
+  sets the speed of a train
+\item
+  \texttt{sw \textless{}switch number\textgreater{} (c\textbar{}s)} sets
+  a the position of a switch to curved or straight
+\item
+  \texttt{rv \textless{}train number\textgreater{}} reverses a train
+\item
+  \texttt{q} exits the program
+\end{itemize}
+
+The positions of each switch is shown in the ASCII-art map of the train
+track. When a sensor is tripped, it is shown both on the ASCII-art map
+for as long as it is tripped, as well as to the right, on the list of
+recently-fired sensors.
+
 \subsection{Useful links:}\label{useful-links}
 
 \subsubsection{General}\label{general}
