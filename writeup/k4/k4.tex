@@ -242,31 +242,24 @@ in userland. Thus, at least for this iteration of the kernel, we have chosen
 to have the kernel read the data from the device, deassert the interrupt,
 and return the relevant data back to the userland \texttt{await()} call.
 
-For now, the interface to \texttt{await()} is \texttt{int await(int evt);}.
-However, this will need to be changed to accommodate passing in additional data
-to the kernel, in order to to support UART write events.
-We considered masking this data into \texttt{evt}.
+The interface to \texttt{await()} is \texttt{int await(int evt, char *buf, int buflen);}.
+This accommodates passing in additional data to the kernel, to support UART write events.
+For timer events, no buffer is needed, or passed in.
+
+Originally, we did not pass in a data buffer, and were considering masking this data
+into \texttt{evt}.
 Since \texttt{evt} is 32 bits wide, and we only need 3 to represent 5 distinct events,
 we could stuff an 8-bit character into the upper bits of the \texttt{int}.
 However, if we have control over the signature of \texttt{await()}, it's easier to just
 add an extra parameter to contain this data.
 
 \subsection{Await Data Structures}
-For keeping track of tasks that are blocked awaiting external events, we used
-a array of queues, one queue for each different possible event. This allows
-constant-time removal and addition of tasks from waiting queues. The latter
-is particularly important, as tasks are currently dequeued immediately in the
-interrupt handler, where speed is particularly important, because it can
-directly impact the worst-case latency of a response. Had a linear scan been
-used instead, this could  yield quite bad latency if many tasks were stacked
-up waiting for interrupts, particularly if many were stacked up at the same
-time.
-
-We currently dequeue all of the waiting tasks when an event occurs. This could
-cause some performance problems if many tasks are queued up at once, because
-a single interrupt would have to dequeue all of them. However, this is not
-currently a problem, because we only ever have a single task at a time
-awaiting an event.
+To keep track of tasks that are blocked awaiting external events, for each event,
+we maintain a pointer to the task descriptor blocked on that event, if any.
+This only allows for a single task to wait on a given event, but this is all
+we are using in our kernel.
+Originally, we maintained a queue of tasks for each event, but found
+that we were not using this capability, so we removed it.
 
 \subsection{Clockserver}
 % TODO: Add something about ClockServer priority RE feedback from k3!
@@ -326,6 +319,105 @@ instructions, we opted just to implement the conditions at the assembler level.
 % What priority each of the tasks runs at.
 % How we do kernel debugging (i.e. bwio and how it just works even though the
 % assignment description says that it shouldn't).
+
+% what we should talk about
+% commandsrv, trainsrv, sensorsrv
+% iosrv
+% interrupts for io, cts, single-await, fifos
+% shutdown
+% destroy
+
+\subsection{IO in the Kernel}
+The syscall interface we chose to have for IO is for user tasks to pass in a buffer
+filled with data they want to output, or a buffer they wish to have filled with input.
+They also pass an event corresponding to the COM port they want to do IO with.
+The kernel runs code in response to hardware interrupts to actually do the IO.
+This is pushes most of the hardware-specific IO logic into the kernel, as opposed to
+the alternate approach where the kernel merely signals to the user task that it is possible
+to do IO, and leaves it to the user task to actually perform the IO.
+
+This was done mostly based on the belief that the IO should be entirely done in the kernel,
+with the hope that the IO server can eventually be subsumed into the kernel entirely.
+The userland implementation of the IO server is fairly complex, and much of the logic
+in it is related to message passing boilerplate.
+Since this could be eliminated in the kernel, moving all of the IO buffering logic
+into the kernel could allow us to simply eliminate this boilerplate, and simplify the code.
+It is unclear, however, if we will ever have sufficient time to justify actually doing
+this, since the IO server seems to not be causing any problems at the present.
+
+The way that the IO interrupts work is that when a task begins awaiting on a particular
+transmit or receive event, we set the control register in the UART to assert an interrupt
+when that event occurs.
+We then leave the kernel, and wait for the event to occur.
+(A simple optimization we could do is to check if the event has already happened by
+inspecting the UART registers, which would allow us to avoid a context switch.)
+When the interrupt occurs, for transmit events we then perform writes to the UART,
+until there is no more data to be transmitted, or until the UART can't accept any more.
+If there is data left to be transmitted, we exit the kernel again, and wait for the TX
+interrupt to be asserted again, and repeat this process.
+If there isn't data left, we deassert the interrupt, and schedule the awaiting task
+to be run.
+Reads are processed in a similar way.
+IO on COM2 uses the FIFOs, which is conceptually no different - it simply allows
+us to process multiple bytes of data each cycle, instead of a single one.
+
+We changed the signature of the await syscall to allow passing in a buffer of data,
+wheras previous signature only allowed passing in a single byte.
+We needed to make this change when we started using the hardware FIFOs in the UARTs.
+The point of using the FIFOs is that we can check the UARTs less frequently, and have
+less overhead per byte of data transferred.
+If we need to do a syscall (meaning a pair of context switches) for each byte anyway,
+there is absolutely no advantage to using the FIFOs.
+Therefore, we need to pass in buffers to take advantage of this.
+
+In order to transmit reliably to the train controller, we needed to transmit slowly
+enough to not flood the train controller.
+We use the CTS bit asserted by the train controller to do this.
+After transmitting, we wait for a modem interrupt to signal CTS being deasserted, then
+asserted again, in addition to the normal condition of the TX interrupt being asserted.
+We use a state machine to keep track of these transitions.
+This is only done for COM1, since COM2 can process input sufficiently quickly for
+this to not be a problem.
+COM1 doesn't use the FIFOs, since we lack the hardware support to do CTS properly
+in hardware.
+
+\section{IO Server}
+We implement an IO server in userland, which the other user tasks interact with
+in order to perform IO.
+There is one IO server for each serial port, which handles both input and output
+for that port.
+The IO server has a pair of notifiers, one to notify it of inbound data, and another
+to send outbound data.
+Since most of the work is done in the kernel, the only thing that the IO server
+is responsible for is buffering IO in both directions.
+For writes, user tasks writing to the IO server return immediately, and don't need
+to wait until the data is actually flushed out to the serial port.
+For reads, data is buffered in the IO server if there isn't a task which wants
+that data at the time that it is read.
+This prevents data from being dropped if no task is attempting to consume it at a particular moment.
+(More accurately, this substantially reduces that probability, since the read notifiers
+spend almost all of their time awaiting events, and never spend more than a few microseconds
+at a time not waiting. We simply don't receive input at a fast enough rate for it to be a problem, since
+the hardware can buffer it for the time the notifiers aren't listening.)
+The IO notifiers have the second highest priority possible, second only to the timer notifier.
+The IO server itself has the fourth highest priority.
+
+\section{Halting}
+We have added a \textttt{halt()} syscall into the kernel.
+The kernel can no longer know when it is safe to exit from the kernel,
+because the receive notifier task is problematic.
+Previously, we would shutdown all of the servers from userland.
+When the servers' notifiers next try to communicate with the server, they would realize
+that the server exited, and they would respond by exiting as well.
+Since the only notifier was the timer notifier, we could be assured that the notifier
+would wake up fairly shortly, so this approach worked.
+However, the receive notifier may never wake up, if no input is sent to the UART,
+so this approach is not viable.
+The way we handled this is to allow a user task to signal to the kernel that it
+can shut down immediately.
+Another way that we could have handled this is to make the receive await time out
+periodically, so that we could guarantee that all notifiers exit shortly after
+the user tells the program to quit.
 
 \section{Source Code}
 The source code is hosted on git, at \url{git.uwaterloo.ca/pgraboud/cs452-kernel}.
