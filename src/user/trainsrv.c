@@ -3,6 +3,8 @@
 #include "clockserver.h"
 #include "nameserver.h"
 #include "request_type.h"
+#include "switch_state.h"
+#include "displaysrv.h"
 
 #include <kernel.h>
 #include <assert.h>
@@ -115,8 +117,20 @@ static void start_switch(int sw, enum sw_direction d) {
 
 static void trains_server(void) {
 	register_as("trains");
+	// TODO: displaysrv_* functions should do this automatically?
+	int displaysrv = whois(DISPLAYSRV_NAME);
 	static int train_speeds[NUM_TRAIN] = {};
-	//static int switch_states[NUM_SWITCH] = {}; // TODO
+	struct switch_state switches = {};
+	for (int i = 1; i <= 18; i++) {
+		tc_switch_switch(i, CURVED);
+		displaysrv_update_switch(displaysrv, i, CURVED);
+		delay(1); // Avoid flooding rbuf.
+	}
+	tc_switch_switch(153, CURVED);
+	displaysrv_update_switch(displaysrv, 153, CURVED);
+	tc_switch_switch(156, CURVED);
+	displaysrv_update_switch(displaysrv, 156, CURVED);
+	tc_deactivate_switch();
 
 	for (;;) {
 		int tid = -1, resp = -1;
@@ -135,6 +149,8 @@ static void trains_server(void) {
 			break;
 		case SWITCH_SWITCH:
 			start_switch(req.switch_number, req.direction);
+			switch_set(&switches, req.switch_number, req.direction);
+			displaysrv_update_switch(displaysrv, req.switch_number, req.direction);
 			break;
 		default:
 			resp = -1;

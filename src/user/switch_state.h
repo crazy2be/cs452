@@ -1,5 +1,7 @@
 #pragma once
 
+#include <assert.h>
+
 // switches are packed so it's cheap to message pass this struct around
 struct switch_state {
 	unsigned packed;
