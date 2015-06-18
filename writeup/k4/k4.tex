@@ -231,6 +231,34 @@ caught (i.e. trying to reply to a task which is not waiting for a reply).
 Our message passing routines are quite fast - Around 14us in the best case for
 a round trip send/receive/reply set, including context switching.
 
+\subsection{Name server}
+In order to allow tasks to communicate with each other, the sending task needs to
+obtain the TID of the task it wishes to send a message to.
+Usually, the problem is that there is a task for some service, but it is assigned
+a TID which is difficult to predict, or is not deterministic.
+To solve this, we created a name server, which has a known TID, and other tasks
+can query to find the TID of a particular service.
+This reduces the scope of the problem, since we only need to have a single service
+TID which is known, instead of every service TID\@.
+The nameserver has the highest priority of any task, except for the clock and IO
+servers, and their notifiers.
+This is chosen so that high priority tasks can't be blocked when looking up the TID
+in order to communicate with another task.
+If the nameserver schedules at a lower priority than other user tasks, it would be possible
+for the nameserver to have a pending request for a high priority task, but be unable
+to service it because another task is running.
+If that task is of lower priority than the high priority task, this is an undesired
+result.
+Therefore, we schedule the nameserver at reasonably high priority.
+
+Currently, each service is looked up by a string identifier, which requires a fairly
+complex hashtable implementation.
+Ideally, we would instead assign a unique integer ID to each task, which indexes
+a table of TIDs.
+This would make the lookup code much less complex and more efficient.
+The main advantage of a string ID is for human readability, which is of significantly
+less importance than clarify of the code, and efficiency.
+
 \subsection{Await Interface}
 The implementation of await was something that we debated for quite some time,
 because we were given multiple choices in implementation, and because there is
