@@ -1,0 +1,333 @@
+\documentclass[titlepage]{article}
+\usepackage{listings}
+\usepackage{hyperref}
+
+\lstset{basicstyle=\footnotesize\ttfamily,breaklines=true}
+
+\begin{document}
+\title{Kernel 4}
+\author{Justin McGirr (\#20413625), Peter Raboud (\#20437716)}
+\maketitle
+
+\section{Instructions}
+\input{"../k1/README.tex"}
+
+\section{Design Decisions}
+\subsection{Structure}
+The kernel is essentially structured as a single main loop.
+The loop calls the priority task queue in order to find the next ready task
+to execute.
+It uses the context switch to yield control flow to this task, as well as to
+return control flow to the kernel when the task causes a software interrupt.
+When the task returns, and sends a syscall to the kernel, the loop calls
+the appropriate syscall handler in order to perform the action requested by
+the syscall.
+The loop continues running until all tasks exit.
+
+Functionality is abstracted into multiple modules, listed here:
+
+\begin{itemize}
+\item A priority task queue
+\item I/O subroutines
+\item A context switch
+\item Handlers and callers for each syscall
+\end{itemize}
+
+There are also some miscellaenous code used for initializing the kernel's environment
+(such as exception handlers), as well as some code which is currently not used (such
+as ring buffers for buffered IO).
+
+The kernel maintains some degree of separation from the user code.
+User code is structured within its own directory.
+By convention, it only includes headers from the \texttt{include} directory,
+which limits the size of the interface between the user and kernel code.
+Currently, this interface comprises the syscalls, a method to start the kernel from
+the program's entrypoint, as well as IO routines.
+(By assignment 4, the IO routines will be replaced by real IO syscalls.)
+
+\subsection{Priority Queue}
+The priority queue used to implement the ready queue of the scheduler is
+arguably the most complex data structure used in the kernel.
+The data structure currently being used is a series of FIFO queues, one for
+each priority level.
+When a task is enqueued, it is added to the queue corresponding to its priority
+level.
+When a consuming a task from the priority queue, a task is dequeued from the
+non-empty queue with the highest priority.
+Each individual queue is implemented as a doubly-linked list, where the
+\texttt{next} and \texttt{prev} pointers of each node are part of the task
+descriptor itself.
+Doing this is possible since a task is in at most one queue at any given time.
+Inlining these fields allows us to not need to separately allocate memory for
+linked list nodes, which simplifies the design.
+For efficiency, we maintain a bit-vector which allows us to efficiently find
+the non-empty queue with the highest priority.
+The $i$th bit of the bit vector is set if the queue of priority $i$ is non-empty.
+To find the highest priority non-empty queue, can find the index of the least
+significant set bit, which can be done fairly efficiently.
+
+This implementation is reasonably efficient in both memory and time.
+The memory usage is linear in the number of task descriptors, no matter
+how many queues need to be created.
+Moreover, the time taken to enqueue and dequeue task descriptors is constant,
+and fairly fast in practice.
+
+To be fair, this implementation is almost exactly what was suggested in the lecture.
+This is by no means novel work.
+
+We did consider alternate implementations at various points, and eventually rejected them.
+The first implementation done was a priority queue implemented as a fixed-capacity heap.
+However, enqueueing and dequeueing elements from the heap takes $O(\log(n))$ time,
+which is too slow for our purposes.
+
+Another implementation considered was a ringbuffer storing pointers to task descriptors.
+However, we then need to have multiple ringbuffers, one for each priority level.
+Each buffer needs to have sufficient space allocated to accommodate the maximum
+number of tasks.
+Therefore, this implementation consumed $O(kn)$ memory, where $k$ is the number
+of priority levels, and $n$ is the number of tasks.
+This would have gotten worse yet after implementing message passing, where each
+a queue is needed for each task.
+At this point, memory consumption would be $O(n^2)$, which is simply not scalable.
+
+\subsection{Integer Log}
+As a subproblem of implementing the priority queue, we needed to be able to take
+a bit vector $b$, and quickly find the least significant set bit.
+This allows us to quickly determine the right constituent queue to dequeue the next
+task from.
+To do this, we first calculate \texttt{c = b \& -b}, which leaves only the least significant
+bit of $b$ set.
+
+After that point, we want to determine the index of the set bit, which is the
+base-2 log of the number.
+The method used is inspired by John Owens' method as listed on the Stanford bit
+twiddling hacks page, but has been altered in implementation to take fewer
+instructions on the ARM processor.
+The algorithm is essentially a bit-level \textbf{binary search} through the bit
+vector for the set bit.
+
+At each step, we know that the set bit is in the bottom $2i$ bits of $c$, and we want
+to narrow that down to a range of $i$ bits.
+At each step, we run the following pseudo-code:
+
+\begin{center}
+\begin{lstlisting}
+if (c >> i) {
+    c = c >> i;
+    log += i;
+}
+\end{lstlisting}
+\end{center}
+
+If the set bit is in the high $i$ bits, then we divide by $2^i$, and add $i$ to the log.
+If the set bit is in the low $i$ bits, we do nothing.
+We then iterate to find the log of the new (or possibly unchanged) value of $c$.
+At the end of this step, we know that set bit is within the bottom $i$ bits of $c$.
+We perform this process for $i=16$, 8 and 4.
+
+A previous copy of the algorithm then repeated the process for a shift of 2 bits and 1 bit
+to find the final result.
+However, it turns out that there is a trick that can be used for the last 4 cases.
+
+Once $2i=4$, 4 values of $c$ are possible: 8, 4, 2 and 1.
+The integer logs of these are 3, 2, 1 and 0 respectively.
+It turns out that this is equal to \texttt{c / 2 - c / 8},
+assuming integer division.
+Since these divisions can be translated into bit-shifts, and because
+ARM allows the second operand to many instructions to be bit-shifted essentially
+for free, it turns out that this is a very cheap expression to calculate.
+This trick can be used to step the last two iterations (each of which costs 3
+instructions), and replace it with an addition and subtraction operation,
+thereby whittling 4 instruction off the total.
+
+The entire algorithm takes 14 instructions of hand-written assembly.
+
+We consider the result to be undefined if $b=0$, and expect the caller to check
+this case before running this algorithm to try to find the least significant set bit.
+The $b=0$ case is special to the caller anyway, and needs to be handled separately,
+and doing this makes it easier to optimize the algorithm.
+
+\subsection{Task Resource Allocation}
+All task descriptors are simply allocated in a statically allocated table.
+A task ID is just an integer index into that table.
+This approach makes the implementation very simple, but precludes the reuse
+of memory allocated for task descriptors, since task IDs themselves cannot
+be reused.
+If we should ever want to support reusing task resources after a task exits,
+we will need to switch the task descriptor table to a different implementation.
+
+Memory allocated for task stacks is allocated in 4K blocks after the end of
+the kernel's stack.
+Each individual stack grows down, but the overall set of task stacks grows up in
+4K increments.
+Like the task descriptors themselves, memory is not currently reused after the
+task exits.
+
+\subsection{Argument Passing}
+To pass arguments and return values to and from syscalls, the kernel manipulates
+the context of the task as stored in memory.
+During the context switch, all the registers of the user task are stored on the
+user's stack, including \texttt{r0}-\texttt{r3}, which are used to pass arguments.
+To find the arguments passed to the syscall, the kernel can just read the values
+from the saved context.
+To return a value to the user task, the kernel can write to the stored value of
+\texttt{r0}, which will be restored to the user task when context switching back,
+and will be interpreted as a return argument.
+
+This approach has two advantages.
+Firstly, returning values this way makes it very easy to handle returning values
+to tasks which aren't immediately returned to.
+The kernel just stores the return value in the context, and doesn't need to care
+when that context is restored.
+Secondly, it makes the context switching code very simple, since no special treatment
+of the arguments is required.
+The context switching simply preserves the entire context, and is agnostic to what,
+if any, arguments have been passed to the syscall.
+
+However, this approach does result in unnecessary memory accesses.
+The obvious way to avoid this would be to pass the syscall arguments back to the kernel
+in their original registers.
+As it turns out, trying to make a C function have returns in registers (i.e.:\ a 4-member
+struct returned in \texttt{r0}-\texttt{r3}) is not easy to do.
+Some compilers implement non-standard extensions which support doing this, but GCC
+is not one of them.
+There is a plausible workaround which uses explicit register variables.
+The function would return \texttt{void}, but then return values could be picked up
+by accessing variables declared as being stored in \texttt{r0}-\texttt{r3}.
+This would allow us to not save those registers in memory for syscalls, since
+there is no expectation that those values will be preserved through the function call.
+They just need to be passed to the kernel, not restored when the context switches back.
+We only need to preserve the full context during interrupts, which is
+currently out of scope.
+However, I've had considerable difficulty in my past experiences with trying to
+convince GCC to emit the correct assembly code to not clobber values returned in this
+way.
+Therefore, I'm not going to try to implement this solution unless it becomes a
+performance problem.
+
+\subsection{k2} % TODO: Rename/reorginize this subsection.
+Very little has changed with the architecture of the kernel since the previous assignment.
+
+One change was to actually store the current state of a task in it's task descriptor.
+Previously, the state of the task could be inferred, and did not need to be explicitly stored.
+(If a task was currently being executed, it is active; if in the ready queue, it is ready; otherwise
+it is a zombie. No other possible states existed.)
+We now need to store whether a task is in the \texttt{REPLY\_BLK} or \texttt{RECV\_BLK} states,
+since this cannot be inferred by whether the task is on some particular queue.
+
+We also added a send queue attached to each task descriptor.
+This is a FIFO queue which maintains a list of task descriptors which wish to send a message
+to that task.
+The FIFO queue was actually already implemented as a subproblem of the priority queue used
+for the ready queue, and so very little new code needed to be written for this.
+
+\subsection{Await Interface}
+The implementation of await was something that we debated for quite some time,
+because we were given multiple choices in implementation, and because there is
+a lot of literature on the different approaches to device driver isolation.
+Given that we are writing a microkernel, we want, for various reasons, the
+kernel itself to be as small as possible. This allows isolation of failures,
+easy prioritization of tasks, and more. However, given that we are, in our toy
+kernel, only writing device drivers for a \emph{very} small number of
+peripherals, creating all the primitives to allow safe and race-free access
+to peripherals from driver tasks seemed like it would likely end up being
+bigger and more complex than just implementing a HAL in the kernel. For
+example, if the user task is responsible for asking the device to deassert
+its interrupt, then you need to make sure that you don't enable interrupts
+when switching back to the user task, or else the user task will just get
+immediately interrupted again, leading to an infinite loop. However, if you
+don't enable interrupts, then you can't preempt the user task, losing a
+significant advantage of implementing that portion of the device communication
+in userland. Thus, at least for this iteration of the kernel, we have chosen
+to have the kernel read the data from the device, deassert the interrupt,
+and return the relevant data back to the userland \texttt{await()} call.
+
+For now, the interface to \texttt{await()} is \texttt{int await(int evt);}.
+However, this will need to be changed to accommodate passing in additional data
+to the kernel, in order to to support UART write events.
+We considered masking this data into \texttt{evt}.
+Since \texttt{evt} is 32 bits wide, and we only need 3 to represent 5 distinct events,
+we could stuff an 8-bit character into the upper bits of the \texttt{int}.
+However, if we have control over the signature of \texttt{await()}, it's easier to just
+add an extra parameter to contain this data.
+
+\subsection{Await Data Structures}
+For keeping track of tasks that are blocked awaiting external events, we used
+a array of queues, one queue for each different possible event. This allows
+constant-time removal and addition of tasks from waiting queues. The latter
+is particularly important, as tasks are currently dequeued immediately in the
+interrupt handler, where speed is particularly important, because it can
+directly impact the worst-case latency of a response. Had a linear scan been
+used instead, this could  yield quite bad latency if many tasks were stacked
+up waiting for interrupts, particularly if many were stacked up at the same
+time.
+
+We currently dequeue all of the waiting tasks when an event occurs. This could
+cause some performance problems if many tasks are queued up at once, because
+a single interrupt would have to dequeue all of them. However, this is not
+currently a problem, because we only ever have a single task at a time
+awaiting an event.
+
+\subsection{Clockserver}
+% TODO: Add something about ClockServer priority RE feedback from k3!
+As part of this assignment, we implemented a clock server as a user task, which
+allows other user tasks to request the current time, or schedule themselves to run
+after some delay.
+I assume this will be very useful
+when we start having trains going around the track, and we will start having
+tasks which care about real-world values like time and distance.
+
+To keep track of tasks which requested future wakeup, we need a priority queue
+of tasks, ordered by the time at which they need to be woken up.
+We chose to use a min-heap for this purpose.
+A min heap is reasonably suitable, since there aren't hard bounds on
+the keys which the tasks are sorted by in the priority queue.
+This made the priority-queue implementation used for the ready queue inappropriate,
+since it relies on the priorities being integers in a very small range.
+
+A min-heap allows $\log(n)$ time insertion and removal of elements, with
+constant-time querying of the smallest element.
+The latter is the most important property, because we have to check the top
+element of this queue against the number of ticks which have passed after each tick.
+The $\log(n)$ cost to add and remove elements is probably more expensive than it
+sounds, since $n$ is relatively small.
+However, since this is not currently a performance bottleneck, we chose not to spend
+additional time optimizing for a problem which doesn't currently exist.
+
+An additional reason for the choice of this data structure was that we coincidentally
+had one from K1.
+We had initially thought we might use it for the priority queue,
+but instead chose an alternative data structure for that assignment.
+
+\subsection{Interrupt-Triggered Context Switch}
+As part of this assignment, we had to write a context switching
+routine to be run when an interrupt was triggered.
+We chose to implement this as a context switch into the kernel, where the interface to the kernel just looks
+like an SVC call, but with a \texttt{SYSCALL\_IRQ} syscall number, where the kernel then
+handles the interrupt just as it would a regular syscall. We considered having
+an extra pseudo-task to handle interrupts, with it's own stack, which would
+automatically get ``scheduled'' whenever an interrupt was triggered, but decided
+that the additional complexity would not be worth the benefits, and additionally
+such a design would waste some space --- the IRQ stack would only be used when
+IRQs are triggered, and is unlikely to hold much of anything useful the rest
+of the time.
+
+The actual context switching function is different depending on whether the
+interrupt originated from an SVC call or a IRQ, although almost all of the
+source code is shared through the use of assembly macros. Although we considered
+trying to fit both context switches into a single block of code through the use
+of conditional execution, it seemed like it would complicate things
+considerably, not least of which because you would have to find a register to
+store that state in. As the context switch is only slightly more than ten
+instructions, we opted just to implement the conditions at the assembler level.
+
+\section{Source Code}
+The source code is hosted on git, at \url{git.uwaterloo.ca/pgraboud/cs452-kernel}.
+The version we wish to submit is on the \texttt{k4} branch, specifically
+the commit:
+\input{|"git rev-parse k4 | ./../verbatim"}
+We are submitting the following files:
+\input{|"cat ../file-list | ./../verbatim"}
+\input{|"./../file-list | ./../verbatim"}
+
+\end{document}

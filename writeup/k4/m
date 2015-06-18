@@ -1,0 +1,1 @@
+pdflatex -shell-escape k4.tex
