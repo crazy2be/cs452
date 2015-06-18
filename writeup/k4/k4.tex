@@ -156,7 +156,7 @@ express many parts of the system, such as in the train server. The details of
 section, below.
 
 One thing to notice about the \texttt{destroy()} primitive is that, although
-it does support reusing td and stack slots, it's current implementation does
+it does support reusing td and stack slots, its current implementation does
 not allow for the reuse of tids. This means that eventually we will face tid
 exhaustion, and crash as a result. This could be written in without much
 difficulty, but we chose not to, because it opens us up to strange behavior.
