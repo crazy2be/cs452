@@ -79,8 +79,7 @@ static void reverse_task(void) {
 	reply(tid, NULL, 0);
 
 	tc_stop(info.train);
-	// TODO: Probably don't want to actually delay this task itself
-	delay(500);
+	delay(400);
 	tc_toggle_reverse(info.train);
 	tc_set_speed(info.train, info.speed);
 }
