@@ -7,7 +7,7 @@
 
 // spawns a new display server task
 void displaysrv(void);
-void displaysrv_update_switch(int displaysrv, int sw, enum sw_direction pos);
+void displaysrv_update_switch(int displaysrv, struct switch_state *state);
 void displaysrv_update_sensor(int displaysrv, struct sensor_state *state);
 void displaysrv_console_clear(int displaysrv);
 void displaysrv_console_backspace(int displaysrv);

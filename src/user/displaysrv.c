@@ -3,6 +3,7 @@
 #include "nameserver.h"
 #include "util.h"
 #include "clockserver.h"
+#include "switch_state.h"
 
 #include <assert.h>
 #include <kernel.h>
@@ -49,11 +50,15 @@ struct sw2_display {
 	unsigned char cx, cy;
 	char cr;
 };
-struct sw3_display {
-	unsigned char lx, ly, sx, sy, rx, ry;
-};
 
-// TODO: handle 3-way switches
+struct sw3_display {
+	unsigned char lx, ly;
+	char l;
+	unsigned char sx, sy;
+	char s;
+	unsigned char rx, ry;
+	char r;
+};
 
 static const struct sw2_display switch_display_info[] = {
 	{ 45, 7,  '\\', 45, 6,  '_'  }, // 1
@@ -74,6 +79,11 @@ static const struct sw2_display switch_display_info[] = {
 	{ 27, 6,  '_',  27, 7,  '/'  }, // 16
 	{ 17, 6,  '_',  17, 7,  '\\' }, // 17
 	{ 30, 0,  '_',  30, 1,  '\\' }, // 18
+};
+
+static const struct sw3_display switch3_display_info[] = {
+	{ 21, 11, '\\', 22, 11, '|', 23, 11, '/' },
+	{ 21, 17, '/', 22, 17, '|', 23, 17, '\\' },
 };
 
 struct sensor_display {
@@ -219,8 +229,7 @@ struct displaysrv_req {
 	// the data associated with each request
 	union {
 		struct {
-			unsigned char num;
-			enum sw_direction pos;
+			struct switch_state state;
 		} sw;
 		struct {
 			struct sensor_state state;
@@ -293,7 +302,7 @@ static void update_sensor(struct sensor_state *sensors, struct sensor_state *old
 	*old_sensors = *sensors;
 }
 
-static void update_switch(int sw, enum sw_direction pos) {
+static void update_single_2switch(int sw, enum sw_direction pos) {
 	if (sw >= 1 && sw <= 18) {
 		ASSERT(pos == STRAIGHT || pos == CURVED);
 		struct sw2_display disp = switch_display_info[sw - 1];
@@ -328,6 +337,65 @@ static void update_switch(int sw, enum sw_direction pos) {
 	} else {
 		//ASSERT(0 && "Unknown switch number");
 	}
+}
+
+static void update_single_3switch(int first_switch, enum sw_direction s1, enum sw_direction s2) {
+	const struct sw3_display *coords = &switch3_display_info[first_switch / 2];
+
+	unsigned char tx, ty; // coords for piece of track to draw
+	unsigned char b1x, b1y, b2x, b2y; // coords for piece of track to blank out
+	char switch_char;
+
+	if (s1 == CURVED && s2 == STRAIGHT) { // right
+		tx = coords->rx;
+		ty = coords->ry;
+		switch_char = coords->r;
+
+		b1x = coords->lx;
+		b1y = coords->ly;
+		b2x = coords->sx;
+		b2y = coords->sy;
+	} else if (s1 == STRAIGHT && s2 == CURVED) { // left
+		tx = coords->lx;
+		ty = coords->ly;
+		switch_char = coords->l;
+
+		b1x = coords->rx;
+		b1y = coords->ry;
+		b2x = coords->sx;
+		b2y = coords->sy;
+	} else {
+		tx = coords->sx;
+		ty = coords->sy;
+		switch_char = (s1 == CURVED) ? 'X' : coords->s;
+
+		b1x = coords->lx;
+		b1y = coords->ly;
+		b2x = coords->rx;
+		b2y = coords->ry;
+	}
+	printf("\e[s\e[%d;%dH\e[1;31m%c\e[0m\e[%d;%dH \e[%d;%dH \e[u",
+		tx + TRAIN_Y_OFFSET, tx + TRAIN_X_OFFSET, switch_char,
+		b1y + TRAIN_Y_OFFSET, b1x + TRAIN_X_OFFSET,
+		b2y + TRAIN_Y_OFFSET, b2y + TRAIN_Y_OFFSET);
+
+}
+
+static void update_switch(struct switch_state *state, struct switch_state *old_state) {
+	for (int i = 1; i <= 18; i++) {
+		enum sw_direction s = switch_get(state, i);
+		if (s != switch_get(old_state, i)) {
+			update_single_2switch(i, s);
+		}
+	}
+	for (int i = 153; i <= 155; i += 2) {
+		enum sw_direction s1 = switch_get(state, i);
+		enum sw_direction s2 = switch_get(state, i + 1);
+		if (s1 != switch_get(old_state, i) || s2 != switch_get(old_state, i + 1)) {
+			update_single_3switch(i, s1, s2);
+		}
+	}
+	*old_state = *state;
 }
 
 static void update_time(unsigned millis) {
@@ -379,8 +447,10 @@ void displaysrv_start(void) {
 
 	struct sensor_state old_sensors;
 	struct sensor_reads sensor_reads;
+	struct switch_state old_switches;
 	sensor_reads.len = sensor_reads.start = 0;
 	memset(&old_sensors, 0, sizeof(old_sensors));
+	memset(&old_switches, 0, sizeof(old_switches));
 	struct displaysrv_req req;
 	int tid;
 
@@ -391,7 +461,7 @@ void displaysrv_start(void) {
 
 		switch (req.type) {
 		case UPDATE_SWITCH:
-			update_switch(req.data.sw.num, req.data.sw.pos);
+			update_switch(&req.data.sw.state, &old_switches);
 			break;
 		case UPDATE_SENSOR:
 			update_sensor(&req.data.sensor.state, &old_sensors, &sensor_reads);
@@ -463,10 +533,9 @@ void displaysrv_update_sensor(int displaysrv, struct sensor_state *state) {
 	displaysrv_send(displaysrv, UPDATE_SENSOR, &req);
 }
 
-void displaysrv_update_switch(int displaysrv, int sw, enum sw_direction pos) {
+void displaysrv_update_switch(int displaysrv, struct switch_state *state) {
 	struct displaysrv_req req;
-	req.data.sw.num = sw;
-	req.data.sw.pos = pos;
+	req.data.sw.state = *state;
 	displaysrv_send(displaysrv, UPDATE_SWITCH, &req);
 }
 

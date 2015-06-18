@@ -7,6 +7,12 @@ struct switch_state {
 	unsigned packed;
 };
 
+// TODO: later, we may want to add left/right distinction, to
+// simplify dealing with the tri-state switches on the track
+enum sw_direction { STRAIGHT, CURVED };
+
+#define SWITCH_COUNT 22
+
 static inline int switch_packed_num(int num) {
 	if (1 <= num && num <= 18) {
 		return num;
@@ -18,12 +24,12 @@ static inline int switch_packed_num(int num) {
 	}
 }
 
-static inline void switch_set(struct switch_state *s, int num, int curved) {
+static inline void switch_set(struct switch_state *s, int num, enum sw_direction d) {
 	const int bit = 0x1 << switch_packed_num(num);
-	s->packed = curved ? (s->packed | bit) : (s->packed & ~bit);
+	s->packed = (d == CURVED) ? (s->packed | bit) : (s->packed & ~bit);
 }
 
-static inline int switch_get(const struct switch_state *s, int num) {
+static inline enum sw_direction switch_get(const struct switch_state *s, int num) {
 	const int bit = 0x1 << switch_packed_num(num);
-	return s->packed & bit;
+	return (s->packed & bit) ? CURVED : STRAIGHT;
 }
