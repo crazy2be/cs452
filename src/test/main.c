@@ -212,10 +212,14 @@ void message_suite(void) {
 }
 
 void io_suite(void) {
+	char buf[120];
 	start_servers();
 	fputs(COM1, "Hello COM1" EOL);
 	fprintf(COM1, "Hello COM1 9 = %d, 0 = %d, -1 = %d or %u, 117 = %d, 0x7f = 0x%x, hello = %s" EOL,
 			9, 0, -1, -1, 117, 0x7f, "hello");
+	snprintf(buf, sizeof(buf), "Hello COM1 9 = %d, 0 = %d, -1 = %d or %u, 117 = %d, 0x7f = 0x%x, hello = %s" EOL,
+			9, 0, -1, -1, 117, 0x7f, "hello");
+	fputs(COM1, buf);
 	fputs(COM2, "Hello COM2" EOL);
 	stop_servers();
 }

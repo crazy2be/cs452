@@ -18,16 +18,17 @@ static int bwa2d(char ch) {
 	return -1;
 }
 
-static char bwa2i(char ch, char **src, int base, int *nump) {
-	int num, digit;
-	char *p;
+static char bwa2i(char ch, const char **src, int base, int *nump) {
+	int num = 0;
+	int digit;
+	const char *p = *src;
 
-	p = *src; num = 0;
 	while ((digit = bwa2d(ch)) >= 0) {
 		if (digit > base) break;
 		num = num*base + digit;
 		ch = *p++;
 	}
+
 	*src = p; *nump = num;
 	return ch;
 }
@@ -82,7 +83,7 @@ static int bwi2a(producer produce, void *produce_state, int num, int padding, ch
 
 #include "vargs.h"
 
-static void format(producer produce, void* produce_state, char *fmt, va_list va) {
+static void format(producer produce, void* produce_state, const char *fmt, va_list va) {
 	char ch, lz;
 	int w;
 
@@ -156,11 +157,34 @@ static int produce_buffered(char c, void *s) {
 int fprintf(int channel, const char *fmt, ...) {
 	va_list va;
 	va_start(va,fmt);
-	struct produce_buffered_state buf;
-	buf.i = 0;
-	buf.channel = channel;
-	format(produce_buffered, (void*) &buf, (char*)fmt, va); // Shouldn't need this cast...
+	struct produce_buffered_state buf = { .i = 0, .channel = channel };
+	format(produce_buffered, (void*) &buf, fmt, va);
 	flush_buffer(&buf);
 	va_end(va);
 	return -1; // Meh
+}
+
+struct produce_string_state {
+	unsigned n;
+	char *buf;
+};
+
+static int produce_string(char c, void *s) {
+	struct produce_string_state *state = (struct produce_string_state*) s;
+	if (state->n-- > 0) {
+		*state->buf++ = c;
+		return 0;
+	} else {
+		return 1;
+	}
+}
+
+int snprintf(char *buf, unsigned size, const char *fmt, ...) {
+	va_list va;
+	va_start(va,fmt);
+	struct produce_string_state state = {size, buf};
+	format(produce_string, &state, fmt, va);
+	produce_string('\0', &state);
+	va_end(va);
+	return 0; // we should probably return something meaningful
 }

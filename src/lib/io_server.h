@@ -22,6 +22,7 @@ int fgets(const int channel, char *buf, int len);
 int fgetc(const int channel);
 
 int fprintf(int channel, const char *format, ...);
+int snprintf(char *buf, unsigned size, const char *fmt, ...);
 
 // Drop whatever is in the input buffer
 // This is useful for discarding garbage input produced by the train controller
