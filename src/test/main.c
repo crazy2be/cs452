@@ -217,15 +217,17 @@ void io_suite(void) {
 	fputs(COM1, "Hello COM1" EOL);
 	fprintf(COM1, "Hello COM1 9 = %d, 0 = %d, -1 = %d or %u, 117 = %d, 0x7f = 0x%x, hello = %s" EOL,
 			9, 0, -1, -1, 117, 0x7f, "hello");
-	ASSERT(88 == snprintf(buf, sizeof(buf), "Hello COM1 9 = %d, 0 = %d, -1 = %d or %u, 117 = %d, 0x7f = 0x%x, hello = %s" EOL,
+	ASSERT(87 == snprintf(buf, sizeof(buf), "Hello COM1 9 = %d, 0 = %d, -1 = %d or %u, 117 = %d, 0x7f = 0x%x, hello = %s" EOL,
 		9, 0, -1, -1, 117, 0x7f, "hello"));
 	fputs(COM1, buf);
+
+	ASSERT(4 == snprintf(buf, sizeof(buf), "1234"));
 
 	// make sure the overflow case is handled
 	memset(buf, 'Q', 16);
 	buf[16] = '\0';
-	ASSERT(8 == snprintf(buf, 8, "123%d56%d890ABCDEF", 4, 7));
-	ASSERT(strncmp(buf, "12345678QQQQQQQQ", 16) == 0);
+	ASSERT(16 == snprintf(buf, 8, "123%d56%d890ABCDEF", 4, 7));
+	ASSERT(strncmp(buf, "1234567", 7) == 0);
 
 	fputs(COM2, "Hello COM2" EOL);
 	stop_servers();
