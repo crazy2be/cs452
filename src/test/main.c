@@ -227,7 +227,7 @@ void io_suite(void) {
 	memset(buf, 'Q', 16);
 	buf[16] = '\0';
 	ASSERT(16 == snprintf(buf, 8, "123%d56%d890ABCDEF", 4, 7));
-	ASSERT(strncmp(buf, "1234567", 7) == 0);
+	ASSERT(strcmp(buf, "1234567") == 0);
 
 	fputs(COM2, "Hello COM2" EOL);
 	stop_servers();
