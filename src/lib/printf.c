@@ -32,7 +32,8 @@ static char bwa2i(char ch, const char **src, int base, int *nump) {
 	return ch;
 }
 
-static int bwui2a(producer produce, void *produce_state, unsigned int num, unsigned int base, int padding, char padchar, int negative) {
+static int bwui2a(producer produce, void *produce_state, unsigned int num,
+		unsigned int base, int padding, char padchar, int negative) {
 	int dgt;
 	unsigned int d = 1;
 
@@ -184,5 +185,5 @@ int snprintf(char *buf, unsigned size, const char *fmt, ...) {
 	format(produce_string, &state, fmt, va);
 	produce_string('\0', &state);
 	va_end(va);
-	return 0; // we should probably return something meaningful
+	return state.buf - buf;
 }
