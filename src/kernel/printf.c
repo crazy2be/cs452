@@ -9,19 +9,7 @@
 
 #define PRINTF_BUFSZ 80
 
-static int flush_buffer(int channel, char *buf, int i) {
-	if (i != 0) {
-		buf[i] = '\0';
-		fputs(channel, buf);
-	}
-	return 0;
-}
-
-static int produce(int channel, char *buf, int i, char c) {
-	buf[i++] = c;
-	if (i == PRINTF_BUFSZ - 1) return flush_buffer(channel, buf, i);
-	return i;
-}
+typedef void (*producer)(char, void*);
 
 static int bwa2d(char ch) {
 	if (ch >= '0' && ch <= '9') return ch - '0';
@@ -44,7 +32,7 @@ static char bwa2i(char ch, char **src, int base, int *nump) {
 	return ch;
 }
 
-static int bwui2a(int channel, char *buf, int i, unsigned int num, unsigned int base, int padding, char padchar, int negative) {
+static void bwui2a(producer produce, void *produce_state, unsigned int num, unsigned int base, int padding, char padchar, int negative) {
 	/* int n = 0; */
 	int dgt;
 	unsigned int d = 1;
@@ -61,14 +49,14 @@ static int bwui2a(int channel, char *buf, int i, unsigned int num, unsigned int 
 		padding--;
 		// only put the negative sign before padding if padding with zeros
 		if (padchar == '0') {
-			i = produce(channel, buf, i, '-');
+			produce('-', produce_state);
 		}
 	}
 
-	while (padding-- > 0) i = produce(channel, buf, i, padchar);
+	while (padding-- > 0) produce(padchar, produce_state);
 
 	if (negative && padchar != '0') {
-		i = produce(channel, buf, i, '-');
+		produce('-', produce_state);
 	}
 
 	while (d != 0) {
@@ -76,32 +64,29 @@ static int bwui2a(int channel, char *buf, int i, unsigned int num, unsigned int 
 		num %= d;
 		d /= base;
 		if (dgt > 0 || d == 0) {
-			i = produce(channel, buf, i, dgt + (dgt < 10 ? '0' : 'a' - 10));
+			produce(dgt + (dgt < 10 ? '0' : 'a' - 10), produce_state);
 			/* ++n; */
 		}
 	}
-	return i;
 }
 
-static int bwi2a(int channel, char* buf, int i, int num, int padding, char padchar) {
+static void bwi2a(producer produce, void *produce_state, int num, int padding, char padchar) {
 	int negative = num < 0;
 	if (negative) {
 		num = -num;
 	}
-	return bwui2a(channel, buf, i, num, 10, padding, padchar, negative);
+	bwui2a(produce, produce_state, num, 10, padding, padchar, negative);
 }
 
 #include "vargs.h"
 
-static void format(int channel, char *fmt, va_list va) {
-	char buf[PRINTF_BUFSZ];
-	int i = 0;
+static void format(producer produce, void* produce_state, char *fmt, va_list va) {
 	char ch, lz;
 	int w;
 
 	while ((ch = *(fmt++))) {
 		if (ch != '%') {
-			i = produce(channel, buf, i, ch);
+			produce(ch, produce_state);
 		} else {
 			lz = ' ';
 			w = 0;
@@ -118,36 +103,59 @@ static void format(int channel, char *fmt, va_list va) {
 			case 0:
 				return;
 			case 'c':
-				i = produce(channel, buf, i, va_arg(va, char));
+				produce(va_arg(va, char), produce_state);
 				break;
 			case 's':
 				{
 					char *str = va_arg(va, char*);
-					while (*str) i = produce(channel, buf, i, *str++);
+					while (*str) produce(*str++, produce_state);
 				}
 				break;
 			case 'u':
-				i = bwui2a(channel, buf, i, va_arg(va, unsigned int), 10, w, lz, 0);
+				bwui2a(produce, produce_state, va_arg(va, unsigned int), 10, w, lz, 0);
 				break;
 			case 'x':
-				i = bwui2a(channel, buf, i, va_arg(va, unsigned int), 16, w, lz, 0);
+				bwui2a(produce, produce_state, va_arg(va, unsigned int), 16, w, lz, 0);
 				break;
 			case 'd':
-				i = bwi2a(channel, buf, i, va_arg(va, int), w, lz);
+				bwi2a(produce, produce_state, va_arg(va, int), w, lz);
 				break;
 			case '%':
-				i = produce(channel, buf, i, ch);
+				produce(ch, produce_state);
 				break;
 			}
 		}
 	}
-	flush_buffer(channel, buf, i);
+}
+
+struct produce_buffered_state {
+	int channel;
+	char buf[PRINTF_BUFSZ];
+	int i;
+};
+
+static void flush_buffer(struct produce_buffered_state *state) {
+	if (state->i != 0) {
+		state->buf[state->i] = '\0';
+		fputs(state->channel, state->buf);
+		state->i = 0;
+	}
+}
+
+static void produce_buffered(char c, void *s) {
+	struct produce_buffered_state *state = (struct produce_buffered_state*) s;
+	state->buf[state->i++] = c;
+	if (state->i == PRINTF_BUFSZ - 1) flush_buffer(state);
 }
 
 int fprintf(int channel, const char *fmt, ...) {
 	va_list va;
 	va_start(va,fmt);
-	format(channel, (char*)fmt, va); // Shouldn't need this cast...
+	struct produce_buffered_state buf;
+	buf.i = 0;
+	buf.channel = channel;
+	format(produce_buffered, (void*) &buf, (char*)fmt, va); // Shouldn't need this cast...
+	flush_buffer(&buf);
 	va_end(va);
 	return -1; // Meh
 }
