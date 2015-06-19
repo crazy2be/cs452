@@ -170,7 +170,7 @@ struct produce_string_state {
 static void produce_string(char c, void *s) {
 	struct produce_string_state *state = (struct produce_string_state*) s;
 	state->total++;
-	if (state->remaining > 0) {
+	if (state->remaining > 1) {
 		*state->buf++ = c;
 		state->remaining--;
 	}
@@ -182,10 +182,6 @@ int snprintf(char *buf, unsigned size, const char *fmt, ...) {
 	struct produce_string_state state = {size, 0, buf};
 	format(produce_string, &state, fmt, va);
 	va_end(va);
-
-	if (state.remaining == 0) {
-		state.buf--; // overwrite the last character in order to null-terminate
-	}
 
 	*state.buf = '\0';
 	return state.total;
