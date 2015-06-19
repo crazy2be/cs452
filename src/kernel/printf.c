@@ -9,7 +9,7 @@
 
 #define PRINTF_BUFSZ 80
 
-typedef void (*producer)(char, void*);
+typedef int (*producer)(char, void*);
 
 static int bwa2d(char ch) {
 	if (ch >= '0' && ch <= '9') return ch - '0';
@@ -32,8 +32,7 @@ static char bwa2i(char ch, char **src, int base, int *nump) {
 	return ch;
 }
 
-static void bwui2a(producer produce, void *produce_state, unsigned int num, unsigned int base, int padding, char padchar, int negative) {
-	/* int n = 0; */
+static int bwui2a(producer produce, void *produce_state, unsigned int num, unsigned int base, int padding, char padchar, int negative) {
 	int dgt;
 	unsigned int d = 1;
 
@@ -49,14 +48,16 @@ static void bwui2a(producer produce, void *produce_state, unsigned int num, unsi
 		padding--;
 		// only put the negative sign before padding if padding with zeros
 		if (padchar == '0') {
-			produce('-', produce_state);
+			if (produce('-', produce_state)) return 1;
 		}
 	}
 
-	while (padding-- > 0) produce(padchar, produce_state);
+	while (padding-- > 0) {
+		if (produce(padchar, produce_state)) return 1;
+	}
 
 	if (negative && padchar != '0') {
-		produce('-', produce_state);
+		if (produce('-', produce_state)) return 1;
 	}
 
 	while (d != 0) {
@@ -64,18 +65,19 @@ static void bwui2a(producer produce, void *produce_state, unsigned int num, unsi
 		num %= d;
 		d /= base;
 		if (dgt > 0 || d == 0) {
-			produce(dgt + (dgt < 10 ? '0' : 'a' - 10), produce_state);
-			/* ++n; */
+			if (produce(dgt + (dgt < 10 ? '0' : 'a' - 10), produce_state)) return 1;
 		}
 	}
+
+	return 0;
 }
 
-static void bwi2a(producer produce, void *produce_state, int num, int padding, char padchar) {
+static int bwi2a(producer produce, void *produce_state, int num, int padding, char padchar) {
 	int negative = num < 0;
 	if (negative) {
 		num = -num;
 	}
-	bwui2a(produce, produce_state, num, 10, padding, padchar, negative);
+	return bwui2a(produce, produce_state, num, 10, padding, padchar, negative);
 }
 
 #include "vargs.h"
@@ -86,7 +88,7 @@ static void format(producer produce, void* produce_state, char *fmt, va_list va)
 
 	while ((ch = *(fmt++))) {
 		if (ch != '%') {
-			produce(ch, produce_state);
+			if (produce(ch, produce_state)) return;
 		} else {
 			lz = ' ';
 			w = 0;
@@ -103,25 +105,27 @@ static void format(producer produce, void* produce_state, char *fmt, va_list va)
 			case 0:
 				return;
 			case 'c':
-				produce(va_arg(va, char), produce_state);
+				if (produce(va_arg(va, char), produce_state)) return;
 				break;
 			case 's':
 				{
 					char *str = va_arg(va, char*);
-					while (*str) produce(*str++, produce_state);
+					while (*str) {
+						if(produce(*str++, produce_state)) return;
+					}
 				}
 				break;
 			case 'u':
-				bwui2a(produce, produce_state, va_arg(va, unsigned int), 10, w, lz, 0);
+				if (bwui2a(produce, produce_state, va_arg(va, unsigned int), 10, w, lz, 0)) return;
 				break;
 			case 'x':
-				bwui2a(produce, produce_state, va_arg(va, unsigned int), 16, w, lz, 0);
+				if (bwui2a(produce, produce_state, va_arg(va, unsigned int), 16, w, lz, 0)) return;
 				break;
 			case 'd':
-				bwi2a(produce, produce_state, va_arg(va, int), w, lz);
+				if (bwi2a(produce, produce_state, va_arg(va, int), w, lz)) return;
 				break;
 			case '%':
-				produce(ch, produce_state);
+				if (produce(ch, produce_state)) return;
 				break;
 			}
 		}
@@ -142,10 +146,11 @@ static void flush_buffer(struct produce_buffered_state *state) {
 	}
 }
 
-static void produce_buffered(char c, void *s) {
+static int produce_buffered(char c, void *s) {
 	struct produce_buffered_state *state = (struct produce_buffered_state*) s;
 	state->buf[state->i++] = c;
 	if (state->i == PRINTF_BUFSZ - 1) flush_buffer(state);
+	return 0;
 }
 
 int fprintf(int channel, const char *fmt, ...) {
