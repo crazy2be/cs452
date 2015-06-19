@@ -220,6 +220,13 @@ void io_suite(void) {
 	snprintf(buf, sizeof(buf), "Hello COM1 9 = %d, 0 = %d, -1 = %d or %u, 117 = %d, 0x7f = 0x%x, hello = %s" EOL,
 			9, 0, -1, -1, 117, 0x7f, "hello");
 	fputs(COM1, buf);
+
+	// make sure the overflow case is handled
+	memset(buf, 'Q', 16);
+	buf[16] = '\0';
+	snprintf(buf, 8, "123%d56%d890ABCDEF", 4, 7);
+	ASSERT(strncmp(buf, "12345678QQQQQQQQ", 16) == 0);
+
 	fputs(COM2, "Hello COM2" EOL);
 	stop_servers();
 }

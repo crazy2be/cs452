@@ -171,8 +171,9 @@ struct produce_string_state {
 
 static int produce_string(char c, void *s) {
 	struct produce_string_state *state = (struct produce_string_state*) s;
-	if (state->n-- > 0) {
+	if (state->n > 0) {
 		*state->buf++ = c;
+		state->n--;
 		return 0;
 	} else {
 		return 1;
