@@ -1,7 +1,6 @@
 #include <util.h>
-#include "kassert.h"
-/* #include "io.h" */
 #include <io_server.h>
+#include "vargs.h"
 
 // printf buffers internally to a buffer allocated on the stack, and flushes this
 // buffer with puts when it fills up, since putc incurs a lot of overhead to only
@@ -80,8 +79,6 @@ static int bwi2a(producer produce, void *produce_state, int num, int padding, ch
 	}
 	return bwui2a(produce, produce_state, num, 10, padding, padchar, negative);
 }
-
-#include "vargs.h"
 
 static void format(producer produce, void* produce_state, const char *fmt, va_list va) {
 	char ch, lz;
