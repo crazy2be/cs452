@@ -25,12 +25,15 @@ class Train():
 		self.off = (100, 100)
 		pygame.draw.rect(surf, (100, 0, 0), self.raw_rect)
 
-	def rotate(self, amount):
-		self.rot += amount
-		self.image, self.rect = rot_center(self.raw_image, self.raw_rect, self.rot)
+	def rotate(self, drad): self.rotate_to(self.rad + drad)
+	def rotate_to(self, rad):
+		self.rad = rad
+		deg = rad * 180 / math.pi
+		self.image, self.rect = rot_center(self.raw_image, self.raw_rect, deg)
 
 	def move(self, amount):
 		self.off = (self.off[0] + amount[0], self.off[1] + amount[1])
+	def move_to(self, loc): self.off = loc
 
 	def update(self):
 		self.rotate(1)
@@ -38,6 +41,18 @@ class Train():
 
 	def draw(self, surf):
 		surf.blit(self.image, self.rect.move(self.off))
+
+class Track():
+	def __init__(self, train):
+		self.train = train
+		self.t = 0
+
+	def update(self):
+		self.t += 0.1
+		x = math.sin(self.t)
+		y = math.cos(self.t)
+		self.train.rotate_to(90-math.atan2(y, x))
+		self.train.move_to((x*100 + 200, y*100 + 200))
 
 class Game(object):
 	def __init__(self, surface):
@@ -50,12 +65,14 @@ class Game(object):
 
 		rot = 45
 		train = Train()
+		track = Track(train)
 		while True:
 			for event in pygame.event.get():
 				if event.type == pygame.QUIT:
 					return
 			self.surface.fill((255, 255, 255))
-			train.update()
+			track.update()
+			#train.update()
 			train.draw(self.surface)
 			textpos = text.get_rect()
 			textpos.centerx = self.surface.get_rect().centerx
