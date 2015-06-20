@@ -128,10 +128,14 @@ int boot(void (*init_task)(void), int init_task_priority, int debug) {
 		KASSERT(current_task->state == READY);
 		struct syscall_context sc;
 
+		task_check_stack_canary(current_task);
+
 		unsigned ts_before = debug_timer_useconds();
 		// context switch to the next task to be run
 		sc = exit_kernel(current_task->context);
 		unsigned ts_after = debug_timer_useconds();
+
+		task_check_stack_canary(current_task);
 
 		current_task->user_time_useconds += ts_after - ts_before;
 
