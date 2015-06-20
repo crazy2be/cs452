@@ -26,47 +26,40 @@ static void tc_set_speed(int train, int speed) {
 	ASSERT(1 <= train && train <= 80);
 	ASSERT(0 <= speed && speed <= 14);
 #ifdef QEMU
-	ASSERT(fprintf(COM1, "set_speed %d to %d" EOL, train, speed) == 0);
+	char buf[80];
+	snprintf(buf, sizeof(buf), "set_speed %d to %d"EOL, train, speed);
+	ASSERT(fputs(COM1, buf) == 0);
 #else
 	char train_command[2] = {speed, train};
 	ASSERT(fput_buf(COM1, train_command, sizeof(train_command)) == 0);
 #endif
 }
-
 static void tc_toggle_reverse(int train) {
 	ASSERT(1 <= train && train <= 80);
 #ifdef QEMU
-	ASSERT(fprintf(COM1, "reverse %d" EOL, train) == 0);
+	char buf[80];
+	snprintf(buf, sizeof(buf), "reverse %d"EOL, train);
+	ASSERT(fputs(COM1, buf) == 0);
 #else
 	char train_command[2] = {15, train};
 	ASSERT(fput_buf(COM1, train_command, sizeof(train_command)) == 0);
 #endif
 }
-
-static void tc_stop(int train) {
-	ASSERT(1 <= train && train <= 80);
-#ifdef QEMU
-	ASSERT(fprintf(COM1, "stop %d" EOL, train) == 0);
-#else
-	char train_command[2] = {0, train};
-	ASSERT(fput_buf(COM1, train_command, sizeof(train_command)) == 0);
-#endif
-}
-
 static void tc_switch_switch(int sw, enum sw_direction d) {
 	ASSERT((1 <= sw && sw <= 18) || (145 <= sw && sw <= 148) || (150 <= sw && sw <= 156));
 #ifdef QEMU
-	ASSERT(fprintf(COM1, "switch %d to %d" EOL, sw, d) == 0);
+	char buf[80];
+	snprintf(buf, sizeof(buf), "switch %d to %d"EOL, sw, d);
+	ASSERT(fputs(COM1, buf) == 0);
 #else
 	char cmd = (d == STRAIGHT) ? 0x21 : 0x22;
 	char sw_command[2] = {cmd, sw};
 	ASSERT(fput_buf(COM1, sw_command, sizeof(sw_command)) == 0);
 #endif
 }
-
 static void tc_deactivate_switch(void) {
 #ifdef QEMU
-	ASSERT(fprintf(COM1, "switch_deactivate" EOL) == 0);
+	ASSERT(fputs(COM1, "switch_deactivate"EOL) == 0);
 #else
 	ASSERT(fputc(COM1, 0x20) == 0);
 #endif
@@ -80,7 +73,7 @@ static void reverse_task(void) {
 	receive(&tid, &info, sizeof(info));
 	reply(tid, NULL, 0);
 
-	tc_stop(info.train);
+	tc_set_speed(info.train, 0);
 	delay(400);
 	tc_toggle_reverse(info.train);
 	tc_set_speed(info.train, info.speed);
