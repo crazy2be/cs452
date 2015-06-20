@@ -3,6 +3,7 @@
 import os
 import random
 import math
+import telnetlib
 
 import pygame
 
@@ -55,8 +56,9 @@ class Track():
 		self.train.move_to((x*100 + 200, y*100 + 200))
 
 class Game(object):
-	def __init__(self, surface):
+	def __init__(self, surface, tn):
 		self.surface = surface
+		self.tn = tn
 		self.clock = pygame.time.Clock()
 
 	def start_screen(self):
@@ -66,10 +68,16 @@ class Game(object):
 		rot = 45
 		train = Train()
 		track = Track(train)
+		cmd = ""
 		while True:
 			for event in pygame.event.get():
 				if event.type == pygame.QUIT:
 					return
+			cmd += self.tn.read_eager()
+			if len(cmd) > 1: print cmd
+			if '\n' in cmd:
+				s, cmd = cmd.split('\n', 1)
+				text = font.render(s, 1, (10, 10, 10))
 			self.surface.fill((255, 255, 255))
 			track.update()
 			#train.update()
@@ -90,7 +98,9 @@ def main():
 	pygame.mouse.set_visible(False)
 	pygame.display.set_caption("Trains")
 
-	game = Game(surface)
+	tn = telnetlib.Telnet("localhost", 1230)
+
+	game = Game(surface, tn)
 
 	game.play_game()
 

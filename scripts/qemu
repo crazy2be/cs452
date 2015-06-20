@@ -9,8 +9,8 @@ case "$1" in
 		com2="file:$4"
 		;;
 	*)
-		com1="stdio"
-		com2="telnet:localhost:1230,server"
+		com1="telnet:localhost:1230,server"
+		com2="telnet:localhost:1231,server"
 		;;
 esac
 
