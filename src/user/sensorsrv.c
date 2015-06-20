@@ -31,16 +31,9 @@ int sensor_get(const struct sensor_state *s, int num) {
 
 // 4-byte buf (including 1 byte of null-term)
 void sensor_repr(int n, char *buf) {
-	// this is a hack, since I don't want to implement general sprintf right now
-	const int group = n / 16;
-	int number = (n % 16) + 1;
-	*buf++ = 'A' + group;
-	if (number >= 10) {
-		*buf++ = '1';
-		number -= 10;
-	}
-	*buf++ = '0' + number;
-	*buf++ = '\0';
+	const char group = 'A' + (n / 16);
+	const int number = (n % 16) + 1;
+	snprintf(buf, 4, "%c%d", group, number);
 }
 
 static void send_sensor_poll(void) {
