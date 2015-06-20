@@ -22,3 +22,4 @@ int tid_possible(int tid);
 struct task_descriptor *task_from_tid(int tid);
 
 void tasks_print_runtime(int total_runtime_us);
+void task_check_stack_canary(struct task_descriptor *td);
