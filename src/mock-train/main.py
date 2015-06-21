@@ -49,15 +49,25 @@ class TrainSprite():
 		surf.blit(self.image, self.rect.move(self.off))
 
 class TrainTrackData():
-	def __init__(self):
-		self.piece = 0 # Current track piece we are on
-		self.segment = 0 # Current segment in the current piece
-		self.offset = 0 # Current offset along the segment
+	def __init__(ttd):
+		ttd.piece = 0 # Current track piece we are on
+		ttd.segment = 0 # Current segment in the current piece
+		ttd.offset = 0 # Current offset along the segment
+	def dist(ttd, ps): return ttd.dir(ps).length
+	def p(ttd, ps): return ps[ttd.piece][ttd.segment]
+	def dir(ttd, ps): return ps[ttd.piece][ttd.segment+1] - ttd.p(ps)
 
 class Train():
 	def __init__(self):
 		self.sprite = TrainSprite()
 		self.ttd = TrainTrackData()
+
+	def update(self, track):
+		track.advance(self.ttd, 10.0)
+		direction = track.direction(self.ttd)
+		position = track.position(self.ttd)
+		self.sprite.move_to(position)
+		self.sprite.rotate_to(-math.atan2(direction[1], direction[0]))
 
 	def draw(self, surf): self.sprite.draw(surf)
 
@@ -83,26 +93,22 @@ class Track():
 			b_points = calculate_bezier(self.track_pieces[x])
 			self.points.append(b_points)
 
-	def update(self):
-		v = v2(0, 0)
-		d = 0
+	def advance(self, ttd, amount):
 		ps = self.points
-		ttd = self.train.ttd
 		ttd.offset += 10.0
 		while True:
 			if ttd.segment + 1 >= len(self.points[ttd.piece]):
 				ttd.segment = 0
 				ttd.piece = (ttd.piece + 1) % len(self.track_pieces)
-			v = ps[ttd.piece][ttd.segment+1] - ps[ttd.piece][ttd.segment]
-			d = math.sqrt(v[0]*v[0] + v[1]*v[1])
+			d = ttd.dist(ps)
 			if ttd.offset < d: break
 			ttd.offset -= d
 			ttd.segment += 1
-		p = ps[ttd.piece][ttd.segment] + v*(ttd.offset/d)
-		x, y = p[0], p[1]
-		print x, y
-		self.train.sprite.move_to((x, y))
-		self.train.sprite.rotate_to(-math.atan2(v[1], v[0]))
+
+	def position(self, ttd):
+		ps = self.points
+		return ttd.p(ps) + ttd.dir(ps)*(ttd.offset/ttd.dist(ps))
+	def direction(self, ttd): return ttd.dir(self.points)
 
 	def draw(self, surf):
 		for i, track_points in enumerate(self.track_pieces):
@@ -138,8 +144,8 @@ class Game(object):
 				s, cmd = cmd.split('\n', 1)
 				text = font.render(s, 1, (10, 10, 10))
 			self.surface.fill((255, 255, 255))
-			track.update()
-			#train.update()
+			#track.update()
+			train.update(track)
 			track.draw(self.surface)
 			train.draw(self.surface)
 			textpos = text.get_rect()

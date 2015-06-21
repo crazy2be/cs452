@@ -302,6 +302,7 @@ class Vec2d(object):
     def dot(self, other):
         return float(self.x*other[0] + self.y*other[1])
 
+    def dist(self, other): return self.get_distance(other)
     def get_distance(self, other):
         return math.sqrt((self.x - other[0])**2 + (self.y - other[1])**2)
 
