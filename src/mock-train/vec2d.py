@@ -320,6 +320,9 @@ class Vec2d(object):
     def interpolate_to(self, other, range):
         return Vec2d(self.x + (other[0] - self.x)*range, self.y + (other[1] - self.y)*range)
 
+    def lerp(self, other, alpha):
+        return Vec2d(self.x + (other.x-self.x)*alpha, self.y + (other.y-self.y)*alpha)
+
     def convert_to_basis(self, x_vector, y_vector):
         return Vec2d(self.dot(x_vector)/x_vector.get_length_sqrd(), self.dot(y_vector)/y_vector.get_length_sqrd())
 

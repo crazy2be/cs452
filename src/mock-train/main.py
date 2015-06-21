@@ -53,9 +53,18 @@ class TrainTrackData():
 		ttd.piece = 0 # Current track piece we are on
 		ttd.segment = 0 # Current segment in the current piece
 		ttd.offset = 0 # Current offset along the segment
-	def dist(ttd, ps): return ttd.dir(ps).length
-	def p(ttd, ps): return ps[ttd.piece][ttd.segment]
-	def dir(ttd, ps): return ps[ttd.piece][ttd.segment+1] - ttd.p(ps)
+	def pc(ttd, ps): return ps[ttd.piece]
+	def start(ttd, pc): return pc.seg(ttd.segment)
+	def end(ttd, pc): return pc.seg(ttd.segment+1)
+	def vec(ttd, pc): return ttd.end(pc) - ttd.start(pc)
+	def loc(ttd, pc):
+		return ttd.start(pc).lerp(ttd.end(pc), ttd.offset / ttd.vec(pc).length)
+
+GRAY = (100,100,100)
+LIGHT_GRAY = (200,200,200)
+RED = (255,0,0)
+GREEN = (0,255,0)
+BLUE = (0,0,255)
 
 class Train():
 	def __init__(self):
@@ -74,51 +83,49 @@ class Train():
 class TrackPiece():
 	ctrl = [v2(100,100), v2(100,200), v2(200, 200), v2(200, 100)]
 	def __init__(self):
-		self.index = 0
+		self.points = calculate_bezier(self.ctrl)
+		pass
+
+	def seg(self, i): return self.points[i]
+	def nseg(self): return len(self.points)
+
+	def draw(self, surf):
+		### Draw control points
+		for p in self.ctrl:
+			pygame.draw.circle(surf, BLUE, p, 4)
+		### Draw control "lines"
+		pygame.draw.lines(surf, LIGHT_GRAY, False, self.ctrl)
+		### Draw bezier segments
+		pygame.draw.lines(surf, RED, False, self.points)
 
 class Track():
-	gray = (100,100,100)
-	lightgray = (200,200,200)
-	red = (255,0,0)
-	green = (0,255,0)
-	blue = (0,0,255)
 	track_pieces = [
 		[v2(100,100), v2(100,200), v2(200, 200), v2(200, 100)],
 		[v2(200, 100), v2(300, 200), v2(300, 300), v2(300, 400)],
 		[v2(300, 400), v2(400, 400), v2(500, 500), v2(400, 500)]]
-	def __init__(self, train):
-		self.train = train
-		self.points = []
-		for x in range(0, len(self.track_pieces)):
-			b_points = calculate_bezier(self.track_pieces[x])
-			self.points.append(b_points)
+	pieces = [TrackPiece()]
+	def __init__(self):
+		pass
 
 	def advance(self, ttd, amount):
-		ps = self.points
 		ttd.offset += 10.0
 		while True:
-			if ttd.segment + 1 >= len(self.points[ttd.piece]):
+			pc = self.pieces[ttd.piece]
+			if ttd.segment + 1 >= pc.nseg():
 				ttd.segment = 0
-				ttd.piece = (ttd.piece + 1) % len(self.track_pieces)
-			d = ttd.dist(ps)
+				ttd.piece = (ttd.piece + 1) % len(self.pieces)
+				continue
+			d = ttd.vec(pc).length
 			if ttd.offset < d: break
 			ttd.offset -= d
 			ttd.segment += 1
 
-	def position(self, ttd):
-		ps = self.points
-		return ttd.p(ps) + ttd.dir(ps)*(ttd.offset/ttd.dist(ps))
-	def direction(self, ttd): return ttd.dir(self.points)
+	def position(self, ttd): return ttd.loc(ttd.pc(self.pieces))
+	def direction(self, ttd): return ttd.vec(ttd.pc(self.pieces))
 
 	def draw(self, surf):
-		for i, track_points in enumerate(self.track_pieces):
-			### Draw control points
-			for p in track_points:
-				pygame.draw.circle(surf, self.blue, p, 4)
-			### Draw control "lines"
-			pygame.draw.lines(surf, self.lightgray, False, track_points)
-			### Draw bezier segments
-			pygame.draw.lines(surf, self.red, False, self.points[i])
+		for pc in self.pieces:
+			pc.draw(surf)
 
 class Game(object):
 	def __init__(self, surface, tn):
@@ -132,7 +139,7 @@ class Game(object):
 
 		rot = 45
 		train = Train()
-		track = Track(train)
+		track = Track()
 		cmd = ""
 		while True:
 			for event in pygame.event.get():
