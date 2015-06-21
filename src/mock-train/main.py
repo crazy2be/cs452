@@ -53,6 +53,8 @@ class TrainTrackData():
 		ttd.piece = 0 # Current track piece we are on
 		ttd.segment = 0 # Current segment in the current piece
 		ttd.offset = 0 # Current offset along the segment
+	def __str__(ttd):
+		return "piece: {0}, segment: {1}, offset: {2}".format(ttd.piece, ttd.segment, ttd.offset)
 	def pc(ttd, ps): return ps[ttd.piece]
 	def start(ttd, pc): return pc.seg(ttd.segment)
 	def end(ttd, pc): return pc.seg(ttd.segment+1)
@@ -70,13 +72,21 @@ class Train():
 	def __init__(self):
 		self.sprite = TrainSprite()
 		self.ttd = TrainTrackData()
+		self.s = 5.
+		self.direction = -1.
 
 	def update(self, track):
-		track.advance(self.ttd, 10.0)
+		track.advance(self.ttd, self.s*self.direction)
 		direction = track.direction(self.ttd)
 		position = track.position(self.ttd)
 		self.sprite.move_to(position)
 		self.sprite.rotate_to(-math.atan2(direction[1], direction[0]))
+
+	def set_speed(self, speed):
+		# TODO: Smooth function here
+		self.s = speed
+
+	def toggle_reverse(self): self.direction *= -1
 
 	def draw(self, surf): self.sprite.draw(surf)
 
@@ -106,17 +116,36 @@ class Track():
 		self.pieces = [TrackPiece(0, (100, 100)), TrackPiece(1, (200, 0))]
 
 	def advance(self, ttd, amount):
-		ttd.offset += 10.0
-		while True:
-			pc = self.pieces[ttd.piece]
-			if ttd.segment + 1 >= pc.nseg():
-				ttd.segment = 0
-				ttd.piece = (ttd.piece + 1) % len(self.pieces)
-				continue
-			d = ttd.vec(pc).length
-			if ttd.offset < d: break
-			ttd.offset -= d
-			ttd.segment += 1
+		def mod(n, m): return ((n % m) + m) % m
+		ttd.offset += amount
+		if amount < 0:
+			while True:
+				pc = self.pieces[ttd.piece]
+				if ttd.segment < 0:
+					ttd.piece = mod(ttd.piece - 1, len(self.pieces))
+					ttd.segment = self.pieces[ttd.piece].nseg() - 2
+					pc = self.pieces[ttd.piece]
+					ttd.offset += ttd.vec(pc).length
+					continue
+				if ttd.offset < 0:
+					ttd.segment -= 1
+					if ttd.segment >= 0:
+						ttd.offset += ttd.vec(pc).length
+					continue
+				return
+		else:
+			while True:
+				pc = self.pieces[ttd.piece]
+				if ttd.segment + 1 >= pc.nseg():
+					ttd.piece = mod(ttd.piece + 1, len(self.pieces))
+					ttd.segment = 0
+					continue
+				d = ttd.vec(pc).length
+				if ttd.offset >= d:
+					ttd.offset -= d # length of current segment
+					ttd.segment += 1
+					continue
+				return
 
 	def position(self, ttd): return ttd.loc(ttd.pc(self.pieces))
 	def direction(self, ttd): return ttd.vec(ttd.pc(self.pieces))
@@ -131,12 +160,39 @@ class Game(object):
 		self.tn = tn
 		self.clock = pygame.time.Clock()
 
+	def parse_cmd(self, s):
+		def consume_word(s, i=0):
+			while i < len(s) and (s[i].isalpha() or s[i] == '_'): i += 1
+			return s[i:], s[:i]
+		def consume_whitespace(s, i=0):
+			while i < len(s) and s[i].isspace(): i += 1
+			return s[i:], s[:i]
+		def consume_number(s, i=0):
+			while i < len(s) and s[i].isdigit(): i += 1
+			return s[i:], int(s[:i])
+		s, _ = consume_whitespace(s)
+		s, word = consume_word(s)
+		s, _ = consume_whitespace(s)
+		if word == 'set_speed':
+			s, train = consume_number(s)
+			s, _ = consume_whitespace(s)
+			s, _ = consume_word(s) # "to"
+			s, _ = consume_whitespace(s)
+			s, speed = consume_number(s)
+			self.train.set_speed(speed)
+		elif word == 'reverse':
+			s, train = consume_number(s)
+			self.train.toggle_reverse()
+		else:
+			print "Unknown command '{0}'!".format(word)
+
+
 	def start_screen(self):
 		font = pygame.font.Font(None, 36)
 		text = font.render("Hello There", 1, (10, 10, 10))
 
 		rot = 45
-		train = Train()
+		self.train = Train()
 		track = Track()
 		cmd = ""
 		while True:
@@ -147,12 +203,13 @@ class Game(object):
 			if len(cmd) > 1: print cmd
 			if '\n' in cmd:
 				s, cmd = cmd.split('\n', 1)
+				self.parse_cmd(s)
 				text = font.render(s, 1, (10, 10, 10))
 			self.surface.fill((255, 255, 255))
 			#track.update()
-			train.update(track)
+			self.train.update(track)
 			track.draw(self.surface)
-			train.draw(self.surface)
+			self.train.draw(self.surface)
 			textpos = text.get_rect()
 			textpos.centerx = self.surface.get_rect().centerx
 			self.surface.blit(text, textpos)
