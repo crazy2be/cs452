@@ -22,11 +22,11 @@ def rot_center(image, rect, angle):
 
 class TrainSprite():
 	def __init__(self):
-		surf = pygame.Surface((100, 50))
+		surf = pygame.Surface((10, 5))
 		surf.fill((0, 0, 0))
 		surf.set_colorkey((0, 0, 0))
 		self.raw_image = surf
-		self.raw_rect = pygame.Rect(0, 0, 100, 50)
+		self.raw_rect = pygame.Rect(0, 0, 10, 5)
 		self.rot = 0
 		self.off = (100, 100)
 		pygame.draw.rect(surf, (100, 0, 0), self.raw_rect)
