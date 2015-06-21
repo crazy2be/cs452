@@ -96,47 +96,6 @@ class Game(object):
 
 	def play_game(self):
 		self.start_screen()
-
-from bspline import Bspline
-import pygame
-from pygame import display, draw, PixelArray, Rect, Surface
-from pygame.locals import *
-import numpy as np
-
-SCREEN_SIZE = (800, 600)
-SCREEN = display.set_mode(SCREEN_SIZE)
-STEP_N = 100
-
-def main2():
-	pygame.init()
-	P = [(0, 100), (100, 0), (200, 0), (300, 100), (400, 200), (500, 200),
-			(600, 100), (400, 400), (700, 50), (800, 200)]
-	n = len(P) - 1 # n = len(P) - 1; (P[0], ... P[n])
-	k = 3          # degree of curve
-	m = n + k + 1  # property of b-splines: m = n + k + 1
-	_t = 1. / (m - k * 2) # t between clamped ends will be evenly spaced
-	# clamp ends and get the t between them
-	t = k * [0] + [t_ * _t for t_ in xrange(m - (k * 2) + 1)] + [1] * k
-
-	S = Bspline(P, t, k)
-	# insert a knot (just to demonstrate the algorithm is working)
-	#S.insert(0.9)
-
-	surface = Surface(SCREEN_SIZE)
-	pxarray = PixelArray(surface)
-	for t_ in np.arange(0, 1, 1. / STEP_N):
-		x, y = S(t_)
-		pxarray[int(x), int(y)] = (255, 0, 0)
-	del pxarray
-
-	for p in zip(S.X, S.Y): draw.circle(surface, (0, 255, 0), [int(a) for a in p], 3, 0)
-	SCREEN.blit(surface, (0, 0))
-
-	while 1:
-		for event in pygame.event.get():
-			if event.type == pygame.QUIT:
-				return
-		display.update()
 """
 bezier.py - Calculates a bezier curve from control points.
 
@@ -146,9 +105,9 @@ Depends on the 2d vector class found here: http://www.pygame.org/wiki/2DVectorCl
 Released to the Public Domain
 """
 import pygame
+import vec2d
+def v2(x, y): return vec2d.Vec2d(x, y)
 from pygame.locals import *
-
-from vec2d import *
 
 def calculate_bezier(p, steps = 10):
 	"""
@@ -158,11 +117,10 @@ def calculate_bezier(p, steps = 10):
 	The function uses the forward differencing algorithm described here:
 	http://www.niksula.cs.hut.fi/~hkankaan/Homepages/bezierfast.html
 	"""
-	#print len(p)
 	t = 1.0 / steps
 	temp = t*t
 
-	f = Vec2d(p[0][0], p[0][1])
+	f = v2(p[0][0], p[0][1])
 	fd = 3 * (p[1] - p[0]) * t
 	fdd_per_2 = 3 * (p[0] - 2 * p[1] + p[2]) * temp
 	fddd_per_2 = 3 * (3 * (p[1] - p[2]) + p[3] - p[0]) * temp * t
@@ -173,7 +131,7 @@ def calculate_bezier(p, steps = 10):
 
 	points = []
 	for x in range(steps):
-		points.append(Vec2d(f[0], f[1]))
+		points.append(v2(f[0], f[1]))
 		f += fd + fdd_per_2 + fddd_per_6
 		fd += fdd + fddd_per_2
 		fdd += fddd
@@ -181,7 +139,6 @@ def calculate_bezier(p, steps = 10):
 	points.append(f)
 	return points
 
-def vec2d(x, y): return Vec2d(x, y)
 def main3():
 	gray = (100,100,100)
 	lightgray = (200,200,200)
@@ -193,7 +150,7 @@ def main3():
 	screen = pygame.display.set_mode((600, 600))
 
 	### Control points that are later used to calculate the curve
-	control_points = [vec2d(100,100), vec2d(100,200), vec2d(200, 200), vec2d(200, 100), vec2d(300, 200), vec2d(300, 300), vec2d(300, 400), vec2d(400, 400), vec2d(500, 500), vec2d(400, 500)]
+	control_points = [v2(100,100), v2(100,200), v2(200, 200), v2(200, 100), v2(300, 200), v2(300, 300), v2(300, 400), v2(400, 400), v2(500, 500), v2(400, 500)]
 
 	### The currently selected point
 	selected = None
@@ -211,7 +168,7 @@ def main3():
 						selected = p
 			elif event.type == MOUSEBUTTONDOWN and event.button == 3:
 				x,y = pygame.mouse.get_pos()
-				control_points.append(vec2d(x,y))
+				control_points.append(v2(x,y))
 			elif event.type == MOUSEBUTTONUP and event.button == 1:
 				selected = None
 
@@ -224,7 +181,7 @@ def main3():
 
 		### Draw control points
 		for p in control_points:
-			pygame.draw.circle(screen, blue, (int(p[0]), int(p[1])), 4)
+			pygame.draw.circle(screen, blue, p, 4)
 		### Draw control "lines"
 		pygame.draw.lines(screen, lightgray, False, control_points)
 		### Draw bezier curve
@@ -256,6 +213,3 @@ def main():
 	game.play_game()
 
 	pygame.quit()
-
-if __name__ == "__main__":
-	main2()
