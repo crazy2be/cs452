@@ -48,11 +48,23 @@ class TrainSprite():
 	def draw(self, surf):
 		surf.blit(self.image, self.rect.move(self.off))
 
+class TrainTrackData():
+	def __init__(self):
+		self.piece = 0 # Current track piece we are on
+		self.segment = 0 # Current segment in the current piece
+		self.offset = 0 # Current offset along the segment
+
 class Train():
-	pass
+	def __init__(self):
+		self.sprite = TrainSprite()
+		self.ttd = TrainTrackData()
+
+	def draw(self, surf): self.sprite.draw(surf)
 
 class TrackPiece():
-	pass
+	ctrl = [v2(100,100), v2(100,200), v2(200, 200), v2(200, 100)]
+	def __init__(self):
+		self.index = 0
 
 class Track():
 	gray = (100,100,100)
@@ -66,34 +78,31 @@ class Track():
 		[v2(300, 400), v2(400, 400), v2(500, 500), v2(400, 500)]]
 	def __init__(self, train):
 		self.train = train
-		self.t = 0
-		self.index = 0
-		self.piece = 0
-		self.offset = 0
 		self.points = []
 		for x in range(0, len(self.track_pieces)):
 			b_points = calculate_bezier(self.track_pieces[x])
 			self.points.append(b_points)
 
 	def update(self):
-		self.t += 10.0
-		self.offset += 10.0
 		v = v2(0, 0)
 		d = 0
+		ps = self.points
+		ttd = self.train.ttd
+		ttd.offset += 10.0
 		while True:
-			if self.index + 1 >= len(self.points[self.piece]):
-				self.index = 0
-				self.piece = (self.piece + 1) % len(self.track_pieces)
-			v = self.points[self.piece][self.index + 1] - self.points[self.piece][self.index]
+			if ttd.segment + 1 >= len(self.points[ttd.piece]):
+				ttd.segment = 0
+				ttd.piece = (ttd.piece + 1) % len(self.track_pieces)
+			v = ps[ttd.piece][ttd.segment+1] - ps[ttd.piece][ttd.segment]
 			d = math.sqrt(v[0]*v[0] + v[1]*v[1])
-			if self.offset < d: break
-			self.offset -= d
-			self.index += 1
-		p = self.points[self.piece][self.index] + v*(self.offset/d)
+			if ttd.offset < d: break
+			ttd.offset -= d
+			ttd.segment += 1
+		p = ps[ttd.piece][ttd.segment] + v*(ttd.offset/d)
 		x, y = p[0], p[1]
 		print x, y
-		self.train.move_to((x, y))
-		self.train.rotate_to(-math.atan2(v[1], v[0]))
+		self.train.sprite.move_to((x, y))
+		self.train.sprite.rotate_to(-math.atan2(v[1], v[0]))
 
 	def draw(self, surf):
 		for i, track_points in enumerate(self.track_pieces):
@@ -102,7 +111,7 @@ class Track():
 				pygame.draw.circle(surf, self.blue, p, 4)
 			### Draw control "lines"
 			pygame.draw.lines(surf, self.lightgray, False, track_points)
-			### Draw bezier curve
+			### Draw bezier segments
 			pygame.draw.lines(surf, self.red, False, self.points[i])
 
 class Game(object):
@@ -116,7 +125,7 @@ class Game(object):
 		text = font.render("Hello There", 1, (10, 10, 10))
 
 		rot = 45
-		train = TrainSprite()
+		train = Train()
 		track = Track(train)
 		cmd = ""
 		while True:
