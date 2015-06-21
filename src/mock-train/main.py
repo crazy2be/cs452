@@ -8,6 +8,9 @@ import socket
 import errno
 
 import pygame
+import vec2d
+def v2(x, y): return vec2d.Vec2d(x, y)
+from bezier import calculate_bezier
 
 def deg_to_rad(deg): return deg * math.pi / 180
 def rot_center(image, rect, angle):
@@ -52,16 +55,37 @@ class TrackPiece():
 	pass
 
 class Track():
+	gray = (100,100,100)
+	lightgray = (200,200,200)
+	red = (255,0,0)
+	green = (0,255,0)
+	blue = (0,0,255)
+	control_points = [v2(100,100), v2(100,200), v2(200, 200), v2(200, 100), v2(300, 200), v2(300, 300), v2(300, 400), v2(400, 400), v2(500, 500), v2(400, 500)]
 	def __init__(self, train):
 		self.train = train
 		self.t = 0
+		self.index = 0
+		self.offset = 0
 
 	def update(self):
 		self.t += 0.1
+		# TODO: This is wrong
 		x = math.sin(self.t)
 		y = math.cos(self.t)
 		self.train.rotate_to(90-math.atan2(y, x))
 		self.train.move_to((x*100 + 200, y*100 + 200))
+
+	def draw(self, surf):
+		### Draw control points
+		for p in self.control_points:
+			pygame.draw.circle(surf, self.blue, p, 4)
+		### Draw control "lines"
+		pygame.draw.lines(surf, self.lightgray, False, self.control_points)
+		### Draw bezier curve
+		for x in range(0,len(self.control_points)-1,3):
+			b_points = calculate_bezier(self.control_points[x:x+4])
+			#print b_points
+			pygame.draw.lines(surf, self.red, False, b_points)
 
 class Game(object):
 	def __init__(self, surface, tn):
@@ -89,6 +113,7 @@ class Game(object):
 			self.surface.fill((255, 255, 255))
 			track.update()
 			#train.update()
+			track.draw(self.surface)
 			train.draw(self.surface)
 			textpos = text.get_rect()
 			textpos.centerx = self.surface.get_rect().centerx
