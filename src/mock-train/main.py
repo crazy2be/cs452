@@ -60,16 +60,20 @@ class Track():
 	red = (255,0,0)
 	green = (0,255,0)
 	blue = (0,0,255)
-	control_points = [v2(100,100), v2(100,200), v2(200, 200), v2(200, 100), v2(300, 200), v2(300, 300), v2(300, 400), v2(400, 400), v2(500, 500), v2(400, 500)]
+	track_pieces = [
+		[v2(100,100), v2(100,200), v2(200, 200), v2(200, 100)],
+		[v2(200, 100), v2(300, 200), v2(300, 300), v2(300, 400)],
+		[v2(300, 400), v2(400, 400), v2(500, 500), v2(400, 500)]]
 	def __init__(self, train):
 		self.train = train
 		self.t = 0
 		self.index = 0
+		self.piece = 0
 		self.offset = 0
 		self.points = []
-		for x in range(0,len(self.control_points)-1,3):
-			b_points = calculate_bezier(self.control_points[x:x+4])
-			self.points += b_points
+		for x in range(0, len(self.track_pieces)):
+			b_points = calculate_bezier(self.track_pieces[x])
+			self.points.append(b_points)
 
 	def update(self):
 		self.t += 1.0
@@ -77,25 +81,26 @@ class Track():
 		v = v2(0, 0)
 		d = 0
 		while True:
-			v = self.points[self.index + 1] - self.points[self.index]
+			v = self.points[self.piece][self.index + 1] - self.points[self.piece][self.index]
 			d = math.sqrt(v[0]*v[0] + v[1]*v[1])
 			if self.offset < d: break
 			self.offset -= d
 			self.index += 1
-		p = self.points[self.index] + v*(self.offset/d)
+		p = self.points[self.piece][self.index] + v*(self.offset/d)
 		x, y = p[0], p[1]
 		print x, y
 		self.train.move_to((x, y))
 		self.train.rotate_to(-math.atan2(v[1], v[0]))
 
 	def draw(self, surf):
-		### Draw control points
-		for p in self.control_points:
-			pygame.draw.circle(surf, self.blue, p, 4)
-		### Draw control "lines"
-		pygame.draw.lines(surf, self.lightgray, False, self.control_points)
-		### Draw bezier curve
-		pygame.draw.lines(surf, self.red, False, self.points)
+		for i, track_points in enumerate(self.track_pieces):
+			### Draw control points
+			for p in track_points:
+				pygame.draw.circle(surf, self.blue, p, 4)
+			### Draw control "lines"
+			pygame.draw.lines(surf, self.lightgray, False, track_points)
+			### Draw bezier curve
+			pygame.draw.lines(surf, self.red, False, self.points[i])
 
 class Game(object):
 	def __init__(self, surface, tn):
