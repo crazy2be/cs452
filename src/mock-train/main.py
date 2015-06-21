@@ -103,12 +103,12 @@ class TrackPiece():
 	def nseg(self): return len(self.points)
 
 	def draw(self, surf):
-		### Draw control points
+		# Draw control points
 		for p in self.ctrl:
 			pygame.draw.circle(surf, BLUE, p, 4)
-		### Draw control "lines"
+		# Draw control "lines"
 		pygame.draw.lines(surf, LIGHT_GRAY, False, self.ctrl)
-		### Draw bezier segments
+		# Draw bezier segments
 		pygame.draw.lines(surf, RED, False, self.points)
 
 class Track():
@@ -118,6 +118,9 @@ class Track():
 	def advance(self, ttd, amount):
 		def mod(n, m): return ((n % m) + m) % m
 		ttd.offset += amount
+		# TODO: This code is pretty gross. It would be nice to clean it
+		# up at least a little bit... I feel like we aught to be able to
+		# better generalize forward/backward travel at the very least.
 		if amount < 0:
 			while True:
 				pc = self.pieces[ttd.piece]
