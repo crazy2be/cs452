@@ -76,11 +76,14 @@ class Track():
 			self.points.append(b_points)
 
 	def update(self):
-		self.t += 1.0
-		self.offset += 1.0
+		self.t += 10.0
+		self.offset += 10.0
 		v = v2(0, 0)
 		d = 0
 		while True:
+			if self.index + 1 >= len(self.points[self.piece]):
+				self.index = 0
+				self.piece = (self.piece + 1) % len(self.track_pieces)
 			v = self.points[self.piece][self.index + 1] - self.points[self.piece][self.index]
 			d = math.sqrt(v[0]*v[0] + v[1]*v[1])
 			if self.offset < d: break
