@@ -158,11 +158,11 @@ def calculate_bezier(p, steps = 10):
 	The function uses the forward differencing algorithm described here:
 	http://www.niksula.cs.hut.fi/~hkankaan/Homepages/bezierfast.html
 	"""
-	print len(p)
+	#print len(p)
 	t = 1.0 / steps
 	temp = t*t
 
-	f = p[0]
+	f = Vec2d(p[0][0], p[0][1])
 	fd = 3 * (p[1] - p[0]) * t
 	fdd_per_2 = 3 * (p[0] - 2 * p[1] + p[2]) * temp
 	fddd_per_2 = 3 * (3 * (p[1] - p[2]) + p[3] - p[0]) * temp * t
