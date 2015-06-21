@@ -81,10 +81,13 @@ class Train():
 	def draw(self, surf): self.sprite.draw(surf)
 
 class TrackPiece():
-	ctrl = [v2(100,100), v2(100,200), v2(200, 200), v2(200, 100)]
-	def __init__(self):
+	track_types = [
+		[v2(0,0), v2(0,1), v2(1,1), v2(1,0)],
+		[v2(0,1), v2(0,0), v2(1,0), v2(1,1)]
+	]
+	def __init__(self, typ, off):
+		self.ctrl = [p*100 + off for p in self.track_types[typ]]
 		self.points = calculate_bezier(self.ctrl)
-		pass
 
 	def seg(self, i): return self.points[i]
 	def nseg(self): return len(self.points)
@@ -99,13 +102,8 @@ class TrackPiece():
 		pygame.draw.lines(surf, RED, False, self.points)
 
 class Track():
-	track_pieces = [
-		[v2(100,100), v2(100,200), v2(200, 200), v2(200, 100)],
-		[v2(200, 100), v2(300, 200), v2(300, 300), v2(300, 400)],
-		[v2(300, 400), v2(400, 400), v2(500, 500), v2(400, 500)]]
-	pieces = [TrackPiece()]
 	def __init__(self):
-		pass
+		self.pieces = [TrackPiece(0, (100, 100)), TrackPiece(1, (200, 0))]
 
 	def advance(self, ttd, amount):
 		ttd.offset += 10.0
