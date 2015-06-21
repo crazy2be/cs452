@@ -85,12 +85,8 @@ class Track():
 		p = self.points[self.index] + v*(self.offset/d)
 		x, y = p[0], p[1]
 		print x, y
-		self.train.rotate_to(-math.atan2(v[1], v[0]))
 		self.train.move_to((x, y))
-
-		# TODO: This is wrong
-		#x = math.sin(self.t)
-		#y = math.cos(self.t)
+		self.train.rotate_to(-math.atan2(v[1], v[0]))
 
 	def draw(self, surf):
 		### Draw control points
