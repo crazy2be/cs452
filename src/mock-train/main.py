@@ -66,14 +66,31 @@ class Track():
 		self.t = 0
 		self.index = 0
 		self.offset = 0
+		self.points = []
+		for x in range(0,len(self.control_points)-1,3):
+			b_points = calculate_bezier(self.control_points[x:x+4])
+			self.points += b_points
 
 	def update(self):
-		self.t += 0.1
+		self.t += 1.0
+		self.offset += 1.0
+		v = v2(0, 0)
+		d = 0
+		while True:
+			v = self.points[self.index + 1] - self.points[self.index]
+			d = math.sqrt(v[0]*v[0] + v[1]*v[1])
+			if self.offset < d: break
+			self.offset -= d
+			self.index += 1
+		p = self.points[self.index] + v*(self.offset/d)
+		x, y = p[0], p[1]
+		print x, y
+		self.train.rotate_to(-math.atan2(v[1], v[0]))
+		self.train.move_to((x, y))
+
 		# TODO: This is wrong
-		x = math.sin(self.t)
-		y = math.cos(self.t)
-		self.train.rotate_to(90-math.atan2(y, x))
-		self.train.move_to((x*100 + 200, y*100 + 200))
+		#x = math.sin(self.t)
+		#y = math.cos(self.t)
 
 	def draw(self, surf):
 		### Draw control points
@@ -82,10 +99,7 @@ class Track():
 		### Draw control "lines"
 		pygame.draw.lines(surf, self.lightgray, False, self.control_points)
 		### Draw bezier curve
-		for x in range(0,len(self.control_points)-1,3):
-			b_points = calculate_bezier(self.control_points[x:x+4])
-			#print b_points
-			pygame.draw.lines(surf, self.red, False, b_points)
+		pygame.draw.lines(surf, self.red, False, self.points)
 
 class Game(object):
 	def __init__(self, surface, tn):
