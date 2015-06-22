@@ -13,8 +13,6 @@ void exited_main(void);
 
 void sleep(int n);
 void *memset(void *ptr, int value, int num);
-// non-traditional name b/c of conflict with built-in function
-// TODO: I should just configure the emulator build script to link in memcpy from libc
 typedef unsigned size_t;
 void* memcpy(void *dst, const void *src, size_t len);
 

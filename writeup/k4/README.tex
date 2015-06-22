@@ -41,50 +41,23 @@ previous runs. In particular, this has been known to cause bugs with the
 sensor reads, where garbage data left in the UART is picked up, and
 misinterpreted.
 
-\subsection{Useful links:}\label{useful-links}
-
-\subsubsection{General}\label{general}
+\subsection{Commands}\label{commands}
 
 \begin{itemize}
 \itemsep1pt\parskip0pt\parsep0pt
 \item
-  \href{http://www.cgl.uwaterloo.ca/~wmcowan/teaching/cs452/pdf/arm-architecture.pdf}{ARMv4
-  Manual}
+  \texttt{tr \textless{}train number\textgreater{} \textless{}speed\textgreater{}}
+  sets the speed of a train
 \item
-  \href{http://ascii-table.com/ansi-escape-sequences.php}{Terminal
-  escape sequences}
+  \texttt{sw \textless{}switch number\textgreater{} (c\textbar{}s)} sets
+  a the position of a switch to curved or straight
+\item
+  \texttt{rv \textless{}train number\textgreater{}} reverses a train
+\item
+  \texttt{q} exits the program
 \end{itemize}
 
-\subsubsection{TS7200 hardware}\label{ts7200-hardware}
-
-\begin{itemize}
-\itemsep1pt\parskip0pt\parsep0pt
-\item
-  \href{http://www.cgl.uwaterloo.ca/~wmcowan/teaching/cs452/pdf/ts-7200-manual.pdf}{TS7200
-  Manual}
-\item
-  \href{http://www.cgl.uwaterloo.ca/~wmcowan/teaching/cs452/pdf/ep93xx-user-guide.pdf}{Cirrus
-  EP9302 Manual}
-\item
-  \href{http://www.cgl.uwaterloo.ca/~wmcowan/teaching/cs452/pdf/icu-pl190.pdf}{Interrupt
-  controller manual}
-\end{itemize}
-
-\subsubsection{VersatilePB hardware emulated by
-QEMU}\label{versatilepb-hardware-emulated-by-qemu}
-
-\begin{itemize}
-\itemsep1pt\parskip0pt\parsep0pt
-\item
-  \href{http://infocenter.arm.com/help/topic/com.arm.doc.dui0224i/DUI0224I_realview_platform_baseboard_for_arm926ej_s_ug.pdf}{SOC
-  manual}
-\item
-  \href{http://infocenter.arm.com/help/topic/com.arm.doc.ddi0271d/DDI0271.pdf}{Timer
-  manual}
-\item
-  \href{http://infocenter.arm.com/help/topic/com.arm.doc.ddi0181e/DDI0181.pdf}{Interrupt
-  controller manual} (Same as the TS7200 hardware)
-\item
-  \href{http://infocenter.arm.com/help/topic/com.arm.doc.ddi0183f/DDI0183.pdf}{UART
-  Manual}
-\end{itemize}
+The positions of each switch is shown in the ASCII-art map of the train
+track. When a sensor is tripped, it is shown both on the ASCII-art map
+for as long as it is tripped, as well as to the right, on the list of
+recently-fired sensors.

@@ -155,11 +155,34 @@ express many parts of the system, such as in the train server. The details of
 \texttt{destroy()}'s implementation are discussed in the resource allocation
 section, below.
 
+One thing to notice about the \texttt{destroy()} primitive is that, although
+it does support reusing td and stack slots, its current implementation does
+not allow for the reuse of TIDs. This means that eventually we will face TID
+exhaustion, and crash as a result. This could be written in without much
+difficulty, but we chose not to, because it opens us up to strange behavior.
+For example, if a task stores a reference to the TID of another task, and then
+tries to send to that task at a later time, but the TID no longer corresponds
+to the same task. Raw reuse of TIDs in the range 0-255 with naive modulus
+would make this (relatively) likely. Thus, we didn't want to use this scheme.
+Wraparound after the integer TID overflows would make this situation much less
+likely, but is unlikely to be necessary, as there are $2^{31} = 2147483648$
+possible TIDs. Our allocation algorithm can accelerate this slightly if there
+are few free td slots remaining, but even in the (very unlikely) worst case of
+only 1-2 td slots remaining which keep getting mutually cycled, we would
+increment the max allocated td by 256 (\texttt{NUM\_TASK}) each time a new
+task was created and destroyed. This still gives us $2^{31 - 8} = 8388608$
+chances to create and destroy tasks, or more than 3 hours of runtime in this
+worst case, if we were creating and destroying tasks every 100ms. In the
+project, it is extremely unlikely we will use anything close to all 256 slots,
+so the real time will be some orders of magnitude larger. However, if we do
+run into this issue, it should not be too hard to implement proper TID
+wrap-around.
+
 \subsection{Task Resource Allocation}
 All task descriptors are simply allocated in a statically allocated table.
 A task ID, modulo \texttt{NUM\_TASK}, is just an integer index into that table.
 This approach makes the implementation very simple, very fast, and still allows
-the reuse of task descriptors after they are destroyed (just increment the tid
+the reuse of task descriptors after they are destroyed (just increment the TID
 for a given slot by 256 every time it is reused).
 
 We also have a queue of free tds from which new tasks can be allocated,
@@ -219,17 +242,45 @@ performance problem.
 
 \subsection{Message Passing}
 Message passing is implemented by having each task keep a queue
-of tasks that are waiting for replies from it (i.e. blocked). This allows us
+of tasks that are waiting for replies from it (i.e.\@ blocked). This allows us
 to ensure that messages are received in FIFO order, and quickly and efficiently
-find tasks that are blocked on a given task (i.e. without having to scan the
+find tasks that are blocked on a given task (i.e.\@ without having to scan the
 list of tasks).
 
 In addition to this, we keep track of the current "state" of a task in it's
 task descriptor, in order to ensure that invalid sequences of operations are
-caught (i.e. trying to reply to a task which is not waiting for a reply).
+caught (i.e.\@ trying to reply to a task which is not waiting for a reply).
 
 Our message passing routines are quite fast - Around 14us in the best case for
 a round trip send/receive/reply set, including context switching.
+
+\subsection{Name server}
+In order to allow tasks to communicate with each other, the sending task needs to
+obtain the TID of the task it wishes to send a message to.
+Usually, the problem is that there is a task for some service, but it is assigned
+a TID which is difficult to predict, or is not deterministic.
+To solve this, we created a name server, which has a known TID, and other tasks
+can query to find the TID of a particular service.
+This reduces the scope of the problem, since we only need to have a single service
+TID which is known, instead of every service TID\@.
+The nameserver has the highest priority of any task, except for the clock and IO
+servers, and their notifiers.
+This is chosen so that high priority tasks can't be blocked when looking up the TID
+in order to communicate with another task.
+If the nameserver schedules at a lower priority than other user tasks, it would be possible
+for the nameserver to have a pending request for a high priority task, but be unable
+to service it because another task is running.
+If that task is of lower priority than the high priority task, this is an undesired
+result.
+Therefore, we schedule the nameserver at reasonably high priority.
+
+Currently, each service is looked up by a string identifier, which requires a fairly
+complex hashtable implementation.
+Ideally, we would instead assign a unique integer ID to each task, which indexes
+a table of TIDs.
+This would make the lookup code much less complex and more efficient.
+The main advantage of a string ID is for human readability, which is of significantly
+less importance than clarify of the code, and efficiency.
 
 \subsection{Await Interface}
 The implementation of await was something that we debated for quite some time,
@@ -282,7 +333,9 @@ tasks which care about real-world values like time and distance.
 The clockserver runs at \texttt{LOWER(PRIORITY\_MAX, 1)}, with the only task
 that runs at higher priority being the clockserver notifier, which runs at
 \texttt{PRIORITY\_MAX}. This ensures we will almost never miss ticks, unless
-something particularly evil happens.
+something particularly evil happens. We have never observed missing ticks under
+current load, although we do check for it, so even a single tick missing would
+be immediately obvious.
 
 To keep track of tasks which requested future wakeup, we need a priority queue
 of tasks, ordered by the time at which they need to be woken up.
@@ -304,7 +357,7 @@ additional time optimizing for a problem which doesn't currently exist.
 An additional reason for the choice of this data structure was that we coincidentally
 had one from K1.
 We had initially thought we might use it for the priority queue,
-but instead chose an alternative data structure for that assignment.
+but ended up choosing a more specialized data structure for that purpose.
 
 \subsection{Interrupt-Triggered Context Switch}
 As part of this assignment, we had to write a context switching
@@ -345,7 +398,7 @@ instructions, we opted just to implement the conditions at the assembler level.
 The syscall interface we chose to have for IO is for user tasks to pass in a buffer
 filled with data they want to output, or a buffer they wish to have filled with input.
 They also pass an event corresponding to the COM port they want to do IO with.
-The kernel runs code in response to hardware interrupts to actually do the IO.
+The kernel runs code in response to hardware interrupts to actually do the IO.\@
 This is pushes most of the hardware-specific IO logic into the kernel, as opposed to
 the alternate approach where the kernel merely signals to the user task that it is possible
 to do IO, and leaves it to the user task to actually perform the IO.
@@ -376,7 +429,7 @@ IO on COM2 uses the FIFOs, which is conceptually no different - it simply allows
 us to process multiple bytes of data each cycle, instead of a single one.
 
 We changed the signature of the await syscall to allow passing in a buffer of data,
-wheras previous signature only allowed passing in a single byte.
+whereas previous signature only allowed passing in a single byte.
 We needed to make this change when we started using the hardware FIFOs in the UARTs.
 The point of using the FIFOs is that we can check the UARTs less frequently, and have
 less overhead per byte of data transferred.
@@ -396,8 +449,8 @@ COM1 doesn't use the FIFOs, since we lack the hardware support to do CTS properl
 in hardware.
 
 \subsection{IO Server}
-We implement an IO server in userland, which the other user tasks interact with
-in order to perform IO.
+We implemented an IO server in userland, which the other user tasks interact with
+in order to perform IO.\@
 There is one IO server for each serial port, which handles both input and output
 for that port.
 The IO server has a pair of notifiers, one to notify it of inbound data, and another
@@ -429,8 +482,8 @@ would wake up after at most a single tick.
 This means that the maximum delay between wishing to exit the program, and actually
 exiting was 10 ms, so this approach was acceptable.
 
-However, the receive notifier will never wake up if no input is sent to the UART\@..
-Introducing the receive notifier makes this approach unviable.
+However, the receive notifier will never wake up if no input is sent to the UART.\@
+Thus, introducing the receive notifier makes the previous approach unviable.
 The way we handled this is to allow a user task to signal to the kernel that it
 can shut down immediately.
 Another way that we could have handled this is to make the receive await time out
