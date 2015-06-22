@@ -116,6 +116,7 @@ static void enque_delay(int amount) {
 //     when we hit a sensor {
 //       print sensor_from, sensor_to, speed, time, distance
 #include "../trainsrv.h"
+#define CALIB_TRAIN_NUMBER 62
 void start_calibrate(void) {
 	register_as(CALIBRATESRV_NAME);
 	signal_recv();
@@ -132,7 +133,7 @@ void start_calibrate(void) {
 	int train_speeds[] = {0, 8, 9, 10, 11, 12, 13, 14, 13, 12, 11, 10, 9, 8};
 	int train_speed_idx = 1;
 
-	trains_set_speed(12, train_speeds[train_speed_idx]);
+	trains_set_speed(CALIB_TRAIN_NUMBER, train_speeds[train_speed_idx]);
 	enque_delay(10*100); // 10 seconds
 	int waiting_for_warmup = 1;
 	printf("Tesitng %d"EOL, 100);
@@ -191,7 +192,7 @@ void start_calibrate(void) {
 				break;
 			}
 			printf("Changing from speed %d to speed %d..."EOL, train_speeds[train_speed_idx - 1], train_speeds[train_speed_idx]);
-			trains_set_speed(12, train_speeds[train_speed_idx]);
+			trains_set_speed(CALIB_TRAIN_NUMBER, train_speeds[train_speed_idx]);
 			enque_delay(10*100); // 10 seconds
 			waiting_for_warmup = 1;
 		} else {
@@ -199,7 +200,7 @@ void start_calibrate(void) {
 		}
 	}
 	printf("Done calibration!");
-	trains_set_speed(12, 0);
+	trains_set_speed(CALIB_TRAIN_NUMBER, 0);
 }
 
 void calibratesrv(void) {
