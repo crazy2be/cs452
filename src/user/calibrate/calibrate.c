@@ -162,13 +162,13 @@ void start_calibrate(void) {
 				has_sensor_data = 1;
 				continue;
 			}
-			printf("Got sensor"EOL);
+			//printf("Got sensor"EOL);
 			int changed = handle_sensor_update(&req.u.sensors, &old_sensors);
 			if (changed == -1) continue;
 
 			char buf[4];
 			sensor_repr(changed, buf);
-			printf("Sensor %s was hit" EOL, buf);
+			//printf("Sensor %s was hit" EOL, buf);
 
 			//calculate_distance_travelled(changed, sensors->ticks, switches, bk, track);
 			const struct track_node *current = node_from_sensor(changed, track);
