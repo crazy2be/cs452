@@ -47,13 +47,13 @@ static int distance_between_nodes(const struct track_node *src,
 
 	const struct track_node *current = src;
 
-	for (;;)
+	for (;;) {
 		/* printf("Currently at node %s" EOL, n->name); */
 
 		// we hit a sensor, which is past this point - this point can't possibly be a dead end
 		// if this happens, we throw up our hands and fail
 		if (current->type == NODE_EXIT) {
-			printf("ERROR: map data indicated that the train went into a dead end, but we hit a sensor..." EOL)
+			printf("ERROR: map data indicated that the train went into a dead end, but we hit a sensor..." EOL);
 			return -1;
 		}
 
@@ -70,11 +70,11 @@ static int distance_between_nodes(const struct track_node *src,
 		if (current == dst) {
 			break;
 		} else if (current->type == NODE_SENSOR && --missed_sensor_tolerance < 0) {
-			printf("ERROR: sensor data indicates that we've missed more than %d sensors" EOL, max_missed_sensors)
+			printf("ERROR: sensor data indicates that we've missed more than %d sensors" EOL, max_missed_sensors);
 			return -1;
 		}
 	}
-	return distance
+	return distance;
 }
 
 static void calculate_distance_travelled(int sensor, int time, const struct switch_state *switches,
@@ -82,7 +82,7 @@ static void calculate_distance_travelled(int sensor, int time, const struct swit
 	char buf[4];
 	sensor_repr(sensor, buf);
 
-	printf("Sensor %s was hit" EOL, buf);
+	/* printf("Sensor %s was hit" EOL, buf); */
 
 	const struct track_node *current = node_from_sensor(sensor, track);
 
@@ -90,7 +90,7 @@ static void calculate_distance_travelled(int sensor, int time, const struct swit
 	if (bk->last_node != NULL) {
 		const int distance = distance_between_nodes(bk->last_node, current, switches);
 		const int delta_t = time - bk->time_at_last_sensor;
-		printf("%s -> %s : %d , %d", bk->last_node->name, n->name, delta_t, distance);
+		printf("%s, %s, %d, %d" EOL, bk->last_node->name, current->name, delta_t, distance);
 	}
 
 	bk->last_node = current;
