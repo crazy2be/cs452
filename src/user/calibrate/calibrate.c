@@ -77,8 +77,7 @@ static int distance_between_nodes(const struct track_node *src,
 	return distance;
 }
 
-static int handle_sensor_update(struct sensor_state *sensors, struct sensor_state *old_sensors,
-		const struct switch_state *switches, struct bookkeeping *bk, const struct track_node *track) {
+static int handle_sensor_update(struct sensor_state *sensors, struct sensor_state *old_sensors) {
 	int sensor_changed = -1;
 	for (int i = 0; i <= SENSOR_COUNT; i++) {
 		int s = sensor_get(sensors, i);
@@ -164,7 +163,7 @@ void start_calibrate(void) {
 				continue;
 			}
 			printf("Got sensor"EOL);
-			int changed = handle_sensor_update(&req.u.sensors, &old_sensors, &switches, &bk, track);
+			int changed = handle_sensor_update(&req.u.sensors, &old_sensors);
 			if (changed == -1) continue;
 
 			char buf[4];
