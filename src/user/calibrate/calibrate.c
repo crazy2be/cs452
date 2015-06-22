@@ -16,7 +16,7 @@ struct calibrate_req {
 };
 
 struct bookkeeping {
-	const struct track_node *last_node, *next_expected_node;
+	const struct track_node *last_node;
 	int distance_to_next_sensor;
 	int time_at_last_sensor;
 };
@@ -31,47 +31,72 @@ static const struct track_node* node_from_sensor(int sensor, const struct track_
 	return NULL;
 }
 
-static const struct track_node* next_expected_sensor(const struct track_node *n,
-		const struct switch_state *switches, int *distance) {
-	do {
-		printf("Currently at node %s" EOL, n->name);
-		ASSERT(n->type != NODE_EXIT); // we don't want to hit a dead end
+// Walk along the graph presented by the track, and calculate the distance between two nodes.
+// It's assumed that we had a sensor hit at the start and end nodes, and the switches were in
+// the given configuration.
+// Therefore, we can trace out the path that the train would have taken given the orientation
+// of the switches.
+static int distance_between_nodes(const struct track_node *src,
+		const struct track_node *dst, const struct switch_state *switches) {
 
+	// we expect to periodically skip some sensors because of misfiring sensors
+	// we allow ourselves to skip at most 1 sensor in a row before throwing up our hands
+	const int max_missed_sensors = 1;
+	int missed_sensor_tolerance = max_missed_sensors;
+	int distance = 0;
+
+	const struct track_node *current = src;
+
+	for (;;)
+		/* printf("Currently at node %s" EOL, n->name); */
+
+		// we hit a sensor, which is past this point - this point can't possibly be a dead end
+		// if this happens, we throw up our hands and fail
+		if (current->type == NODE_EXIT) {
+			printf("ERROR: map data indicated that the train went into a dead end, but we hit a sensor..." EOL)
+			return -1;
+		}
+
+		// choose which node we pass down to
 		int index = 0;
-		if (n->type == NODE_BRANCH && switch_get(switches, n->num) == CURVED) {
+		if (current->type == NODE_BRANCH && switch_get(switches, current->num) == CURVED) {
 			index = 1;
 		}
-		const struct track_edge *edge = &n->edge[index];
-		*distance += edge->dist;
-		n = edge->dest;
-	} while (n->type != NODE_SENSOR);
-	return n;
+
+		const struct track_edge *edge = &current->edge[index];
+		distance += edge->dist;
+		current = edge->dest;
+
+		if (current == dst) {
+			break;
+		} else if (current->type == NODE_SENSOR && --missed_sensor_tolerance < 0) {
+			printf("ERROR: sensor data indicates that we've missed more than %d sensors" EOL, max_missed_sensors)
+			return -1;
+		}
+	}
+	return distance
 }
 
 static void calculate_distance_travelled(int sensor, int time, const struct switch_state *switches,
 		struct bookkeeping *bk, const struct track_node *track) {
-	const struct track_node *n;
-
 	char buf[4];
 	sensor_repr(sensor, buf);
 
 	printf("Sensor %s was hit" EOL, buf);
 
-	if (bk->next_expected_node == NULL) {
-		// first node we get, so we need to figure out where we are
-		// we don't print a data point here
-		n = node_from_sensor(sensor, track);
-	} else {
-		n = bk->next_expected_node;
-		ASSERT(n == node_from_sensor(sensor, track));
-		int delta_t = time - bk->time_at_last_sensor;
-		printf("%s -> %s : %d , %d", bk->last_node->name, n->name, delta_t, bk->distance_to_next_sensor);
+	const struct track_node *current = node_from_sensor(sensor, track);
+
+	// we don't print a data point if we don't have a last position
+	if (bk->last_node != NULL) {
+		const int distance = distance_between_nodes(bk->last_node, current, switches);
+		const int delta_t = time - bk->time_at_last_sensor;
+		printf("%s -> %s : %d , %d", bk->last_node->name, n->name, delta_t, distance);
 	}
 
-	bk->last_node = n;
-	bk->next_expected_node = next_expected_sensor(n, switches, &bk->distance_to_next_sensor);
-	printf("Current tracked sensor is %s, next is %s" EOL, n->name, bk->next_expected_node->name);
+	bk->last_node = current;
 	bk->time_at_last_sensor = time;
+
+	/* printf("Current tracked sensor is %s, next is %s" EOL, n->name, bk->next_expected_node->name); */
 }
 
 static void handle_sensor_update(struct sensor_state *sensors, struct sensor_state *old_sensors,
