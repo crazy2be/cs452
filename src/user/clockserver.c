@@ -52,6 +52,7 @@ void clockserver(void) {
 			}
 			break;
 		case DELAY:
+			//printf("Clockserver got delay %d"EOL, req.ticks);
 			min_heap_push(&delayed, num_ticks + req.ticks, tid);
 			break;
 		case DELAY_UNTIL:

@@ -7,6 +7,7 @@
 #define STRINGIFY1(STR) STRINGIFY2(STR)
 
 #define offsetof(type, member) __builtin_offsetof(type, member)
+#define ARRAY_LENGTH(x) (sizeof(x)/sizeof(*x))
 
 void exited_main(void);
 
