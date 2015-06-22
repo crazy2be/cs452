@@ -65,9 +65,7 @@ static void bwui2a(producer produce, void *produce_state, unsigned int num,
 		dgt = num / d;
 		num %= d;
 		d /= base;
-		if (dgt > 0 || d == 0) {
-			produce(dgt + (dgt < 10 ? '0' : 'a' - 10), produce_state);
-		}
+		produce(dgt + (dgt < 10 ? '0' : 'a' - 10), produce_state);
 	}
 }
 
