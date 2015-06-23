@@ -48,13 +48,20 @@ LINKER_SCRIPT = qemu.ld
 LDFLAGS = -Wl,-T,$(LINKER_SCRIPT),-Map,$(MAP) -N -static-libgcc --specs=nosys.specs
 CFLAGS += -DQEMU
 default: $(KERNEL_BIN)
-else
+else ifeq ($(ENV), cow)
+# TODO: We probably want to remove this once we know that the proper toolchain is working.
 export PATH := /u/wbcowan/gnuarm-4.0.2/libexec/gcc/arm-elf/4.0.2:/u/wbcowan/gnuarm-4.0.2/arm-elf/bin:$(PATH)
 CC = gcc
 AS = as
 LD = ld
+LDFLAGS = -init main -Map $(MAP) -T $(LINKER_SCRIPT) -N -L/u/wbcowan/gnuarm-4.0.2/lib/gcc/arm-elf/4.0
+else
+export PATH := /u1/jmcgirr/arm-toolchain/current/bin:$(PATH)
+CC = arm-none-eabi-gcc
+AS = arm-none-eabi-as
+LD = $(CC)
 LINKER_SCRIPT = ts7200.ld
-LDFLAGS = -init main -Map $(MAP) -T $(LINKER_SCRIPT) -N -L/u/wbcowan/gnuarm-4.0.2/lib/gcc/arm-elf/4.0.2
+LDFLAGS = -Wl,-T,$(LINKER_SCRIPT),-Map,$(MAP) -N -static-libgcc --specs=nosys.specs -L/u1/jmcgirr/arm-toolchain/current/lib/gcc/arm-none-eabi/4.9.3
 default: install
 endif
 
@@ -187,7 +194,7 @@ qemu-debug-test: $(TEST_ELF)
 	./scripts/qemu debug $<
 
 sync:
-	rsync -avzd . uw:cs452-kernel/
+	rsync -avzd --exclude /build --exclude /.git --exclude /writeup . uw:cs452-kernel/
 	ssh uw "bash -c 'cd cs452-kernel && make clean && make ENV=ts7200 install'"
 
 all: $(KERNEL_ELF)
