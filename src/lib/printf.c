@@ -8,7 +8,7 @@
 
 #define PRINTF_BUFSZ 80
 
-typedef void (*producer)(char, void*);
+typedef void (*producer)(char);
 
 static int bwa2d(char ch) {
 	if (ch >= '0' && ch <= '9') return ch - '0';
@@ -32,7 +32,7 @@ static char bwa2i(char ch, const char **src, int base, int *nump) {
 	return ch;
 }
 
-static void bwui2a(producer produce, void *produce_state, unsigned int num,
+static void bwui2a(producer produce, unsigned int num,
 		unsigned int base, int padding, char padchar, int negative) {
 	int dgt;
 	unsigned int d = 1;
@@ -49,41 +49,41 @@ static void bwui2a(producer produce, void *produce_state, unsigned int num,
 		padding--;
 		// only put the negative sign before padding if padding with zeros
 		if (padchar == '0') {
-			produce('-', produce_state);
+			produce('-');
 		}
 	}
 
 	while (padding-- > 0) {
-		produce(padchar, produce_state);
+		produce(padchar);
 	}
 
 	if (negative && padchar != '0') {
-		produce('-', produce_state);
+		produce('-');
 	}
 
 	while (d != 0) {
 		dgt = num / d;
 		num %= d;
 		d /= base;
-		produce(dgt + (dgt < 10 ? '0' : 'a' - 10), produce_state);
+		produce(dgt + (dgt < 10 ? '0' : 'a' - 10));
 	}
 }
 
-static void bwi2a(producer produce, void *produce_state, int num, int padding, char padchar) {
+static void bwi2a(producer produce, int num, int padding, char padchar) {
 	int negative = num < 0;
 	if (negative) {
 		num = -num;
 	}
-	bwui2a(produce, produce_state, num, 10, padding, padchar, negative);
+	bwui2a(produce, num, 10, padding, padchar, negative);
 }
 
-static void format(producer produce, void* produce_state, const char *fmt, va_list va) {
+static void format(producer produce, const char *fmt, va_list va) {
 	char ch, lz;
 	int w;
 
 	while ((ch = *(fmt++))) {
 		if (ch != '%') {
-			produce(ch, produce_state);
+			produce(ch);
 		} else {
 			lz = ' ';
 			w = 0;
@@ -100,87 +100,82 @@ static void format(producer produce, void* produce_state, const char *fmt, va_li
 			case 0:
 				return;
 			case 'c':
-				produce(va_arg(va, char), produce_state);
+				produce(va_arg(va, char));
 				break;
 			case 's':
 				{
 					char *str = va_arg(va, char*);
 					while (*str) {
-						produce(*str++, produce_state);
+						produce(*str++);
 					}
 				}
 				break;
 			case 'u':
-				bwui2a(produce, produce_state, va_arg(va, unsigned int), 10, w, lz, 0);
+				bwui2a(produce, va_arg(va, unsigned int), 10, w, lz, 0);
 				break;
 			case 'x':
-				bwui2a(produce, produce_state, va_arg(va, unsigned int), 16, w, lz, 0);
+				bwui2a(produce, va_arg(va, unsigned int), 16, w, lz, 0);
 				break;
 			case 'd':
-				bwi2a(produce, produce_state, va_arg(va, int), w, lz);
+				bwi2a(produce, va_arg(va, int), w, lz);
 				break;
 			case '%':
-				produce(ch, produce_state);
+				produce(ch);
 				break;
 			}
 		}
 	}
 }
 
-struct produce_buffered_state {
-	int channel;
-	char buf[PRINTF_BUFSZ];
-	int i;
-};
-
-static void flush_buffer(struct produce_buffered_state *state) {
-	if (state->i != 0) {
-		state->buf[state->i] = '\0';
-		fputs(state->channel, state->buf);
-		state->i = 0;
+static void flush_buffer(int channel, char *buf, int i) {
+	if (i != 0) {
+		buf[i] = '\0';
+		fputs(channel, buf);
 	}
-}
-
-static void produce_buffered(char c, void *s) {
-	struct produce_buffered_state *state = (struct produce_buffered_state*) s;
-	state->buf[state->i++] = c;
-	if (state->i == PRINTF_BUFSZ - 1) flush_buffer(state);
 }
 
 int fprintf(int channel, const char *fmt, ...) {
 	va_list va;
 	va_start(va,fmt);
-	struct produce_buffered_state buf = { .i = 0, .channel = channel };
-	format(produce_buffered, (void*) &buf, fmt, va);
-	flush_buffer(&buf);
+
+	char buf[PRINTF_BUFSZ];
+	int i = 0;
+	int bytes_printed = 0;
+
+	void produce_buffered(char c) {
+		bytes_printed++;
+		buf[i++] = c;
+		if (i == PRINTF_BUFSZ - 1) {
+			flush_buffer(channel, buf, i);
+			i = 0;
+		}
+
+	}
+
+	format(produce_buffered, fmt, va);
+	flush_buffer(channel, buf, i);
+
 	va_end(va);
 
-	//TODO: to be consistent with the usual printf return, we should return the number of characters written
-	return -1; // Meh
-}
-
-struct produce_string_state {
-	unsigned remaining;
-	unsigned total; // number of characters that *would* have been written, given sufficient space
-	char *buf;
-};
-
-static void produce_string(char c, void *s) {
-	struct produce_string_state *state = (struct produce_string_state*) s;
-	state->total++;
-	if (state->remaining > 1) {
-		*state->buf++ = c;
-		state->remaining--;
-	}
+	return bytes_printed;
 }
 
 int snprintf(char *buf, unsigned size, const char *fmt, ...) {
 	va_list va;
 	va_start(va,fmt);
-	struct produce_string_state state = {size, 0, buf};
-	format(produce_string, &state, fmt, va);
+	int bytes_printed = 0;
+
+	void produce_string(char c) {
+		bytes_printed++;
+		if (size > 1) {
+			*buf++ = c;
+			--size;
+		}
+	}
+
+	format(produce_string, fmt, va);
 	va_end(va);
 
-	*state.buf = '\0';
-	return state.total;
+	*buf = '\0';
+	return bytes_printed;
 }
