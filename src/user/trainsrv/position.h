@@ -1,5 +1,7 @@
 #pragma once
 
+#include "../calibrate/track_node.h"
+
 // Position encodes a direction, since the nodes/edges in the track graph
 // have a direction encoded implicitly.
 // This means that there are two representations for the same *position* -

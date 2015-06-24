@@ -1,6 +1,5 @@
 #include "../trainsrv.h"
 
-#include "../util.h"
 #include "../clockserver.h"
 #include "../nameserver.h"
 #include "../request_type.h"
@@ -8,6 +7,7 @@
 #include "../displaysrv.h"
 #include "../calibrate/calibrate.h"
 
+#include <util.h>
 #include <kernel.h>
 #include <assert.h>
 
@@ -129,7 +129,8 @@ static void start_switch(int sw, enum sw_direction d) {
 struct internal_train_state {
 	//  1. Its current estimated position
 	//     position_unitialized(&position) iff train_id == state->unknown_train_id
-	struct position position;
+	struct position last_known_position;
+	int last_known_time;
 
 	//  2. Our best guess for its velocity at each of the 27 speed settings
 	//     (the speed setting behaves differently depending on if you accelerate or
@@ -163,22 +164,25 @@ struct trainsrv_state {
 	struct switch_state switches;
 };
 
-static inline struct internal_train_state* get_train_state(int train_id, struct trainsrv_state *state) {
+static inline struct internal_train_state* get_train_state(struct trainsrv_state *state, int train_id) {
 	ASSERT(MIN_TRAIN <= train_id && train_id <= MAX_TRAIN);
 	struct internal_train_state *train_state = state->state_for_train[train_id - 1];
-	return state;
+	return train_state;
 }
 
-static struct internal_train_state* allocate_train_state(int train_id, struct trainsrv_state *state) {
-	ASSERT(get_train_state(train_id, state) == NULL);
+static struct internal_train_state* allocate_train_state(struct trainsrv_state *state, int train_id) {
+	ASSERT(get_train_state(state, train_id) == NULL);
+	ASSERT(state->num_active_trains + 1 < ARRAY_LENGTH(state->train_states));
 	struct internal_train_state *train_state = &state->train_states[state->num_active_trains++];
 	memset(train_state, 0, sizeof(*train_state));
 	state->state_for_train[train_id - 1] = train_state;
 
 	// initialize estimated speeds based on train id
-	int train_scaling_factor = 0;
+	//int train_scaling_factor = 0;
 	switch (train_id) {
 	default:
+		// TODO
+		memset(train_state->est_velocities, 0, sizeof(*train_state->est_velocities));
 		break;
 	}
 	// TODO: actually get constants from model, and calculate wild ass guess of
@@ -191,36 +195,31 @@ static struct internal_train_state* allocate_train_state(int train_id, struct tr
 // how long it will take to travel a particular distance, or get the set of
 // currently active trains
 
-static void handle_set_speed(int train_id, int speed, struct trainsrv_state *state) {
-	struct internal_train_state *train_state = get_train_state(train_id, state);
+static void handle_set_speed(struct trainsrv_state *state, int train_id, int speed) {
+	struct internal_train_state *train_state = get_train_state(state, train_id);
 	if (train_state == NULL) {
 		// we've never seen this train before
 		ASSERT(state->unknown_train_id < 0);
 		state->unknown_train_id = train_id;
 
-		train_state = allocate_train_state(train_id, state);
+		train_state = allocate_train_state(state, train_id);
 	}
 	train_state->current_speed_setting = speed;
 	tc_set_speed(train_id, speed);
 }
-
-static void handle_reverse(int train_id,  struct trainsrv_state *state) {
-	struct internal_train_state *train_state = get_train_state(train_id, state);
-
-	struct internal_train_state *train_state = get_train_state(train_id, state);
-	if (train_state == NULL) train_state = allocate_train_state(train_id, state);
-
-	if (position_is_uninitialized(&train_state->position)) {
-		// position was previously known
-		// if the position *is not* known, then we'll figure out where the train
-		// is when it first hits a sensor. there's nothing to do for now
-		position_reverse(&train_state->position);
+static bool position_known(struct trainsrv_state *state, int train_id) {
+	ASSERT(train_id > 0);
+	return state->unknown_train_id == train_id;
+}
+static void handle_reverse(struct trainsrv_state *state, int train_id) {
+	struct internal_train_state *train_state = get_train_state(state, train_id);
+	if ((train_state != NULL) && (position_known(state, train_id))) {
+		position_reverse(&train_state->last_known_position);
 	}
-
-	start_reverse(req.train_number, train_speeds[req.train_number - MIN_TRAIN]);
+	start_reverse(train_id, train_state->current_speed_setting);
 }
 
-static void trains_init(int displaysrv, struct trainsrv_state *state) {
+static void trains_init(struct trainsrv_state *state, int displaysrv) {
 	memset(state, 0, sizeof(*state));
 	for (int i = 1; i <= 18; i++) {
 		tc_switch_switch(i, CURVED);
@@ -239,13 +238,12 @@ static void trains_init(int displaysrv, struct trainsrv_state *state) {
 
 static void trains_server(void) {
 	register_as("trains");
-
-	calibrate_send_switches(whois(CALIBRATESRV_NAME), &switches);
-
-	int displaysrv = whois(DISPLAYSRV_NAME);
 	struct trainsrv_state state;
 
-	trains_init(displaysrv, &state);
+	int displaysrv = whois(DISPLAYSRV_NAME);
+	trains_init(&state, displaysrv);
+
+	calibrate_send_switches(whois(CALIBRATESRV_NAME), &state.switches);
 
 	for (;;) {
 		int tid = -1;
@@ -256,16 +254,16 @@ static void trains_server(void) {
 		switch (req.type) {
 		case SET_SPEED:
 			// TODO: What do we do if we are already reversing or something?
-			handle_set_speed(req.train_number, req.speed, &state);
+			handle_set_speed(&state, req.train_number, req.speed);
 			reply(tid, NULL, 0);
 			break;
 		case REVERSE:
-			handle_reverse(req.train_number, &state);
+			handle_reverse(&state, req.train_number);
 			reply(tid, NULL, 0);
 			break;
 		case SWITCH_SWITCH:
 			start_switch(req.switch_number, req.direction);
-			switch_set(&switches, req.switch_number, req.direction);
+			switch_set(&state.switches, req.switch_number, req.direction);
 			/* displaysrv_update_switch(displaysrv, &switches); */
 			reply(tid, NULL, 0);
 			break;
