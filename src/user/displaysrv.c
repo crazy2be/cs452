@@ -5,6 +5,7 @@
 #include "clockserver.h"
 #include "switch_state.h"
 #include "trainsrv.h"
+#include "track.h"
 
 #include <assert.h>
 #include <kernel.h>
@@ -431,27 +432,6 @@ static void update_time(unsigned millis) {
 	printf("\e[s\e[%d;%dH%02d:%02d:%d\e[u", CLOCK_Y_OFFSET, CLOCK_X_OFFSET, minutes, seconds, tenths);
 }
 
-static const struct track_node *next_sensor(const struct track_node *current, const struct switch_state *switches, int *distance_out) {
-	int distance = 0;
-
-	do {
-		if (current->type == NODE_EXIT) break;
-
-		// choose which node we pass down to
-		int index = 0;
-		if (current->type == NODE_BRANCH && switch_get(switches, current->num) == CURVED) {
-			index = 1;
-		}
-
-		const struct track_edge *edge = &current->edge[index];
-		distance += edge->dist;
-		current = edge->dest;
-	} while (current->type != NODE_SENSOR);
-
-	*distance_out = distance;
-	return current;
-}
-
 static void update_train_states(int active_trains, struct display_train_state *active_train_states,
 		const struct switch_state *switches) {
 
@@ -469,7 +449,7 @@ static void update_train_states(int active_trains, struct display_train_state *a
 		const int velocity = active_train_states[i].state.velocity;
 
 		int distance_to_next;
-		const struct track_node *next_node = next_sensor(active_train_states[i].state.position.edge->src, switches, &distance_to_next);
+		const struct track_node *next_node = track_next_sensor(active_train_states[i].state.position.edge->src, switches, &distance_to_next);
 
 		printf("\e[%d;%dHTrain %d, %d mm past %s, vel %d, %d to %s",
 			term_col, term_row, train_id, displacement, pos_name, velocity,

@@ -249,19 +249,56 @@ static void handle_sensors(struct trainsrv_state *state, struct sensor_state sen
 	train_state->last_known_time = sens.ticks;
 	state->sens_prev = sens;
 }
-static int train_velocity(struct trainsrv_state *state, int train) {
-	struct internal_train_state *train_state = get_train_state(state, train);
-	ASSERT(train_state != NULL);
+
+static int train_velocity_from_state(struct internal_train_state *train_state) {
 	int cur_speed = train_state->current_speed_setting;
 	int i = cur_speed*2 + (train_state->previous_speed_setting >= cur_speed) - 1;
 	return train_state->est_velocities[i];
 }
+
+static int train_velocity(struct trainsrv_state *state, int train) {
+	struct internal_train_state *train_state = get_train_state(state, train);
+	ASSERT(train_state != NULL);
+	return train_velocity_from_state(train_state);
+}
 static int handle_query_arrival(struct trainsrv_state *state, int train, int dist) {
-	return dist / train_velocity(state, train);
+	return (1000 * dist) / train_velocity(state, train);
 }
 static struct train_state handle_query_spatials(struct trainsrv_state *state, int train) {
-	return (struct train_state){
-		// TODO
+	struct internal_train_state *train_state = get_train_state(state, train);
+	ASSERT(train_state != NULL);
+
+	// find how much time has passed since the recorded position on the internal
+	// train state, and how far we expect to have moved since then
+	int delta_t = time() - train_state->last_known_time;
+	int velocity = train_velocity_from_state(train_state);
+	int dist_travelled = delta_t * velocity / 1000 +
+		train_state->last_known_position.displacement;
+
+	const struct track_edge *last_edge = train_state->last_known_position.edge;
+	const struct track_node *current = last_edge->src;
+
+	if (dist_travelled >= last_edge->dist) {
+		dist_travelled -= last_edge->dist;
+		current = last_edge->dest;
+
+		// travel down the track for that many mm, and see which node we end at
+		bool break_after_distance(const struct track_edge *e) {
+			last_edge = e;
+			if (dist_travelled >= e->dist) {
+				dist_travelled -= e->dist;
+				return 0;
+			} else {
+				return 1;
+			}
+		}
+
+		current = track_go_forwards(current, &state->switches, break_after_distance);
+	}
+
+	return (struct train_state) {
+		{ last_edge, dist_travelled }, // position
+		velocity,
 	};
 }
 static void handle_query_active(struct trainsrv_state *state, int *trains) {
