@@ -44,7 +44,7 @@ void clockserver(void) {
 			if (num_ticks + 1 != req.ticks) {
 				printf("num_ticks = %d, req.ticks = %d" EOL, num_ticks, req.ticks);
 			}
-			ASSERT(num_ticks + 1 == req.ticks);
+			//ASSERT(num_ticks + 1 == req.ticks);
 			num_ticks = req.ticks;
 			while (!min_heap_empty(&delayed) && min_heap_top_key(&delayed) <= num_ticks) {
 				int awoken_tid = min_heap_pop(&delayed);
@@ -82,7 +82,7 @@ static int clockserver_tid(void) {
 
 static int clockserver_send(struct clockserver_request *req) {
 	int rpy, l;
-	//printf("%d", clockserver_tid());
+	printf("%d", clockserver_tid());
 	ASSERTOK(l = send(clockserver_tid(), req, sizeof(*req), &rpy, sizeof(rpy)));
 	if (l != sizeof(rpy)) return l;
 	return rpy;

@@ -244,6 +244,7 @@ static void handle_sensors(struct trainsrv_state *state, struct sensor_state sen
 		sensor = sensor_;
 	}
 	sensor_each_new(&state->sens_prev, &sens, sens_handler);
+	if (sensor == -1) return;
 	train_state->last_known_position.edge = &track_node_from_sensor(sensor)->edge[0];
 	train_state->last_known_position.displacement = 0;
 	train_state->last_known_time = sens.ticks;

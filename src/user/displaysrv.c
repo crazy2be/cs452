@@ -503,7 +503,7 @@ void displaysrv_start(void) {
 	create(HIGHER(PRIORITY_MIN, 2), clock_update_task);
 	signal_recv();
 
-	initial_draw();
+	(void)initial_draw;
 
 	struct sensor_state old_sensors;
 	struct sensor_reads sensor_reads;
