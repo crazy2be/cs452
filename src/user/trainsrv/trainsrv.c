@@ -126,7 +126,9 @@ static void start_switch(int sw, enum sw_direction d) {
 //
 
 // state about what we know about this train
-#define NUM_SPEED_SETTINGS 27
+// (previous_speed_was_bigger, current)
+// (true, 0), (false, 1), (true, 1), ..., (false, 13), (true, 13), (false, 14)
+#define NUM_SPEED_SETTINGS 28
 struct internal_train_state {
 	//  1. Its current estimated position
 	//     position_unitialized(&position) iff train_id == state->unknown_train_id
@@ -141,6 +143,7 @@ struct internal_train_state {
 
 	//  3. Its current speed setting
 	int current_speed_setting;
+	int previous_speed_setting;
 
 	//  4. Later, we'll have information about if (and at what rate) it is currently
 	//     accelerating
@@ -206,6 +209,10 @@ static void handle_set_speed(struct trainsrv_state *state, int train_id, int spe
 
 		train_state = allocate_train_state(state, train_id);
 	}
+	// Just don't allow this so that we don't have to think about what the train
+	// controller does in this case in terms of actual train speed.
+	if (train_state->current_speed_setting == speed) return;
+	train_state->previous_speed_setting = train_state->current_speed_setting;
 	train_state->current_speed_setting = speed;
 	tc_set_speed(train_id, speed);
 }
@@ -242,11 +249,20 @@ static void handle_sensors(struct trainsrv_state *state, struct sensor_state sen
 	train_state->last_known_time = sens.ticks;
 	state->sens_prev = sens;
 }
-static void handle_query_arrival(struct trainsrv_state *state, int train, int dist) {
-	// TODO
+static int train_velocity(struct trainsrv_state *state, int train) {
+	struct internal_train_state *train_state = get_train_state(state, train);
+	ASSERT(train_state != NULL);
+	int cur_speed = train_state->current_speed_setting;
+	int i = cur_speed*2 + (train_state->previous_speed_setting >= cur_speed) - 1;
+	return train_state->est_velocities[i];
+}
+static int handle_query_arrival(struct trainsrv_state *state, int train, int dist) {
+	return dist / train_velocity(state, train);
 }
 static struct train_state handle_query_spatials(struct trainsrv_state *state, int train) {
-	return (struct train_state){};
+	return (struct train_state){
+		// TODO
+	};
 }
 
 static void trains_init(struct trainsrv_state *state) {
