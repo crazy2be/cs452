@@ -1,5 +1,6 @@
-
 #include "trainsrv.h"
+
+#include "util.h"
 #include "clockserver.h"
 #include "nameserver.h"
 #include "request_type.h"
@@ -18,6 +19,9 @@ struct trains_request {
 
 	int switch_number;
 	enum sw_direction direction; // TODO: union?
+
+	int distance;
+	struct sensor_state sensors;
 };
 
 #define MAX_TRAIN 80
@@ -139,7 +143,7 @@ static void trains_server(void) {
 	calibrate_send_switches(whois(CALIBRATESRV_NAME), &switches);
 
 	for (;;) {
-		int tid = -1, resp = -1;
+		int tid = -1;
 		struct trains_request req;
 		receive(&tid, &req, sizeof(req));
 
@@ -149,21 +153,22 @@ static void trains_server(void) {
 			// TODO: What do we do if we are already reversing or something?
 			tc_set_speed(req.train_number, req.speed);
 			train_speeds[req.train_number - MIN_TRAIN] = req.speed;
+			reply(tid, NULL, 0);
 			break;
 		case REVERSE:
 			start_reverse(req.train_number, train_speeds[req.train_number - MIN_TRAIN]);
+			reply(tid, NULL, 0);
 			break;
 		case SWITCH_SWITCH:
 			start_switch(req.switch_number, req.direction);
 			switch_set(&switches, req.switch_number, req.direction);
 			/* displaysrv_update_switch(displaysrv, &switches); */
+			reply(tid, NULL, 0);
 			break;
 		default:
-			resp = -1;
-			printf("UNKNOWN TRAINS REQ %d" EOL, req.type);
+			WTF("UNKNOWN TRAINS REQ %d"EOL, req.type);
 			break;
 		}
-		reply(tid, &resp, sizeof(resp));
 	}
 }
 
@@ -179,32 +184,55 @@ static int trains_tid(void) {
 	return ts_tid;
 }
 
-static int trains_send(struct trains_request req) {
-	int rpy;
-	int l = send(trains_tid(), &req, sizeof(req), &rpy, sizeof(rpy));
-	if (l != sizeof(rpy)) return l;
+static void trains_send(struct trains_request req, void *rpy, int rpyl) {
+	ASSERTOK(send(trains_tid(), &req, sizeof(req), rpy, rpyl));
+}
+#define TSEND(req) trains_send(req, NULL, 0)
+#define TSEND2(req, rpy) trains_send(req, rpy, sizeof(*(rpy)))
+
+void trains_query_spatials(int train, struct train_state *state_out) {
+	TSEND2(((struct trains_request) {
+		.type = QUERY_SPATIALS,
+		.train_number = train,
+	}), state_out);
+}
+
+int trains_query_arrival_time(int train, int distance) {
+	int rpy = -1;
+	TSEND2(((struct trains_request) {
+		.type = QUERY_ARRIVAL,
+		.train_number = train,
+		.distance = distance,
+	}), &rpy);
 	return rpy;
 }
 
-int trains_set_speed(int train, int speed) {
-	return trains_send((struct trains_request) {
+void trains_send_sensors(struct sensor_state state) {
+	TSEND(((struct trains_request) {
+		.type = SEND_SENSORS,
+		.sensors = state,
+	}));
+}
+
+void trains_set_speed(int train, int speed) {
+	TSEND(((struct trains_request) {
 		.type = SET_SPEED,
 		.train_number = train,
 		.speed = speed,
-	});
+	}));
 }
 
-int trains_reverse(int train) {
-	return trains_send((struct trains_request) {
+void trains_reverse(int train) {
+	TSEND(((struct trains_request) {
 		.type = REVERSE,
 		.train_number = train,
-	});
+	}));
 }
 
-int trains_switch(int switch_number, enum sw_direction d) {
-	return trains_send((struct trains_request) {
+void trains_switch(int switch_number, enum sw_direction d) {
+	TSEND(((struct trains_request) {
 		.type = SWITCH_SWITCH,
 		.switch_number = switch_number,
 		.direction = d,
-	});
+	}));
 }
