@@ -3,20 +3,10 @@
 #include "switch_state.h"
 #include "calibrate/track_node.h"
 #include "sensorsrv.h"
+#include "trainsrv/position.h"
 
 enum track_id { TRACK_A, TRACK_B };
 
-// Position encodes a direction, since the nodes/edges in the track graph
-// have a direction encoded implicitly.
-// This means that there are two representations for the same *position* -
-// one travelling in each direction.
-struct position {
-	struct track_edge *edge;
-
-	// distance from the edge->src
-	// invariant: 0 <= displacement <= edge->dist
-	int displacement;
-};
 
 struct train_state {
 	struct position position;
@@ -31,4 +21,10 @@ void trains_send_sensors(struct sensor_state state);
 void trains_set_speed(int train, int speed);
 void trains_reverse(int train);
 void trains_switch(int switch_numuber, enum sw_direction d);
+
 int start_trains(void);
+
+#define MAX_ACTIVE_TRAINS 8 // way more than we'll be able to have on the track in practice
+// returns number of active trains (bounded above by MAX_ACTIVE_TRAINS)
+// writes an array of active train ids to trains_out
+int positionsrv_query_active_trains(int *trains_out);
