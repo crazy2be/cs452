@@ -3,6 +3,7 @@
 #include "../nameserver.h"
 #include "../switch_state.h"
 #include "../sensorsrv.h"
+#include "../track.h"
 #include "track_node.h"
 #include "track_data_new.h"
 #include <util.h>
@@ -20,16 +21,6 @@ struct bookkeeping {
 	int distance_to_next_sensor;
 	int time_at_last_sensor;
 };
-
-static const struct track_node* node_from_sensor(int sensor, const struct track_node *track) {
-	for (int i = 0; i < TRACK_MAX; i++) {
-		if (track[i].type == NODE_SENSOR && track[i].num == sensor) {
-			return &track[i];
-		}
-	}
-	ASSERTF(0, "Couldn't find sensor %d on the track", sensor);
-	return NULL;
-}
 
 // Walk along the graph presented by the track, and calculate the distance between two nodes.
 // It's assumed that we had a sensor hit at the start and end nodes, and the switches were in
@@ -128,8 +119,6 @@ void start_calibrate(void) {
 	int has_sensor_data = 0;
 	int tid;
 	struct bookkeeping bk = {};
-	struct track_node track[TRACK_MAX];
-	init_tracka(track);
 	int train_speeds[] = {0, 8, 9, 10, 11, 12, 13, 14, 13, 12, 11, 10, 9, 8};
 	int train_speed_idx = 1;
 
@@ -172,7 +161,7 @@ void start_calibrate(void) {
 			//printf("Sensor %s was hit" EOL, buf);
 
 			//calculate_distance_travelled(changed, sensors->ticks, switches, bk, track);
-			const struct track_node *current = node_from_sensor(changed, track);
+			const struct track_node *current = track_node_from_sensor(changed);
 
 			// we don't print a data point if we don't have a last position
 			if (bk.last_node != NULL) {

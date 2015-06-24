@@ -37,8 +37,22 @@ void sensor_repr(int n, char *buf) {
 	snprintf(buf, 4, "%c%d", group, number);
 }
 
+void sensor_each_new(struct sensor_state *old, struct sensor_state *new,
+		sensor_new_handler cb) {
+	for (int i = 0; i <= SENSOR_COUNT; i++) {
+		int s = sensor_get(new, i);
+		if (s && s != sensor_get(old, i)) {
+			cb(i);
+		}
+	}
+}
+
 static void send_sensor_poll(void) {
+#ifdef QEMU
+	fputs(COM1, "Sending sensor poll"EOL);
+#else
 	fputc(COM1, 0x85);
+#endif
 }
 
 void start_sensorsrv(void) {

@@ -7,7 +7,7 @@
 // This means that there are two representations for the same *position* -
 // one travelling in each direction.
 struct position {
-	struct track_edge *edge;
+	const struct track_edge *edge;
 
 	// distance from the edge->src
 	// invariant: 0 <= displacement <= edge->dist

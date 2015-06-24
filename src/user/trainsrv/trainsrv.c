@@ -6,6 +6,7 @@
 #include "../switch_state.h"
 #include "../displaysrv.h"
 #include "../calibrate/calibrate.h"
+#include "../track.h"
 
 #include <util.h>
 #include <kernel.h>
@@ -162,6 +163,7 @@ struct trainsrv_state {
 	int unknown_train_id;
 
 	struct switch_state switches;
+	struct sensor_state sens_prev;
 };
 
 static inline struct internal_train_state* get_train_state(struct trainsrv_state *state, int train_id) {
@@ -207,19 +209,47 @@ static void handle_set_speed(struct trainsrv_state *state, int train_id, int spe
 	train_state->current_speed_setting = speed;
 	tc_set_speed(train_id, speed);
 }
-static bool position_known(struct trainsrv_state *state, int train_id) {
+static bool position_unknown(struct trainsrv_state *state, int train_id) {
 	ASSERT(train_id > 0);
 	return state->unknown_train_id == train_id;
 }
 static void handle_reverse(struct trainsrv_state *state, int train_id) {
 	struct internal_train_state *train_state = get_train_state(state, train_id);
-	if ((train_state != NULL) && (position_known(state, train_id))) {
+	if ((train_state != NULL) && (!position_unknown(state, train_id))) {
 		position_reverse(&train_state->last_known_position);
 	}
 	start_reverse(train_id, train_state->current_speed_setting);
 }
+static void handle_sensors(struct trainsrv_state *state, struct sensor_state sens) {
+	struct internal_train_state *train_state = NULL;
+	if (state->unknown_train_id >= 0) {
+		train_state = get_train_state(state, state->unknown_train_id);
+	} else if (state->num_active_trains < 1) {
+		return;
+	} else {
+		train_state = state->state_for_train[0];
+	}
+	// TODO: Currently this is horribly naive, and will only work when a
+	// single train is on the track. It's also not robust against anything.
+	int sensor = -1;
+	void sens_handler(int sensor_) {
+		ASSERT(sensor == -1);
+		sensor = sensor_;
+	}
+	sensor_each_new(&state->sens_prev, &sens, sens_handler);
+	train_state->last_known_position.edge = &track_node_from_sensor(sensor)->edge[0];
+	train_state->last_known_position.displacement = 0;
+	train_state->last_known_time = sens.ticks;
+	state->sens_prev = sens;
+}
+static void handle_query_arrival(struct trainsrv_state *state, int train, int dist) {
+	// TODO
+}
+static struct train_state handle_query_spatials(struct trainsrv_state *state, int train) {
+	return (struct train_state){};
+}
 
-static void trains_init(struct trainsrv_state *state, int displaysrv) {
+static void trains_init(struct trainsrv_state *state) {
 	memset(state, 0, sizeof(*state));
 	for (int i = 1; i <= 18; i++) {
 		tc_switch_switch(i, CURVED);
@@ -233,17 +263,15 @@ static void trains_init(struct trainsrv_state *state, int displaysrv) {
 	tc_switch_switch(156, CURVED);
 	switch_set(&state->switches, 156, CURVED);
 	tc_deactivate_switch();
-	displaysrv_update_switch(displaysrv, &state->switches);
+	displaysrv_update_switch(whois(DISPLAYSRV_NAME), &state->switches);
+	calibrate_send_switches(whois(CALIBRATESRV_NAME), &state->switches);
 }
 
 static void trains_server(void) {
 	register_as("trains");
 	struct trainsrv_state state;
 
-	int displaysrv = whois(DISPLAYSRV_NAME);
-	trains_init(&state, displaysrv);
-
-	calibrate_send_switches(whois(CALIBRATESRV_NAME), &state.switches);
+	trains_init(&state);
 
 	for (;;) {
 		int tid = -1;
@@ -252,6 +280,19 @@ static void trains_server(void) {
 
 		/* printf("Trains server got message! %d"EOL, req.type); */
 		switch (req.type) {
+		case QUERY_SPATIALS: {
+			struct train_state ts = handle_query_spatials(&state, req.train_number);
+			reply(tid, &ts, sizeof(ts));
+			break;
+		}
+		case QUERY_ARRIVAL:
+			handle_query_arrival(&state, req.train_number, req.distance);
+			reply(tid, NULL, 0);
+			break;
+		case SEND_SENSORS:
+			handle_sensors(&state, req.sensors);
+			reply(tid, NULL, 0);
+			break;
 		case SET_SPEED:
 			// TODO: What do we do if we are already reversing or something?
 			handle_set_speed(&state, req.train_number, req.speed);
