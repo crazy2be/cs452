@@ -1,6 +1,7 @@
 #pragma once
 
 /** @file */
+#include <util.h>
 
 /**
  * Main entrypoint into the kernel
@@ -96,5 +97,3 @@ unsigned rand(void);
 int should_idle(void); // Just for the idle task.
 
 void halt(void) __attribute__((noreturn)); // stop the kernel immediately, does not return
-
-#define NULL (void*)0

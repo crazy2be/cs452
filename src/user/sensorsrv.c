@@ -2,6 +2,7 @@
 #include "displaysrv.h"
 #include "nameserver.h"
 #include "clockserver.h"
+#include "calibrate/calibrate.h"
 #include <assert.h>
 #include <io_server.h>
 #include <kernel.h>
@@ -36,8 +37,22 @@ void sensor_repr(int n, char *buf) {
 	snprintf(buf, 4, "%c%d", group, number);
 }
 
+void sensor_each_new(struct sensor_state *old, struct sensor_state *new,
+		sensor_new_handler cb) {
+	for (int i = 0; i <= SENSOR_COUNT; i++) {
+		int s = sensor_get(new, i);
+		if (s && s != sensor_get(old, i)) {
+			cb(i);
+		}
+	}
+}
+
 static void send_sensor_poll(void) {
+#ifdef QEMU
+	fputs(COM1, "Sending sensor poll"EOL);
+#else
 	fputc(COM1, 0x85);
+#endif
 }
 
 void start_sensorsrv(void) {
@@ -52,14 +67,20 @@ void start_sensorsrv(void) {
 	/* fputc(COM1, 0x61); */
 	/* fputc(COM1, 0x60); */
 
-	int displaysrv = whois(DISPLAYSRV_NAME);
+	/* int displaysrv = whois(DISPLAYSRV_NAME); */
+// 	int calibratesrv = whois(CALIBRATESRV_NAME);
 	struct sensor_state sensors;
 	for (;;) {
 		send_sensor_poll();
 		/* printf("%d bytes in the buffer before" EOL, fbuflen(COM1)); */
 		ASSERT(fgets(COM1, (char*) &sensors, 10) >= 0);
+		sensors.ticks = time();
+
+		// notify the tasks which need to know about sensor updates
 		/* printf("%d bytes in the buffer after" EOL, fbuflen(COM1)); */
-		displaysrv_update_sensor(displaysrv, &sensors);
+		/* displaysrv_update_sensor(displaysrv, &sensors); */
+		//calibrate_send_sensors(calibratesrv, &sensors);
+		trains_send_sensors(sensors);
 	}
 	/* delay(100); */
 	/* printf("%d bytes in the buffer after stop" EOL, fbuflen(COM1)); */

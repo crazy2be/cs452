@@ -10,7 +10,9 @@
 #include "displaysrv.h"
 #include "sensorsrv.h"
 #include "trainsrv.h"
+#include "calibrate/calibrate.h"
 #include "../kernel/drivers/timer.h"
+#include "track.h"
 
 struct init_reply {
 	int delay_time;
@@ -43,11 +45,26 @@ void init(void) {
 	stop_servers();
 }
 
+struct track_node track[TRACK_MAX];
+
+
+void fuck_the_police(void) {
+	delay(1000);
+	stop_servers();
+}
+
 void test_init(void) {
+	// initialize the track
+
+	init_tracka(track);
+
 	start_servers();
+
+	ASSERTOK(create(PRIORITY_MAX, fuck_the_police));
 
 	displaysrv();
 	commandsrv();
+	//calibratesrv();
 	sensorsrv();
 	start_trains();
 	trains_set_speed(12, 5);
