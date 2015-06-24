@@ -157,7 +157,7 @@ struct trainsrv_state {
 
 	// The id of a train that we've instructed to start moving, but we don't
 	// know where it is on the track yet.
-	// -1 iff there is no such train.
+	// 0 iff there is no such train.
 	// We don't allow multiple such trains on the track at once, since we wouldn't
 	// be able to tell which train corresponds to which sensor hit. (The only way
 	// we could do this would be to have them all going at different speeds, and
@@ -204,7 +204,7 @@ static void handle_set_speed(struct trainsrv_state *state, int train_id, int spe
 	struct internal_train_state *train_state = get_train_state(state, train_id);
 	if (train_state == NULL) {
 		// we've never seen this train before
-		ASSERT(state->unknown_train_id < 0);
+		ASSERT(state->unknown_train_id == 0);
 		state->unknown_train_id = train_id;
 
 		train_state = allocate_train_state(state, train_id);
@@ -229,7 +229,7 @@ static void handle_reverse(struct trainsrv_state *state, int train_id) {
 }
 static void handle_sensors(struct trainsrv_state *state, struct sensor_state sens) {
 	struct internal_train_state *train_state = NULL;
-	if (state->unknown_train_id >= 0) {
+	if (state->unknown_train_id > 0) {
 		train_state = get_train_state(state, state->unknown_train_id);
 	} else if (state->num_active_trains < 1) {
 		return;
@@ -325,7 +325,7 @@ static void trains_init(struct trainsrv_state *state) {
 	switch_set(&state->switches, 156, CURVED);
 	tc_deactivate_switch();
 	displaysrv_update_switch(whois(DISPLAYSRV_NAME), &state->switches);
-	calibrate_send_switches(whois(CALIBRATESRV_NAME), &state->switches);
+	//calibrate_send_switches(whois(CALIBRATESRV_NAME), &state->switches);
 }
 
 static void trains_server(void) {

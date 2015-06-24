@@ -54,9 +54,9 @@ void test_init(void) {
 
 	start_servers();
 
-	/* displaysrv(); */
-	/* commandsrv(); */
-	calibratesrv();
+	displaysrv();
+	commandsrv();
+	//calibratesrv();
 	sensorsrv();
 	start_trains();
 	trains_set_speed(12, 5);

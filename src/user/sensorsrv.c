@@ -68,7 +68,7 @@ void start_sensorsrv(void) {
 	/* fputc(COM1, 0x60); */
 
 	/* int displaysrv = whois(DISPLAYSRV_NAME); */
-	int calibratesrv = whois(CALIBRATESRV_NAME);
+// 	int calibratesrv = whois(CALIBRATESRV_NAME);
 	struct sensor_state sensors;
 	for (;;) {
 		send_sensor_poll();
@@ -79,7 +79,8 @@ void start_sensorsrv(void) {
 		// notify the tasks which need to know about sensor updates
 		/* printf("%d bytes in the buffer after" EOL, fbuflen(COM1)); */
 		/* displaysrv_update_sensor(displaysrv, &sensors); */
-		calibrate_send_sensors(calibratesrv, &sensors);
+		//calibrate_send_sensors(calibratesrv, &sensors);
+		trains_send_sensors(sensors);
 	}
 	/* delay(100); */
 	/* printf("%d bytes in the buffer after stop" EOL, fbuflen(COM1)); */

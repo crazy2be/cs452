@@ -562,7 +562,7 @@ void displaysrv(void) {
 
 static void displaysrv_send(int displaysrv, enum displaysrv_req_type type, struct displaysrv_req *req) {
 	req->type = type;
-	ASSERT(send(displaysrv, req, sizeof(*req), NULL, 0) == 0);
+	ASSERTOK(send(displaysrv, req, sizeof(*req), NULL, 0));
 }
 
 void displaysrv_console_input(int displaysrv, char c) {

@@ -81,8 +81,9 @@ static int clockserver_tid(void) {
 }
 
 static int clockserver_send(struct clockserver_request *req) {
-	int rpy;
-	int l = send(clockserver_tid(), req, sizeof(*req), &rpy, sizeof(rpy));
+	int rpy, l;
+	//printf("%d", clockserver_tid());
+	ASSERTOK(l = send(clockserver_tid(), req, sizeof(*req), &rpy, sizeof(rpy)));
 	if (l != sizeof(rpy)) return l;
 	return rpy;
 }
