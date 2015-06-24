@@ -28,11 +28,16 @@ struct train_state {
 void positionsrv(enum track_id track_id);
 
 // client methods
-void positionsrv_query_train_state(int train_id, struct state *state_out);
+void positionsrv_query_train_state(int train_id, struct train_state *state_out);
 
 // distance is in micrometers
 // arrival time is in clock ticks (absolute value, not relative to now)
 int positionsrv_query_train_arrival_time(int train_id, int distance);
+
+#define MAX_ACTIVE_TRAINS 8 // way more than we'll be able to have on the track in practice
+// returns number of active trains (bounded above by MAX_ACTIVE_TRAINS)
+// writes an array of active train ids to trains_out
+int positionsrv_query_active_trains(int *trains_out);
 
 void positionsrv_notify_train_speed(int train_id, int speed);
 void positionsrv_notify_train_reverse(int train_id);
