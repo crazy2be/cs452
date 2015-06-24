@@ -444,16 +444,23 @@ static void update_train_states(int active_trains, struct display_train_state *a
 		const int term_col = TRAIN_STATUS_Y_OFFSET + row;
 
 		const int train_id = active_train_states[i].train_id;
-		const int displacement = active_train_states[i].state.position.displacement;
-		const char *pos_name = active_train_states[i].state.position.edge->src->name;
-		const int velocity = active_train_states[i].state.velocity;
 
-		int distance_to_next;
-		const struct track_node *next_node = track_next_sensor(active_train_states[i].state.position.edge->src, switches, &distance_to_next);
+		if (position_is_uninitialized(&active_train_states[i].state.position)) {
+				printf("\e[%d;%dHTrain %d, position unknown",
+				term_col, term_row, train_id);
+		} else {
+			const int displacement = active_train_states[i].state.position.displacement;
+			const char *pos_name = active_train_states[i].state.position.edge->src->name;
+			const int velocity = active_train_states[i].state.velocity;
 
-		printf("\e[%d;%dHTrain %d, %d mm past %s, vel %d, %d to %s",
-			term_col, term_row, train_id, displacement, pos_name, velocity,
-			distance_to_next, next_node->name);
+			int distance_to_next;
+			const struct track_node *next_node = track_next_sensor(active_train_states[i].state.position.edge->src, switches, &distance_to_next);
+
+			printf("\e[%d;%dHTrain %d, %d mm past %s, vel %d, %d to %s",
+				term_col, term_row, train_id, displacement, pos_name, velocity,
+				distance_to_next, next_node->name);
+
+		}
 	}
 	puts("\e[u");
 }
@@ -497,13 +504,14 @@ static void clock_update_task(void) {
 		displaysrv_update_time(displaysrv, ticks * 10, active_trains, active_train_states);
 	}
 }
-
+void ptid(void) { printf("Displayserver tid: %d"EOL, tid()); }
 void displaysrv_start(void) {
 	register_as(DISPLAYSRV_NAME);
+	ptid();
 	create(HIGHER(PRIORITY_MIN, 2), clock_update_task);
 	signal_recv();
 
-	(void)initial_draw;
+	initial_draw();
 
 	struct sensor_state old_sensors;
 	struct sensor_reads sensor_reads;

@@ -240,7 +240,7 @@ static void handle_sensors(struct trainsrv_state *state, struct sensor_state sen
 	// single train is on the track. It's also not robust against anything.
 	int sensor = -1;
 	void sens_handler(int sensor_) {
-		ASSERT(sensor == -1);
+		//ASSERT(sensor == -1);
 		sensor = sensor_;
 	}
 	sensor_each_new(&state->sens_prev, &sens, sens_handler);
@@ -268,6 +268,11 @@ static int handle_query_arrival(struct trainsrv_state *state, int train, int dis
 static struct train_state handle_query_spatials(struct trainsrv_state *state, int train) {
 	struct internal_train_state *train_state = get_train_state(state, train);
 	ASSERT(train_state != NULL);
+
+	if (position_is_uninitialized(&train_state->last_known_position)) {
+		// the position is unknown, so just return unknown
+		return (struct train_state){train_state->last_known_position, 0};
+	}
 
 	// find how much time has passed since the recorded position on the internal
 	// train state, and how far we expect to have moved since then
@@ -331,6 +336,7 @@ static void trains_init(struct trainsrv_state *state) {
 
 static void trains_server(void) {
 	register_as("trains");
+	printf("Trainsrv tid: %d\n", tid());
 	struct trainsrv_state state;
 
 	trains_init(&state);

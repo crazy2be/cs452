@@ -47,12 +47,20 @@ void init(void) {
 
 struct track_node track[TRACK_MAX];
 
+
+void fuck_the_police(void) {
+	delay(1000);
+	stop_servers();
+}
+
 void test_init(void) {
 	// initialize the track
 
 	init_tracka(track);
 
 	start_servers();
+
+	ASSERTOK(create(PRIORITY_MAX, fuck_the_police));
 
 	displaysrv();
 	commandsrv();
