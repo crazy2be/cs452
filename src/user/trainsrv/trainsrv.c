@@ -264,6 +264,14 @@ static struct train_state handle_query_spatials(struct trainsrv_state *state, in
 		// TODO
 	};
 }
+static void handle_query_active(struct trainsrv_state *state, int *trains) {
+	memset(trains, 0, MAX_ACTIVE_TRAINS*sizeof(*trains));
+	for (int i = 0; i < NUM_TRAIN; i++) {
+		if (state->state_for_train[i] != NULL) {
+			*trains = i + 1; //
+		}
+	}
+}
 
 static void trains_init(struct trainsrv_state *state) {
 	memset(state, 0, sizeof(*state));
@@ -296,6 +304,12 @@ static void trains_server(void) {
 
 		/* printf("Trains server got message! %d"EOL, req.type); */
 		switch (req.type) {
+		case QUERY_ACTIVE: {
+			int active_trains[MAX_ACTIVE_TRAINS];
+			handle_query_active(&state, active_trains);
+			reply(tid, &active_trains, sizeof(active_trains));
+			break;
+		}
 		case QUERY_SPATIALS: {
 			struct train_state ts = handle_query_spatials(&state, req.train_number);
 			reply(tid, &ts, sizeof(ts));
@@ -349,6 +363,15 @@ static void trains_send(struct trains_request req, void *rpy, int rpyl) {
 #define TSEND(req) trains_send(req, NULL, 0)
 #define TSEND2(req, rpy) trains_send(req, rpy, sizeof(*(rpy)))
 
+int trains_query_active(int *trains_out) {
+	trains_send((struct trains_request) {
+		.type = QUERY_ACTIVE,
+	}, trains_out, sizeof(int)*MAX_ACTIVE_TRAINS);
+	for (int i = 0; i < MAX_ACTIVE_TRAINS; i++) {
+		if (trains_out[i] == 0) return i;
+	}
+	return MAX_ACTIVE_TRAINS;
+}
 void trains_query_spatials(int train, struct train_state *state_out) {
 	TSEND2(((struct trains_request) {
 		.type = QUERY_SPATIALS,

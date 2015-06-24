@@ -6,6 +6,8 @@
 #include "../track.h"
 #include "track_node.h"
 #include "track_data_new.h"
+#include "../trainsrv.h"
+#include "../track.h"
 #include <util.h>
 
 struct calibrate_req {
@@ -106,7 +108,6 @@ static void enque_delay(int amount) {
 //   run for 60 seconds {
 //     when we hit a sensor {
 //       print sensor_from, sensor_to, speed, time, distance
-#include "../trainsrv.h"
 #define CALIB_TRAIN_NUMBER 62
 void start_calibrate(void) {
 	register_as(CALIBRATESRV_NAME);
