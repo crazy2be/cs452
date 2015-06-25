@@ -168,25 +168,27 @@ class Game(object):
 		print "Got command %s"% s.encode('hex')
 		f = ord(s[0])
 		if 0 <= f <= 14:
-			if len(s) < 2: return
+			if len(s) < 2: return s
 			print "Setting speed of %d to %d" % (ord(s[1]), f)
-			self.train.set_speed(speed)
+			self.train.set_speed(f)
 			return s[2:]
 		elif f == 15:
-			if len(s) < 2: return
+			if len(s) < 2: return s
 			print "Toggling reverse of %d" % ord(s[1])
 			self.train.toggle_reverse()
 			return s[2:]
-		elif 0x20 <= f <= 0x22:
-			if len(s) < 2: return
+		elif f == 0x20:
+			print "Disabling solenoid"
+			return s[1:]
+		elif 0x21 <= f <= 0x22:
+			if len(s) < 2: return s
 			print "Switch command not supported %d %d" % (f, ord(s[1]))
 			return s[2:]
 		elif f == 0x85:
 			print "Got sensor poll"
 			return s[1:]
-		else:
-			raise Exception("Unknown command %s" % s.encode('hex'))
-			return s
+
+		raise Exception("Unknown command %s" % s.encode('hex'))
 		#def consume_word(s, i=0):
 			#while i < len(s) and (s[i].isalpha() or s[i] == '_'): i += 1
 			#return s[i:], s[:i]
