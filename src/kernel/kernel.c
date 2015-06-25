@@ -58,32 +58,32 @@ void setup(void) {
 	uart_clrerr(COM1);
 	uart_clrerr(COM2);
 
-	fputs(COM2_DEBUG, "Boot");
+	kputs("Boot");
 
 	clear_bss();
-	fputc(COM2_DEBUG, '.');
+	kputc('.');
 
 	setup_irq_table();
-	fputc(COM2_DEBUG, '.');
+	kputc('.');
 
 	await_init();
-	fputc(COM2_DEBUG, '.');
+	kputc('.');
 
 	irq_setup();
-	fputc(COM2_DEBUG, '.');
+	kputc('.');
 
 	setup_cache();
-	fputc(COM2_DEBUG, '.');
+	kputc('.');
 
 	rand_init(0xdeadbeef);
-	fputc(COM2_DEBUG, '.');
+	kputc('.');
 
 	tasks_init();
-	fputc(COM2_DEBUG, '.');
+	kputc('.');
 
 	timer_init();
-	fputc(COM2_DEBUG, '.');
-	fputs(COM2_DEBUG, EOL);
+	kputc('.');
+	kputs(EOL);
 
 }
 

@@ -291,20 +291,20 @@ static int io_server_tid(int channel) {
 
 
 // bw analogues to the functions below
-int bw_putc(const int channel, const char c) {
+int bw_putc(const char c, const int channel) {
 	/* KASSERT(!usermode()); */
 	while(!uart_canwritefifo(channel));
 	uart_write(channel, c);
 	return 0;
 }
 
-int bw_puts(const int channel, const char *str) {
+int bw_puts(const char *str, const int channel) {
 	/* KASSERT(!usermode()); */
-	while (*str) bw_putc(channel, *str++);
+	while (*str) bw_putc(*str++, channel);
 	return 0;
 }
 
-int bw_gets(const int channel, char *buf, int len) {
+int bw_gets(char *buf, int len, const int channel) {
 	/* KASSERT(!usermode()); */
 	while (len-- > 0) {
 		while (!uart_canread(channel));
@@ -313,7 +313,7 @@ int bw_gets(const int channel, char *buf, int len) {
 	return 0;
 }
 
-int fput_buf(const int channel, const char *buf, int buflen) {
+int fput_buf(const char *buf, int buflen, const int channel) {
 	struct io_request req;
 	unsigned resp;
 
@@ -328,24 +328,26 @@ int fput_buf(const int channel, const char *buf, int buflen) {
 	return (err < 0) ? -1 : 0;
 }
 // functions which interact with the io server
-int fputs(const int channel, const char *str) {
-	if (channel == COM2_DEBUG) return bw_puts(COM2, str);
+int fputs(const char *str, const int channel) {
+	if (channel == COM2_DEBUG) return bw_puts(str, COM2);
 
-	KASSERT(usermode());
+	if (!usermode()) {
+		KASSERT(0);
+	}
 	int len = strlen(str);
 	ASSERT(len <= MAX_STR_LEN);
-	return fput_buf(channel, str, len);
+	return fput_buf(str, len, channel);
 }
 
-int fputc(const int channel, const char c) {
-	if (channel == COM2_DEBUG) return bw_putc(COM2, c);
+int fputc(const char c, const int channel) {
+	if (channel == COM2_DEBUG) return bw_putc(c, COM2);
 
 	KASSERT(usermode());
-	return fput_buf(channel, &c, 1);
+	return fput_buf(&c, 1, channel);
 }
 
-int fgets(const int channel, char *buf, int len) {
-	if (channel == COM2_DEBUG) return bw_gets(COM2, buf, len);
+int fgets(char *buf, int len, const int channel) {
+	if (channel == COM2_DEBUG) return bw_gets(buf, len, COM2);
 
 	KASSERT(usermode());
 	struct io_request req;
@@ -362,7 +364,7 @@ int fgets(const int channel, char *buf, int len) {
 
 int fgetc(int channel) {
 	char c;
-	int err = fgets(channel, &c, 1);
+	int err = fgets(&c, 1, channel);
 	return (err < 0) ? err : c;
 }
 

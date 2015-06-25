@@ -37,7 +37,7 @@ void sensor_repr(int n, char *buf) {
 }
 
 static void send_sensor_poll(void) {
-	fputc(COM1, 0x85);
+	fputc(0x85, COM1);
 }
 
 void start_sensorsrv(void) {
@@ -57,7 +57,7 @@ void start_sensorsrv(void) {
 	for (;;) {
 		send_sensor_poll();
 		/* printf("%d bytes in the buffer before" EOL, fbuflen(COM1)); */
-		ASSERT(fgets(COM1, (char*) &sensors, 10) >= 0);
+		ASSERT(fgets((char*) &sensors, 10, COM1) >= 0);
 		/* printf("%d bytes in the buffer after" EOL, fbuflen(COM1)); */
 		displaysrv_update_sensor(displaysrv, &sensors);
 	}

@@ -127,13 +127,6 @@ static void format(producer produce, const char *fmt, va_list va) {
 	}
 }
 
-static void flush_buffer(int channel, char *buf, int i) {
-	if (i != 0) {
-		buf[i] = '\0';
-		fputs(channel, buf);
-	}
-}
-
 int fprintf(int channel, const char *fmt, ...) {
 	va_list va;
 	va_start(va,fmt);
@@ -146,14 +139,14 @@ int fprintf(int channel, const char *fmt, ...) {
 		bytes_printed++;
 		buf[i++] = c;
 		if (i == PRINTF_BUFSZ - 1) {
-			flush_buffer(channel, buf, i);
+			fput_buf(buf, i, channel);
 			i = 0;
 		}
 
 	}
 
 	format(produce_buffered, fmt, va);
-	flush_buffer(channel, buf, i);
+	fput_buf(buf, i, channel);
 
 	va_end(va);
 
