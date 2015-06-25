@@ -179,8 +179,12 @@ class MyTelnetWrapper():
 	def write(self, buf): return self.tn.write(buf) # TODO: Non-blocking
 	def service(self): pass
 class FakeTelnet():
-	def __init__(self): pass
-	def read(self): return '\x00'
+	def __init__(self): self.fakeB = True
+	def read(self):
+		if self.fakeB:
+			self.fakeB = False
+			return '\x00'
+		else: return ''
 	def write(self, buf): pass
 	def service(self): pass
 class CmdParser():
