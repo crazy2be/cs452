@@ -164,30 +164,53 @@ class Game(object):
 		self.clock = pygame.time.Clock()
 
 	def parse_cmd(self, s):
-		def consume_word(s, i=0):
-			while i < len(s) and (s[i].isalpha() or s[i] == '_'): i += 1
-			return s[i:], s[:i]
-		def consume_whitespace(s, i=0):
-			while i < len(s) and s[i].isspace(): i += 1
-			return s[i:], s[:i]
-		def consume_number(s, i=0):
-			while i < len(s) and s[i].isdigit(): i += 1
-			return s[i:], int(s[:i])
-		s, _ = consume_whitespace(s)
-		s, word = consume_word(s)
-		s, _ = consume_whitespace(s)
-		if word == 'set_speed':
-			s, train = consume_number(s)
-			s, _ = consume_whitespace(s)
-			s, _ = consume_word(s) # "to"
-			s, _ = consume_whitespace(s)
-			s, speed = consume_number(s)
+		if len(s) < 1: return s
+		print "Got command %s"% s.encode('hex')
+		f = ord(s[0])
+		if 0 <= f <= 14:
+			if len(s) < 2: return
+			print "Setting speed of %d to %d" % (ord(s[1]), f)
 			self.train.set_speed(speed)
-		elif word == 'reverse':
-			s, train = consume_number(s)
+			return s[2:]
+		elif f == 15:
+			if len(s) < 2: return
+			print "Toggling reverse of %d" % ord(s[1])
 			self.train.toggle_reverse()
+			return s[2:]
+		elif 0x20 <= f <= 0x22:
+			if len(s) < 2: return
+			print "Switch command not supported %d %d" % (f, ord(s[1]))
+			return s[2:]
+		elif f == 0x85:
+			print "Got sensor poll"
+			return s[1:]
 		else:
-			print "Unknown command '{0}'!".format(word)
+			raise Exception("Unknown command %s" % s.encode('hex'))
+			return s
+		#def consume_word(s, i=0):
+			#while i < len(s) and (s[i].isalpha() or s[i] == '_'): i += 1
+			#return s[i:], s[:i]
+		#def consume_whitespace(s, i=0):
+			#while i < len(s) and s[i].isspace(): i += 1
+			#return s[i:], s[:i]
+		#def consume_number(s, i=0):
+			#while i < len(s) and s[i].isdigit(): i += 1
+			#return s[i:], int(s[:i])
+		#s, _ = consume_whitespace(s)
+		#s, word = consume_word(s)
+		#s, _ = consume_whitespace(s)
+		#if word == 'set_speed':
+			#s, train = consume_number(s)
+			#s, _ = consume_whitespace(s)
+			#s, _ = consume_word(s) # "to"
+			#s, _ = consume_whitespace(s)
+			#s, speed = consume_number(s)
+			#self.train.set_speed(speed)
+		#elif word == 'reverse':
+			#s, train = consume_number(s)
+			#self.train.toggle_reverse()
+		#else:
+			#print "Unknown command '{0}'!".format(word)
 
 
 	def start_screen(self):
@@ -203,11 +226,7 @@ class Game(object):
 				if event.type == pygame.QUIT:
 					return
 			cmd += self.tn.read_eager()
-			if len(cmd) > 1: print cmd
-			if '\n' in cmd:
-				s, cmd = cmd.split('\n', 1)
-				self.parse_cmd(s)
-				text = font.render(s, 1, (10, 10, 10))
+			cmd = self.parse_cmd(cmd)
 			self.surface.fill((255, 255, 255))
 			#track.update()
 			self.train.update(track)

@@ -48,7 +48,7 @@ void sensor_each_new(struct sensor_state *old, struct sensor_state *new,
 }
 
 static void send_sensor_poll(void) {
-#ifdef QEMU
+#ifdef ASCII_TC
 	fputs(COM1, "Sending sensor poll"EOL);
 #else
 	fputc(COM1, 0x85);
