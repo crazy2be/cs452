@@ -187,7 +187,7 @@ static struct internal_train_state* allocate_train_state(struct trainsrv_state *
 	switch (train_id) {
 	default:
 		// TODO
-		memset(train_state->est_velocities, 0, sizeof(*train_state->est_velocities));
+		memset(train_state->est_velocities, 1, sizeof(*train_state->est_velocities));
 		break;
 	}
 	// TODO: actually get constants from model, and calculate wild ass guess of
