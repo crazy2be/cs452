@@ -157,13 +157,49 @@ class Track():
 		for pc in self.pieces:
 			pc.draw(surf)
 
-class Game(object):
-	def __init__(self, surface, tn):
-		self.surface = surface
+import socket, select
+class MyTelnet():
+	def __init__(self, host, port=23, timeout=socket._GLOBAL_DEFAULT_TIMEOUT):
+		self.sock = socket.create_connection((host, port), timeout)
+		self.wbuf = ''
+		self.rbuf = ''
+	def fileno(self): return self.sock.fileno()
+	def read(self): buf = self.rbuf; self.rbuf = ''; return buf
+	def write(self, buf): self.wbuf += buf
+	def service(self):
+		if len(self.wbuf) > 0 and select.select([], [self], [], 0) == ([], [self], []):
+			sent = self.sock.send(self.wbuf)
+			self.wbuf = self.wbuf[sent:]
+		elif select.select([self], [], [], 0) == ([self], [], []):
+			self.rbuf += self.sock.recv(50)
+class MyTelnetWrapper():
+	def __init__(self, host, port=23, timeout=socket._GLOBAL_DEFAULT_TIMEOUT):
+		self.tn = telnetlib.Telnet(host, port, timeout)
+	def read(self): return self.tn.read_eager()
+	def write(self, buf): return self.tn.write(buf) # TODO: Non-blocking
+	def service(self): pass
+class FakeTelnet():
+	def __init__(self): pass
+	def read(self): return '\x00'
+	def write(self, buf): pass
+	def service(self): pass
+class CmdParser():
+	def __init__(self, tn, train):
 		self.tn = tn
-		self.clock = pygame.time.Clock()
+		self.train = train
+		self.s = ''
+		while True:
+			self.s += self.tn.read()
+			if len(self.s) > 0:
+				assert(self.s[0] == '\x00')
+				self.s = self.s[1:]
+				break
 
-	def parse_cmd(self, s):
+	def parse_cmd(self):
+		self.s += self.tn.read()
+		self.s = self._parse_cmd(self.s)
+
+	def _parse_cmd(self, s):
 		if len(s) < 1: return s
 		print "Got command %s"% s.encode('hex')
 		f = ord(s[0])
@@ -176,6 +212,7 @@ class Game(object):
 			if len(s) < 2: return s
 			print "Toggling reverse of %d" % ord(s[1])
 			self.train.toggle_reverse()
+			self.tn.write('\x00'*5 + '\x10' + '\x00'*4)
 			return s[2:]
 		elif f == 0x20:
 			print "Disabling solenoid"
@@ -187,48 +224,29 @@ class Game(object):
 		elif f == 0x85:
 			print "Got sensor poll"
 			return s[1:]
-
 		raise Exception("Unknown command %s" % s.encode('hex'))
-		#def consume_word(s, i=0):
-			#while i < len(s) and (s[i].isalpha() or s[i] == '_'): i += 1
-			#return s[i:], s[:i]
-		#def consume_whitespace(s, i=0):
-			#while i < len(s) and s[i].isspace(): i += 1
-			#return s[i:], s[:i]
-		#def consume_number(s, i=0):
-			#while i < len(s) and s[i].isdigit(): i += 1
-			#return s[i:], int(s[:i])
-		#s, _ = consume_whitespace(s)
-		#s, word = consume_word(s)
-		#s, _ = consume_whitespace(s)
-		#if word == 'set_speed':
-			#s, train = consume_number(s)
-			#s, _ = consume_whitespace(s)
-			#s, _ = consume_word(s) # "to"
-			#s, _ = consume_whitespace(s)
-			#s, speed = consume_number(s)
-			#self.train.set_speed(speed)
-		#elif word == 'reverse':
-			#s, train = consume_number(s)
-			#self.train.toggle_reverse()
-		#else:
-			#print "Unknown command '{0}'!".format(word)
 
+
+class Game(object):
+	def __init__(self, surface, tn):
+		self.surface = surface
+		self.tn = tn
+		self.clock = pygame.time.Clock()
+		self.train = Train()
 
 	def start_screen(self):
 		font = pygame.font.Font(None, 36)
 		text = font.render("Hello There", 1, (10, 10, 10))
 
 		rot = 45
-		self.train = Train()
 		track = Track()
-		cmd = ""
+		cmd = CmdParser(self.tn, self.train)
 		while True:
 			for event in pygame.event.get():
 				if event.type == pygame.QUIT:
 					return
-			cmd += self.tn.read_eager()
-			cmd = self.parse_cmd(cmd)
+			self.tn.service()
+			cmd.parse_cmd()
 			self.surface.fill((255, 255, 255))
 			#track.update()
 			self.train.update(track)
@@ -250,9 +268,9 @@ def main():
 	pygame.mouse.set_visible(False)
 	pygame.display.set_caption("Trains")
 
-	tn = FakeTn()
+	tn = FakeTelnet()
 	try:
-		tn = telnetlib.Telnet("localhost", 1230)
+		tn = MyTelnetWrapper("localhost", 1230)
 	except socket.error, v:
 		if v[0] == errno.ECONNREFUSED:
 			# TODO: We probably don't want to catch this normally, just when
@@ -264,9 +282,5 @@ def main():
 	game.play_game()
 
 	pygame.quit()
-
-class FakeTn():
-	def read_eager(self):
-		return ""
 
 main()

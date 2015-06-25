@@ -482,8 +482,8 @@ class Telnet:
             while self.rawq:
                 c = self.rawq_getchar()
                 if not self.iacseq:
-                    if c == theNULL:
-                        continue
+                    #if c == theNULL:
+                    #    continue
                     # WTF was this code here?
                     # nobody seems to know:
                     # http://www.gossamer-threads.com/lists/python/python/356461
