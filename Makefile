@@ -54,6 +54,7 @@ export PATH := /u/wbcowan/gnuarm-4.0.2/libexec/gcc/arm-elf/4.0.2:/u/wbcowan/gnua
 CC = gcc
 AS = as
 LD = ld
+LINKER_SCRIPT = ts7200.ld
 LDFLAGS = -init main -Map $(MAP) -T $(LINKER_SCRIPT) -N -L/u/wbcowan/gnuarm-4.0.2/lib/gcc/arm-elf/4.0
 else
 export PATH := /u1/jmcgirr/arm-toolchain/current/bin:$(PATH)
