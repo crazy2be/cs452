@@ -227,6 +227,12 @@ static void handle_reverse(struct trainsrv_state *state, int train_id) {
 	}
 	start_reverse(train_id, train_state->current_speed_setting);
 }
+
+void sensor_cb(int sensor, void *ctx) {
+	int *sensor_dest= (int*) ctx;
+	*sensor_dest = sensor;
+}
+
 static void handle_sensors(struct trainsrv_state *state, struct sensor_state sens) {
 	struct internal_train_state *train_state = NULL;
 	if (state->unknown_train_id > 0) {
@@ -236,14 +242,12 @@ static void handle_sensors(struct trainsrv_state *state, struct sensor_state sen
 	} else {
 		train_state = state->state_for_train[0];
 	}
+
+	ASSERT(train_state != NULL);
 	// TODO: Currently this is horribly naive, and will only work when a
 	// single train is on the track. It's also not robust against anything.
 	int sensor = -1;
-	void sens_handler(int sensor_) {
-		//ASSERT(sensor == -1);
-		sensor = sensor_;
-	}
-	sensor_each_new(&state->sens_prev, &sens, sens_handler);
+	sensor_each_new(&state->sens_prev, &sens, sensor_cb, &sensor);
 	if (sensor == -1) return;
 	train_state->last_known_position.edge = &track_node_from_sensor(sensor)->edge[0];
 	train_state->last_known_position.displacement = 0;
@@ -340,7 +344,6 @@ static void trains_init(struct trainsrv_state *state) {
 
 static void trains_server(void) {
 	register_as("trains");
-	printf("Trainsrv tid: %d\n", tid());
 	struct trainsrv_state state;
 
 	trains_init(&state);
