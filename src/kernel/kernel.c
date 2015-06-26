@@ -23,6 +23,7 @@ void setup_cache(void) {
 #else
 	flags &= ~FLAG_BITS;
 #endif
+	fputc(COM2_DEBUG, '!');
 	__asm__ __volatile__ ("mcr p15, 0, %0, c1, c0, 0" : : "r"(flags));
 }
 

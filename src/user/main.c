@@ -60,7 +60,7 @@ void test_init(void) {
 
 	start_servers();
 
-	ASSERTOK(create(PRIORITY_MAX, fuck_the_police));
+	//ASSERTOK(create(PRIORITY_MAX, fuck_the_police));
 
 	displaysrv();
 	commandsrv();

@@ -70,6 +70,27 @@ void start_sensorsrv(void) {
 	/* int displaysrv = whois(DISPLAYSRV_NAME); */
 // 	int calibratesrv = whois(CALIBRATESRV_NAME);
 	struct sensor_state sensors;
+	// Test just to try and crash everything.
+	delay(100);
+	char test[10] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x10, 0x00, 0x00, 0x00, 0x00};
+	memcpy(sensors.packed, test, sizeof(test));
+	sensors.ticks = time();
+	trains_send_sensors(sensors);
+	delay(100);
+	char test2[10] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x20, 0x00, 0x00, 0x00, 0x00};
+	memcpy(sensors.packed, test2, sizeof(test2));
+	sensors.ticks = time();
+	trains_send_sensors(sensors);
+	delay(100);
+	char test3[10] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x40, 0x00, 0x00, 0x00, 0x00};
+	memcpy(sensors.packed, test3, sizeof(test3));
+	sensors.ticks = time();
+	trains_send_sensors(sensors);
+	delay(100);
+	char test4[10] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x00, 0x00, 0x00, 0x00};
+	memcpy(sensors.packed, test4, sizeof(test4));
+	sensors.ticks = time();
+	trains_send_sensors(sensors);
 	for (;;) {
 		send_sensor_poll();
 		/* printf("%d bytes in the buffer before" EOL, fbuflen(COM1)); */
