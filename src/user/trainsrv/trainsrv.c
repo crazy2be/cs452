@@ -167,12 +167,47 @@ struct trainsrv_state {
 
 	struct switch_state switches;
 	struct sensor_state sens_prev;
+	int sensors_are_known;
 };
 
 static inline struct internal_train_state* get_train_state(struct trainsrv_state *state, int train_id) {
 	ASSERT(MIN_TRAIN <= train_id && train_id <= MAX_TRAIN);
 	struct internal_train_state *train_state = state->state_for_train[train_id - 1];
 	return train_state;
+}
+
+static void initialize_train_velocity_table(struct internal_train_state *train_state, int train_id) {
+	// our model is v = offset + speed_coef * speed + is_accelerated * is_accelerated_coef
+	// basic linear model fitted in R
+	// all of these are denominated in micrometers
+	int offset, speed_coef, is_accelerated_coef;
+	switch (train_id) {
+	case 12:
+		offset = -3816;
+		speed_coef = 934;
+		is_accelerated_coef = -605;
+		break;
+	case 62:
+		offset = 1159;
+		speed_coef = 357;
+		is_accelerated_coef = -125;
+		break;
+	case 58:
+		offset = -3404;
+		speed_coef = 683;
+		is_accelerated_coef = -315;
+		break;
+	default:
+		memset(train_state->est_velocities, 0, sizeof(*train_state->est_velocities));
+		return;
+	}
+
+	// calculate wild ass guess of the train velocity table
+	for (int i = 0; i < NUM_SPEED_SETTINGS; i++) {
+		int speed = (i + 1) / 2;
+		int is_accelerated = (i + 1) % 2;
+		train_state->est_velocities[i] = offset + speed * speed_coef + is_accelerated * is_accelerated_coef;
+	}
 }
 
 static struct internal_train_state* allocate_train_state(struct trainsrv_state *state, int train_id) {
@@ -184,14 +219,7 @@ static struct internal_train_state* allocate_train_state(struct trainsrv_state *
 
 	// initialize estimated speeds based on train id
 	//int train_scaling_factor = 0;
-	switch (train_id) {
-	default:
-		// TODO
-		memset(train_state->est_velocities, 0, sizeof(*train_state->est_velocities));
-		break;
-	}
-	// TODO: actually get constants from model, and calculate wild ass guess of
-	// the train velocity table
+	initialize_train_velocity_table(train_state, train_id);
 
 	return train_state;
 }
@@ -234,24 +262,28 @@ void sensor_cb(int sensor, void *ctx) {
 }
 
 static void handle_sensors(struct trainsrv_state *state, struct sensor_state sens) {
-	struct internal_train_state *train_state = NULL;
-	if (state->unknown_train_id > 0) {
-		train_state = get_train_state(state, state->unknown_train_id);
-	} else if (state->num_active_trains < 1) {
-		return;
-	} else {
-		train_state = state->state_for_train[0];
-	}
+	if (state->sensors_are_known) {
+		struct internal_train_state *train_state = NULL;
+		if (state->unknown_train_id > 0) {
+			train_state = get_train_state(state, state->unknown_train_id);
+		} else if (state->num_active_trains < 1) {
+			return;
+		} else {
+			train_state = state->state_for_train[0];
+		}
 
-	ASSERT(train_state != NULL);
-	// TODO: Currently this is horribly naive, and will only work when a
-	// single train is on the track. It's also not robust against anything.
-	int sensor = -1;
-	sensor_each_new(&state->sens_prev, &sens, sensor_cb, &sensor);
-	if (sensor == -1) return;
-	train_state->last_known_position.edge = &track_node_from_sensor(sensor)->edge[0];
-	train_state->last_known_position.displacement = 0;
-	train_state->last_known_time = sens.ticks;
+		ASSERT(train_state != NULL);
+		// TODO: Currently this is horribly naive, and will only work when a
+		// single train is on the track. It's also not robust against anything.
+		int sensor = -1;
+		sensor_each_new(&state->sens_prev, &sens, sensor_cb, &sensor);
+		if (sensor == -1) return;
+		train_state->last_known_position.edge = &track_node_from_sensor(sensor)->edge[0];
+		train_state->last_known_position.displacement = 0;
+		train_state->last_known_time = sens.ticks;
+	} else {
+		state->sensors_are_known = 1;
+	}
 	state->sens_prev = sens;
 }
 
