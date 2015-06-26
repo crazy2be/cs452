@@ -265,6 +265,18 @@ static int train_velocity(struct trainsrv_state *state, int train) {
 static int handle_query_arrival(struct trainsrv_state *state, int train, int dist) {
 	return (1000 * dist) / train_velocity(state, train);
 }
+struct bafc { const struct track_edge *last_edge; int dist_travelled; };
+// travel down the track for that many mm, and see which node we end at
+bool break_after_distance(const struct track_edge *e, void *ctx_) {
+	struct bafc *ctx = (struct bafc*)ctx_;
+	ctx->last_edge = e;
+	if (ctx->dist_travelled >= e->dist) {
+		ctx->dist_travelled -= e->dist;
+		return 0;
+	} else {
+		return 1;
+	}
+}
 static struct train_state handle_query_spatials(struct trainsrv_state *state, int train) {
 	struct internal_train_state *train_state = get_train_state(state, train);
 	ASSERT(train_state != NULL);
@@ -287,19 +299,11 @@ static struct train_state handle_query_spatials(struct trainsrv_state *state, in
 	if (dist_travelled >= last_edge->dist) {
 		dist_travelled -= last_edge->dist;
 		current = last_edge->dest;
+		struct bafc fuck = (struct bafc) { .last_edge = last_edge, .dist_travelled = dist_travelled };
 
-		// travel down the track for that many mm, and see which node we end at
-		bool break_after_distance(const struct track_edge *e) {
-			last_edge = e;
-			if (dist_travelled >= e->dist) {
-				dist_travelled -= e->dist;
-				return 0;
-			} else {
-				return 1;
-			}
-		}
-
-		current = track_go_forwards(current, &state->switches, break_after_distance);
+		current = track_go_forwards(current, &state->switches, break_after_distance, &fuck);
+		last_edge = fuck.last_edge;
+		dist_travelled = fuck.dist_travelled;
 	}
 
 	return (struct train_state) {

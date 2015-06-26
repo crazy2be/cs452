@@ -12,9 +12,8 @@ const struct track_node *track_node_from_sensor(int sensor) {
 }
 
 
-typedef bool (*break_cond)(const struct track_edge *e);
 const struct track_node *track_go_forwards(const struct track_node *cur,
-		const struct switch_state *sw, break_cond cb) {
+		const struct switch_state *sw, break_cond cb, void *ctx) {
 	for (;;) {
 		if (cur->type == NODE_EXIT) break;
 
@@ -23,22 +22,27 @@ const struct track_node *track_go_forwards(const struct track_node *cur,
 			switch_get(sw, cur->num) == CURVED;
 
 		const struct track_edge *e = &cur->edge[index];
-		if (cb(e)) break;
+// 		kprintf("edge b4: %x"EOL, (unsigned)e);
+		if (cb(e, ctx)) break;
+// 		kprintf("edge a4: %x"EOL, (unsigned)e);
 		cur = e->dest;
 	}
 	return cur;
 }
 
+static bool break_on_sensor(const struct track_edge *e, void *ctx) {
+// 	kprintf("edge b5: %x"EOL, (unsigned)e);
+	*(int*)ctx += e->dist;
+// 	kprintf("edge a5: %x"EOL, (unsigned)e);
+	bool r = e->dest->type == NODE_SENSOR;
+// 	kprintf("edge z5: %x"EOL, (unsigned)e);
+	return r;
+}
+
 const struct track_node *track_next_sensor(const struct track_node *cur,
 		const struct switch_state *sw, int *distance_out) {
 	int distance = 0;
-
-	bool break_on_sensor(const struct track_edge *e) {
-		distance += e->dist;
-		return e->dest->type == NODE_SENSOR;
-	}
-
-	const struct track_node *next = track_go_forwards(cur, sw, break_on_sensor);
+	const struct track_node *next = track_go_forwards(cur, sw, break_on_sensor, &distance);
 	*distance_out = distance;
 	return next;
 }
