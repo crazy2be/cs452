@@ -147,10 +147,17 @@ struct internal_train_state {
 
 	//  4. Later, we'll have information about if (and at what rate) it is currently
 	//     accelerating
+
+	//  5. For debug purposes, we maintain info about the next sensor we expect to hit
+	//     When we hit the next sensor, this allows us to know how far off our estimates were
+	const struct track_node *next_sensor;
+	int mm_to_next_sensor; // can be negative, if we've passed the sensor
 };
 
 // catch-all struct to avoid static memory allocation for a user space task
 struct trainsrv_state {
+	int displaysrv_tid;
+
 	struct internal_train_state train_states[MAX_ACTIVE_TRAINS];
 	struct internal_train_state *state_for_train[NUM_TRAIN];
 	int num_active_trains;
@@ -239,6 +246,7 @@ static void handle_set_speed(struct trainsrv_state *state, int train_id, int spe
 	}
 	// Just don't allow this so that we don't have to think about what the train
 	// controller does in this case in terms of actual train speed.
+	// TODO: we need to reanchor in this case
 	if (train_state->current_speed_setting == speed) return;
 	train_state->previous_speed_setting = train_state->current_speed_setting;
 	train_state->current_speed_setting = speed;
@@ -256,6 +264,18 @@ static void handle_reverse(struct trainsrv_state *state, int train_id) {
 	start_reverse(train_id, train_state->current_speed_setting);
 }
 
+static int train_velocity_from_state(struct internal_train_state *train_state) {
+	int cur_speed = train_state->current_speed_setting;
+	int i = cur_speed*2 + (train_state->previous_speed_setting >= cur_speed) - 1;
+	return train_state->est_velocities[i];
+}
+
+static int train_velocity(struct trainsrv_state *state, int train) {
+	struct internal_train_state *train_state = get_train_state(state, train);
+	ASSERT(train_state != NULL);
+	return train_velocity_from_state(train_state);
+}
+
 void sensor_cb(int sensor, void *ctx) {
 	int *sensor_dest= (int*) ctx;
 	*sensor_dest = sensor;
@@ -265,17 +285,42 @@ static void update_train_position_from_sensor(struct trainsrv_state *state,
 		struct internal_train_state *train_state,
 		int sensor, int ticks) {
 
+	const struct track_node *sensor_node = track_node_from_sensor(sensor);
+	ASSERT(sensor_node != NULL && sensor_node->type == NODE_SENSOR && sensor_node->num == sensor);
+
 	// if we had an estimated position for this train, ideally it should be estimated as
 	// being very near to the tripped sensor when this happens
-	/* struct train_state estimated_train_state; */
-	/* int estimated_sensors_passed; */
- 
-	/* static void get_estimated_train_position(state, train_state, */
-	/* 		&estimated_train_state, &estimated_sensors_passed); */
+	// we will calculate how far away from the sensor we thought we were
+	if (train_state->next_sensor != NULL) {
+		char feedback[80];
+		char sens_name[4];
+		sensor_repr(sensor, sens_name);
+		ASSERTF(train_state->next_sensor->type == NODE_SENSOR, "sensor node was %x from %x, track = %x", (unsigned) train_state->next_sensor, (unsigned) train_state, (unsigned) track);
+		if (train_state->next_sensor == sensor_node) {
+			const int delta_t = time() - train_state->last_known_time;
+			const int velocity = train_velocity_from_state(train_state);
+			const int delta_d = train_state->mm_to_next_sensor - delta_t * velocity / 1000;
+			snprintf(feedback, sizeof(feedback), "Train was estimated at %d mm away from sensor %s when tripped (%d total)",
+					delta_d, sens_name, train_state->mm_to_next_sensor);
+			displaysrv_console_feedback(state->displaysrv_tid, feedback);
+		} else {
+			char exp_sens_name[4];
+			sensor_repr(train_state->next_sensor->num, exp_sens_name);
+			snprintf(feedback, sizeof(feedback), "Train was expected to hit sensor %s, actually hit %s",
+					exp_sens_name, sens_name);
+			displaysrv_console_feedback(state->displaysrv_tid, feedback);
+		}
+	}
+	train_state->next_sensor = track_next_sensor(sensor_node, &state->switches,
+			&train_state->mm_to_next_sensor);
 
-	// TODO: produce feedback about how much we were off by
+	if (train_state->next_sensor->type != NODE_SENSOR) {
+		ASSERT(train_state->next_sensor->type == NODE_EXIT);
+		train_state->next_sensor = NULL;
+	}
 
-	train_state->last_known_position.edge = &track_node_from_sensor(sensor)->edge[0];
+	// update internal train state
+	train_state->last_known_position.edge = &sensor_node->edge[0];
 	train_state->last_known_position.displacement = 0;
 	train_state->last_known_time = ticks;
 }
@@ -308,24 +353,10 @@ static void handle_sensors(struct trainsrv_state *state, struct sensor_state sen
 	state->sens_prev = sens;
 }
 
-static int train_velocity_from_state(struct internal_train_state *train_state) {
-	int cur_speed = train_state->current_speed_setting;
-	int i = cur_speed*2 + (train_state->previous_speed_setting >= cur_speed) - 1;
-	return train_state->est_velocities[i];
-}
-
-static int train_velocity(struct trainsrv_state *state, int train) {
-	struct internal_train_state *train_state = get_train_state(state, train);
-	ASSERT(train_state != NULL);
-	return train_velocity_from_state(train_state);
-}
 static int handle_query_arrival(struct trainsrv_state *state, int train, int dist) {
 	return (1000 * dist) / train_velocity(state, train);
 }
-struct bafc {
-	const struct track_edge *last_edge;
-	int dist_travelled;
-};
+
 // travel down the track for that many mm, and see which node we end at
 bool break_after_distance(const struct track_edge *e, void *ctx) {
 	struct position *pos = (struct position*)ctx;
@@ -408,7 +439,8 @@ static void trains_init(struct trainsrv_state *state) {
 	tc_switch_switch(156, CURVED);
 	switch_set(&state->switches, 156, CURVED);
 	tc_deactivate_switch();
-	displaysrv_update_switch(whois(DISPLAYSRV_NAME), &state->switches);
+	state->displaysrv_tid = whois(DISPLAYSRV_NAME);
+	displaysrv_update_switch(state->displaysrv_tid, &state->switches);
 	//calibrate_send_switches(whois(CALIBRATESRV_NAME), &state->switches);
 }
 
@@ -456,6 +488,7 @@ static void trains_server(void) {
 		case SWITCH_SWITCH:
 			start_switch(req.switch_number, req.direction);
 			switch_set(&state.switches, req.switch_number, req.direction);
+			// TODO: we need to reanchor the trains here
 			/* displaysrv_update_switch(displaysrv, &switches); */
 			reply(tid, NULL, 0);
 			break;

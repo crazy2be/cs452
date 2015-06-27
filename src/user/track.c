@@ -22,21 +22,21 @@ const struct track_node *track_go_forwards(const struct track_node *cur,
 			switch_get(sw, cur->num) == CURVED;
 
 		const struct track_edge *e = &cur->edge[index];
-// 		kprintf("edge b4: %x"EOL, (unsigned)e);
 		if (cb(e, ctx)) break;
-// 		kprintf("edge a4: %x"EOL, (unsigned)e);
 		cur = e->dest;
 	}
 	return cur;
 }
 
 static bool break_on_sensor(const struct track_edge *e, void *ctx) {
-// 	kprintf("edge b5: %x"EOL, (unsigned)e);
-	*(int*)ctx += e->dist;
-// 	kprintf("edge a5: %x"EOL, (unsigned)e);
-	bool r = e->dest->type == NODE_SENSOR;
-// 	kprintf("edge z5: %x"EOL, (unsigned)e);
-	return r;
+	// break if we are leaving a sensor, and it's not the node we started at
+	if (e->src->type == NODE_SENSOR) {
+		int *distance = (int*) ctx;
+		*distance += e->dist;
+		return *distance != e->dist;
+	} else {
+		return 0;
+	}
 }
 
 const struct track_node *track_next_sensor(const struct track_node *cur,
