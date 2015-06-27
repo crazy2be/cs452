@@ -11,7 +11,7 @@ LIB_SRC_DIR=$(SRC_DIR)/lib
 BENCHMARK_FLAGS = -DBENCHMARK_CACHE -DBENCHMARK_SEND_FIRST -DBENCHMARK_MSG_SIZE=64
 
 CFLAGS  = -g -fPIC -Wall -Werror -Iinclude -I$(SRC_DIR)/lib -std=c99 -O2 $(BENCHMARK_FLAGS) \
-		  -fno-builtin-puts -fno-builtin-fputs -fno-builtin-fputc -fno-builtin-putc
+		  -fno-builtin-puts -fno-builtin-fputs -fno-builtin-fputc -fno-builtin-putc -fverbose-asm
 ARCH_CFLAGS = -mcpu=arm920t -msoft-float
 # -g: include hooks for gdb
 # -mcpu=arm920t: generate code for the 920t architecture
