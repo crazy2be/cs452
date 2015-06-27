@@ -32,11 +32,11 @@ const struct track_node *track_go_forwards(const struct track_node *cur,
 
 static bool break_on_sensor(const struct track_edge *e, void *ctx) {
 	// break if we are leaving a sensor, and it's not the node we started at
-	if (e->src->type == NODE_SENSOR) {
-		int *distance = (int*) ctx;
-		*distance += e->dist;
-		return *distance != e->dist;
+	int *distance = (int*) ctx;
+	if (e->src->type == NODE_SENSOR && *distance != 0) {
+		return 1;
 	} else {
+		*distance += e->dist;
 		return 0;
 	}
 }

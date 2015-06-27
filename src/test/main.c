@@ -7,6 +7,8 @@
 #include <util.h>
 
 #include "min_heap.h"
+#include "track_test.h"
+
 #include "../user/servers.h"
 #include "../user/signal.h"
 #include "../user/trainsrv.h"
@@ -187,6 +189,7 @@ void init_task(void) {
 	hashtable_tests();
 	memcpy_tests();
 	min_heap_tests();
+	track_tests();
 	ASSERT(1);
 	ASSERT(create(-1, child) == CREATE_INVALID_PRIORITY);
 	ASSERT(create(32, child) == CREATE_INVALID_PRIORITY);
