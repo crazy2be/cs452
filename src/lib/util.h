@@ -1,9 +1,14 @@
 #pragma once
 
 #define NULL (void*)0
+#if 0 // For cowan's compiler
 typedef int bool;
 #define false 0
 #define true 1
+#else
+#include <stdbool.h>
+#include <stdint.h>
+#endif
 
 #define MIN(x, y) (((x) < (y)) ? (x) : (y))
 #define MAX(x, y) (((x) > (y)) ? (x) : (y))
