@@ -194,9 +194,12 @@ qemu-start-test: $(TEST_BIN)
 qemu-debug-test: $(TEST_ELF)
 	./scripts/qemu debug $<
 
+sync-clean:
+	ssh uw "rm -rf cs452-kernel"
+
 sync:
 	rsync -avzd --exclude /build --exclude /.git --exclude /writeup . uw:cs452-kernel/
-	ssh uw "bash -c 'cd cs452-kernel && make clean && make ENV=ts7200 install'"
+	ssh uw "bash -c 'cd cs452-kernel && make -j4 ENV=arm920t install'"
 
 all: $(KERNEL_ELF)
 
