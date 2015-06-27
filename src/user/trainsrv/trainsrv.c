@@ -235,6 +235,18 @@ static struct internal_train_state* allocate_train_state(struct trainsrv_state *
 // how long it will take to travel a particular distance, or get the set of
 // currently active trains
 
+static struct position get_estimated_train_position(struct trainsrv_state *state,
+		struct internal_train_state *train_state);
+static void reanchor(struct trainsrv_state *state,
+					 struct internal_train_state *train_state) {
+	train_state->last_known_position = get_estimated_train_position(state, train_state);
+	train_state->last_known_time = time();
+}
+static void reanchor_all(struct trainsrv_state *state) {
+	for (int i = 0; i < state->num_active_trains; i++) {
+		reanchor(state, &state->train_states[i]);
+	}
+}
 static void handle_set_speed(struct trainsrv_state *state, int train_id, int speed) {
 	struct internal_train_state *train_state = get_train_state(state, train_id);
 	if (train_state == NULL) {
@@ -248,6 +260,7 @@ static void handle_set_speed(struct trainsrv_state *state, int train_id, int spe
 	// controller does in this case in terms of actual train speed.
 	// TODO: we need to reanchor in this case
 	if (train_state->current_speed_setting == speed) return;
+	reanchor(state, train_state); // TODO: Deacceration model.
 	train_state->previous_speed_setting = train_state->current_speed_setting;
 	train_state->current_speed_setting = speed;
 	tc_set_speed(train_id, speed);
@@ -261,6 +274,10 @@ static void handle_reverse(struct trainsrv_state *state, int train_id) {
 	if ((train_state != NULL) && (!position_unknown(state, train_id))) {
 		position_reverse(&train_state->last_known_position);
 	}
+	// TODO: This is basically wrong.
+	// We want to reanchor whenever we actually change speed, which happens
+	// twice when we are reversing.
+	reanchor(state, train_state);
 	start_reverse(train_id, train_state->current_speed_setting);
 }
 
@@ -486,6 +503,7 @@ static void trains_server(void) {
 			reply(tid, NULL, 0);
 			break;
 		case SWITCH_SWITCH:
+			reanchor_all(&state);
 			start_switch(req.switch_number, req.direction);
 			switch_set(&state.switches, req.switch_number, req.direction);
 			// TODO: we need to reanchor the trains here
