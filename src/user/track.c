@@ -1,6 +1,8 @@
 #include "track.h"
 #include <assert.h>
 
+struct track_node track[TRACK_MAX];
+
 const struct track_node *track_node_from_sensor(int sensor) {
 	for (int i = 0; i < TRACK_MAX; i++) {
 		if (track[i].type == NODE_SENSOR && track[i].num == sensor) {

@@ -12,7 +12,7 @@ static struct priority_task_queue queue;
 static const unsigned stack_canary[4] = { 0xdeadbeef, 0xdeadbeef, 0xdeadbeef, 0xdeadbeef };
 
 void tasks_init(void) {
-	memset(&tasks, sizeof(tasks), 0);
+	memset(&tasks, 0, sizeof(tasks));
 
 	/* struct prng prng; */
 	// TODO: Could make this some sort of less-deterministic value.

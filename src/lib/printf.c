@@ -135,8 +135,7 @@ struct produce_buffered_state {
 
 static void flush_buffer(struct produce_buffered_state *state) {
 	if (state->i != 0) {
-		state->buf[state->i] = '\0';
-		fputs(state->channel, state->buf);
+		fput_buf(state->buf, state->i, state->channel);
 		state->i = 0;
 	}
 }

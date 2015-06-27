@@ -49,9 +49,9 @@ void sensor_each_new(struct sensor_state *old, struct sensor_state *new,
 
 static void send_sensor_poll(void) {
 #ifdef QEMU
-	fputs(COM1, "Sending sensor poll"EOL);
+	fputs("Sending sensor poll"EOL, COM1);
 #else
-	fputc(COM1, 0x85);
+	fputc(0x85, COM1);
 #endif
 }
 
@@ -94,7 +94,7 @@ void start_sensorsrv(void) {
 	for (;;) {
 		send_sensor_poll();
 		/* printf("%d bytes in the buffer before" EOL, fbuflen(COM1)); */
-		ASSERT(fgets(COM1, (char*) &sensors, 10) >= 0);
+		ASSERT(fgets((char*) &sensors, 10, COM1) >= 0);
 		sensors.ticks = time();
 
 		// notify the tasks which need to know about sensor updates

@@ -45,9 +45,6 @@ void init(void) {
 	stop_servers();
 }
 
-struct track_node track[TRACK_MAX];
-
-
 void fuck_the_police(void) {
 	delay(1000);
 	stop_servers();

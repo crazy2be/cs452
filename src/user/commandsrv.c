@@ -47,16 +47,16 @@ void get_command(char *buf, int buflen, int displaysrv) {
 
 // character helpers
 
-inline int is_alpha(char c) {
+static inline int is_alpha(char c) {
 	return ('a' <= c && c <= 'z') || ('A' <= c && c <= 'Z');
 }
 
-inline int is_whitespace(char c) {
+static inline int is_whitespace(char c) {
 	// null-term counts as whitespace so the end of the line is treated as whitespace
 	return (c == ' ') || (c == '\t') || (c == '\0');
 }
 
-inline int is_digit(char c) {
+static inline int is_digit(char c) {
 	return '0' <= c && c <= '9';
 }
 
