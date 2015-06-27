@@ -67,7 +67,6 @@ void test_init(void) {
 	//calibratesrv();
 	sensorsrv();
 	start_trains();
-	trains_set_speed(12, 5);
 
 	/* printf("Hello world" EOL); */
 	/* char buf[] = {0xE2, 0x94, 0x90}; */
