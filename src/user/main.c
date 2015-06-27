@@ -60,14 +60,13 @@ void test_init(void) {
 
 	start_servers();
 
-	ASSERTOK(create(PRIORITY_MAX, fuck_the_police));
+	//ASSERTOK(create(PRIORITY_MAX, fuck_the_police));
 
 	displaysrv();
 	commandsrv();
 	//calibratesrv();
 	sensorsrv();
 	start_trains();
-	trains_set_speed(12, 5);
 
 	/* printf("Hello world" EOL); */
 	/* char buf[] = {0xE2, 0x94, 0x90}; */

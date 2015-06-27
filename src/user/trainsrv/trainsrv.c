@@ -167,12 +167,47 @@ struct trainsrv_state {
 
 	struct switch_state switches;
 	struct sensor_state sens_prev;
+	int sensors_are_known;
 };
 
 static inline struct internal_train_state* get_train_state(struct trainsrv_state *state, int train_id) {
 	ASSERT(MIN_TRAIN <= train_id && train_id <= MAX_TRAIN);
 	struct internal_train_state *train_state = state->state_for_train[train_id - 1];
 	return train_state;
+}
+
+static void initialize_train_velocity_table(struct internal_train_state *train_state, int train_id) {
+	// our model is v = offset + speed_coef * speed + is_accelerated * is_accelerated_coef
+	// basic linear model fitted in R
+	// all of these are denominated in micrometers
+	int offset, speed_coef, is_accelerated_coef;
+	switch (train_id) {
+	case 12:
+		offset = -3816;
+		speed_coef = 934;
+		is_accelerated_coef = -605;
+		break;
+	case 62:
+		offset = 1159;
+		speed_coef = 357;
+		is_accelerated_coef = -125;
+		break;
+	case 58:
+		offset = -3404;
+		speed_coef = 683;
+		is_accelerated_coef = -315;
+		break;
+	default:
+		memset(train_state->est_velocities, 0, sizeof(*train_state->est_velocities));
+		return;
+	}
+
+	// calculate wild ass guess of the train velocity table
+	for (int i = 0; i < NUM_SPEED_SETTINGS; i++) {
+		int speed = (i + 1) / 2;
+		int is_accelerated = (i + 1) % 2;
+		train_state->est_velocities[i] = offset + speed * speed_coef + is_accelerated * is_accelerated_coef;
+	}
 }
 
 static struct internal_train_state* allocate_train_state(struct trainsrv_state *state, int train_id) {
@@ -184,14 +219,7 @@ static struct internal_train_state* allocate_train_state(struct trainsrv_state *
 
 	// initialize estimated speeds based on train id
 	//int train_scaling_factor = 0;
-	switch (train_id) {
-	default:
-		// TODO
-		memset(train_state->est_velocities, 1, sizeof(*train_state->est_velocities));
-		break;
-	}
-	// TODO: actually get constants from model, and calculate wild ass guess of
-	// the train velocity table
+	initialize_train_velocity_table(train_state, train_id);
 
 	return train_state;
 }
@@ -200,6 +228,18 @@ static struct internal_train_state* allocate_train_state(struct trainsrv_state *
 // how long it will take to travel a particular distance, or get the set of
 // currently active trains
 
+static struct position get_estimated_train_position(struct trainsrv_state *state,
+		struct internal_train_state *train_state);
+static void reanchor(struct trainsrv_state *state,
+					 struct internal_train_state *train_state) {
+	train_state->last_known_position = get_estimated_train_position(state, train_state);
+	train_state->last_known_time = time();
+}
+static void reanchor_all(struct trainsrv_state *state) {
+	for (int i = 0; i < state->num_active_trains; i++) {
+		reanchor(state, &state->train_states[i]);
+	}
+}
 static void handle_set_speed(struct trainsrv_state *state, int train_id, int speed) {
 	struct internal_train_state *train_state = get_train_state(state, train_id);
 	if (train_state == NULL) {
@@ -212,6 +252,7 @@ static void handle_set_speed(struct trainsrv_state *state, int train_id, int spe
 	// Just don't allow this so that we don't have to think about what the train
 	// controller does in this case in terms of actual train speed.
 	if (train_state->current_speed_setting == speed) return;
+	reanchor(state, train_state); // TODO: Deacceration model.
 	train_state->previous_speed_setting = train_state->current_speed_setting;
 	train_state->current_speed_setting = speed;
 	tc_set_speed(train_id, speed);
@@ -225,29 +266,62 @@ static void handle_reverse(struct trainsrv_state *state, int train_id) {
 	if ((train_state != NULL) && (!position_unknown(state, train_id))) {
 		position_reverse(&train_state->last_known_position);
 	}
+	// TODO: This is basically wrong.
+	// We want to reanchor whenever we actually change speed, which happens
+	// twice when we are reversing.
+	reanchor(state, train_state);
 	start_reverse(train_id, train_state->current_speed_setting);
 }
-static void handle_sensors(struct trainsrv_state *state, struct sensor_state sens) {
-	struct internal_train_state *train_state = NULL;
-	if (state->unknown_train_id > 0) {
-		train_state = get_train_state(state, state->unknown_train_id);
-	} else if (state->num_active_trains < 1) {
-		return;
-	} else {
-		train_state = state->state_for_train[0];
-	}
-	// TODO: Currently this is horribly naive, and will only work when a
-	// single train is on the track. It's also not robust against anything.
-	int sensor = -1;
-	void sens_handler(int sensor_) {
-		//ASSERT(sensor == -1);
-		sensor = sensor_;
-	}
-	sensor_each_new(&state->sens_prev, &sens, sens_handler);
-	if (sensor == -1) return;
+
+void sensor_cb(int sensor, void *ctx) {
+	int *sensor_dest= (int*) ctx;
+	*sensor_dest = sensor;
+}
+
+static void update_train_position_from_sensor(struct trainsrv_state *state,
+		struct internal_train_state *train_state,
+		int sensor, int ticks) {
+
+	// if we had an estimated position for this train, ideally it should be estimated as
+	// being very near to the tripped sensor when this happens
+	/* struct train_state estimated_train_state; */
+	/* int estimated_sensors_passed; */
+ 
+	/* static void get_estimated_train_position(state, train_state, */
+	/* 		&estimated_train_state, &estimated_sensors_passed); */
+
+	// TODO: produce feedback about how much we were off by
+
 	train_state->last_known_position.edge = &track_node_from_sensor(sensor)->edge[0];
 	train_state->last_known_position.displacement = 0;
-	train_state->last_known_time = sens.ticks;
+	train_state->last_known_time = ticks;
+}
+
+static void handle_sensors(struct trainsrv_state *state, struct sensor_state sens) {
+	if (state->sensors_are_known) {
+		struct internal_train_state *train_state = NULL;
+		if (state->unknown_train_id > 0) {
+			train_state = get_train_state(state, state->unknown_train_id);
+		} else if (state->num_active_trains >= 1) {
+			// TODO: Currently this is horribly naive, and will only work when a
+			// single train is on the track. It's also not robust against anything.
+			train_state = state->state_for_train[0];
+		} else {
+			return;
+		}
+
+		ASSERT(train_state != NULL);
+
+
+		// TODO: this doesn't work if multiple sensors are tripped at the same time
+		int sensor = -1;
+		sensor_each_new(&state->sens_prev, &sens, sensor_cb, &sensor);
+		if (sensor == -1) return;
+
+		update_train_position_from_sensor(state, train_state, sensor, sens.ticks);
+	} else {
+		state->sensors_are_known = 1;
+	}
 	state->sens_prev = sens;
 }
 
@@ -265,48 +339,69 @@ static int train_velocity(struct trainsrv_state *state, int train) {
 static int handle_query_arrival(struct trainsrv_state *state, int train, int dist) {
 	return (1000 * dist) / train_velocity(state, train);
 }
-static struct train_state handle_query_spatials(struct trainsrv_state *state, int train) {
-	struct internal_train_state *train_state = get_train_state(state, train);
-	ASSERT(train_state != NULL);
+struct bafc {
+	const struct track_edge *last_edge;
+	int dist_travelled;
+};
+// travel down the track for that many mm, and see which node we end at
+bool break_after_distance(const struct track_edge *e, void *ctx) {
+	struct position *pos = (struct position*)ctx;
 
-	if (position_is_uninitialized(&train_state->last_known_position)) {
+	pos->edge = e;
+
+	// Here, displacement is really the total distance travelled by the train in
+	// the time interval since we last knew it's position
+	// Note that this violates the usual invariant of displacement < edge->dist
+	// We move to the next edge so long as our displacement is greater than the
+	// length of the edge we're currently on.
+	if (pos->displacement >= e->dist) {
+		pos->displacement -= e->dist;
+		return 0;
+	} else {
+		return 1;
+	}
+}
+
+static struct position get_estimated_train_position(struct trainsrv_state *state,
+		struct internal_train_state *train_state) {
+
+	struct position position = train_state->last_known_position;
+
+	if (position_is_uninitialized(&position)) {
 		// the position is unknown, so just return unknown
-		return (struct train_state){train_state->last_known_position, 0};
+		return position;
 	}
 
 	// find how much time has passed since the recorded position on the internal
 	// train state, and how far we expect to have moved since then
-	int delta_t = time() - train_state->last_known_time;
-	int velocity = train_velocity_from_state(train_state);
-	int dist_travelled = delta_t * velocity / 1000 +
-		train_state->last_known_position.displacement;
-
+	const int delta_t = time() - train_state->last_known_time;
+	const int velocity = train_velocity_from_state(train_state);
 	const struct track_edge *last_edge = train_state->last_known_position.edge;
-	const struct track_node *current = last_edge->src;
 
-	if (dist_travelled >= last_edge->dist) {
-		dist_travelled -= last_edge->dist;
-		current = last_edge->dest;
+	position.displacement += delta_t * velocity / 1000;
 
-		// travel down the track for that many mm, and see which node we end at
-		bool break_after_distance(const struct track_edge *e) {
-			last_edge = e;
-			if (dist_travelled >= e->dist) {
-				dist_travelled -= e->dist;
-				return 0;
-			} else {
-				return 1;
-			}
-		}
-
-		current = track_go_forwards(current, &state->switches, break_after_distance);
+	// we special case the first edge like this since track_go_forwards takes a node, but we
+	// start part of the way down an *edge*
+	// If we didn't do this, if the starting node was a branch, we could be affected by the
+	// direction of the switch even though we've passed the switch already
+	if (position.displacement >= last_edge->dist) {
+		position.displacement -= last_edge->dist;
+		track_go_forwards(last_edge->dest, &state->switches, break_after_distance, &position);
 	}
 
+	return position;
+}
+
+static struct train_state handle_query_spatials(struct trainsrv_state *state, int train) {
+	struct internal_train_state *train_state = get_train_state(state, train);
+	ASSERT(train_state != NULL);
+
 	return (struct train_state) {
-		{ last_edge, dist_travelled }, // position
-		velocity,
+		get_estimated_train_position(state, train_state),
+		train_velocity_from_state(train_state),
 	};
 }
+
 static void handle_query_active(struct trainsrv_state *state, int *trains) {
 	memset(trains, 0, MAX_ACTIVE_TRAINS*sizeof(*trains));
 	for (int i = 0; i < NUM_TRAIN; i++) {
@@ -336,7 +431,6 @@ static void trains_init(struct trainsrv_state *state) {
 
 static void trains_server(void) {
 	register_as("trains");
-	printf("Trainsrv tid: %d\n", tid());
 	struct trainsrv_state state;
 
 	trains_init(&state);
@@ -377,6 +471,7 @@ static void trains_server(void) {
 			reply(tid, NULL, 0);
 			break;
 		case SWITCH_SWITCH:
+			reanchor_all(&state);
 			start_switch(req.switch_number, req.direction);
 			switch_set(&state.switches, req.switch_number, req.direction);
 			/* displaysrv_update_switch(displaysrv, &switches); */

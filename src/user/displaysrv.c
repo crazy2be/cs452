@@ -453,12 +453,13 @@ static void update_train_states(int active_trains, struct display_train_state *a
 			const char *pos_name = active_train_states[i].state.position.edge->src->name;
 			const int velocity = active_train_states[i].state.velocity;
 
-			int distance_to_next;
-			const struct track_node *next_node = track_next_sensor(active_train_states[i].state.position.edge->src, switches, &distance_to_next);
+			int distance_to_next = -1;
+			const struct track_node *next_node = active_train_states[i].state.position.edge->src;
+			next_node = track_next_sensor(active_train_states[i].state.position.edge->src, switches, &distance_to_next);
 
 			printf("\e[%d;%dHTrain %d, %d mm past %s, vel %d, %d to %s",
 				term_col, term_row, train_id, displacement, pos_name, velocity,
-				distance_to_next, next_node->name);
+				distance_to_next - displacement, next_node->name);
 
 		}
 	}

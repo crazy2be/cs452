@@ -38,11 +38,11 @@ void sensor_repr(int n, char *buf) {
 }
 
 void sensor_each_new(struct sensor_state *old, struct sensor_state *new,
-		sensor_new_handler cb) {
+		sensor_new_handler cb, void *ctx) {
 	for (int i = 0; i <= SENSOR_COUNT; i++) {
 		int s = sensor_get(new, i);
 		if (s && s != sensor_get(old, i)) {
-			cb(i);
+			cb(i, ctx);
 		}
 	}
 }

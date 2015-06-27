@@ -11,7 +11,7 @@ LIB_SRC_DIR=$(SRC_DIR)/lib
 BENCHMARK_FLAGS = -DBENCHMARK_CACHE -DBENCHMARK_SEND_FIRST -DBENCHMARK_MSG_SIZE=64
 
 CFLAGS  = -g -fPIC -Wall -Werror -Iinclude -I$(SRC_DIR)/lib -std=c99 -O2 $(BENCHMARK_FLAGS) \
-		  -fno-builtin-puts -fno-builtin-fputs -fno-builtin-fputc -fno-builtin-putc
+		  -fno-builtin-puts -fno-builtin-fputs -fno-builtin-fputc -fno-builtin-putc -fverbose-asm
 ARCH_CFLAGS = -mcpu=arm920t -msoft-float
 # -g: include hooks for gdb
 # -mcpu=arm920t: generate code for the 920t architecture
@@ -54,7 +54,8 @@ export PATH := /u/wbcowan/gnuarm-4.0.2/libexec/gcc/arm-elf/4.0.2:/u/wbcowan/gnua
 CC = gcc
 AS = as
 LD = ld
-LDFLAGS = -init main -Map $(MAP) -T $(LINKER_SCRIPT) -N -L/u/wbcowan/gnuarm-4.0.2/lib/gcc/arm-elf/4.0
+LINKER_SCRIPT = ts7200.ld
+LDFLAGS = -init main -Map $(MAP) -T $(LINKER_SCRIPT) -N -L/u/wbcowan/gnuarm-4.0.2/lib/gcc/arm-elf/4.0.2
 else
 export PATH := /u1/jmcgirr/arm-toolchain/current/bin:$(PATH)
 CC = arm-none-eabi-gcc
@@ -193,9 +194,12 @@ qemu-start-test: $(TEST_BIN)
 qemu-debug-test: $(TEST_ELF)
 	./scripts/qemu debug $<
 
+sync-clean:
+	ssh uw "rm -rf cs452-kernel"
+
 sync:
 	rsync -avzd --exclude /build --exclude /.git --exclude /writeup . uw:cs452-kernel/
-	ssh uw "bash -c 'cd cs452-kernel && make clean && make ENV=ts7200 install'"
+	ssh uw "bash -c 'cd cs452-kernel && make -j4 ENV=arm920t install'"
 
 all: $(KERNEL_ELF)
 
