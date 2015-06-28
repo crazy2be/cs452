@@ -38,7 +38,36 @@ void memcpy_tests(void) {
 			}
 		}
 	}
+}
 
+void memset_tests(void) {
+	const unsigned bufsz = 80;
+	unsigned char buf[bufsz];
+	const char init = '\0';
+	const char filler = '@';
+
+	for (int lo = 0; lo < bufsz; lo++) {
+		for (int hi = lo; hi < bufsz; hi++) {
+			int len = hi - lo + 1;
+
+			// naive memset to clear out the memory
+			for (int i = 0; i < bufsz; i++) buf[i] = init;
+
+			memset(buf + lo, filler, len);
+			for (int i = 0; i < bufsz; i++) {
+				const char expected = (lo <= i && i <= hi) ? filler : init;
+				ASSERTF(buf[i] == expected, "buf[%d] = %d != %d", i, buf[i], expected);
+			}
+		}
+	}
+}
+
+void sqrti_tests(void) {
+	for (unsigned n = 0; n < 1000; n++) {
+		unsigned m = sqrti(n);
+		ASSERT(m * m <= n);
+		ASSERT((m+1) * (m+1) > n);
+	}
 }
 
 void lssb_tests(void) {
@@ -188,6 +217,8 @@ void init_task(void) {
 	lssb_tests();
 	hashtable_tests();
 	memcpy_tests();
+	memset_tests();
+	sqrti_tests();
 	min_heap_tests();
 	track_tests();
 	ASSERT(1);
