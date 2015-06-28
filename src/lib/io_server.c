@@ -66,24 +66,24 @@ static void transmit(int notifier_tid, struct char_rbuf *buf) {
 	int msg_len = MIN(sizeof(buf->buf) - buf->i, buf->l);
 	msg_len = MIN(TX_BUFSZ, msg_len);
 
-	try_reply(notifier_tid, msg_start, msg_len);
+	reply(notifier_tid, msg_start, msg_len);
 	char_rbuf_drop(buf, msg_len);
 }
 
-static int try_receive_data(int tid, struct char_rbuf *buf, int len) {
+static int receive_data(int tid, struct char_rbuf *buf, int len) {
 	char reply_buf[MAX_STR_LEN];
 	int i;
 	for (i = 0; i < len && buf->l > 0; i++) {
 		reply_buf[i] = char_rbuf_take(buf);
 	}
-	try_reply(tid, reply_buf, i);
+	reply(tid, reply_buf, i);
 	return len;
 }
 
 static int notifier_get_channel(int server_tid) {
 	int channel, tid;
-	try_receive(&tid, &channel, sizeof(channel));
-	try_reply(tid, NULL, 0);
+	receive(&tid, &channel, sizeof(channel));
+	reply(tid, NULL, 0);
 	return channel;
 }
 
@@ -96,10 +96,10 @@ static void tx_notifier(void) {
 
 	for (;;) {
 		int len = try_send(parent, &req, sizeof(req), buf, TX_BUFSZ);
-		if (len == 0) continue; // try_await behaves badly if you try_send an empty buffer
+		if (len == 0) continue; // await behaves badly if you send an empty buffer
 		else if (len < 0) break; // quit if the server shut down
 		ASSERT(evt == EID_COM1_WRITE || evt == EID_COM2_WRITE);
-		try_await(evt, buf, len);
+		await(evt, buf, len);
 	}
 }
 
@@ -111,7 +111,7 @@ static void rx_notifier(void) {
 
 	for (;;) {
 		ASSERT(evt == EID_COM1_READ || evt == EID_COM2_READ);
-		try_await(evt, buf + 4, RX_BUFSZ);
+		await(evt, buf + 4, RX_BUFSZ);
 		buf[0] = IO_RX_NTFY;
 		int err = try_send(parent, buf, sizeof(buf), &resp, sizeof(resp));
 		if (err < 0) break; // quit if the server shut down
@@ -122,7 +122,7 @@ static void io_server_run() {
 	// buffers to accumulate data
 	struct char_rbuf tx_buf, rx_buf;
 
-	// tasks try_awaiting IO (the one at the front of the queue is currently being
+	// tasks awaiting IO (the one at the front of the queue is currently being
 	// serviced)
 	struct io_rbuf rx_waiters;
 
@@ -142,7 +142,7 @@ static void io_server_run() {
 		struct io_request req;
 		int tid;
 
-		int msg_len = try_receive(&tid, &req, sizeof(req));
+		int msg_len = receive(&tid, &req, sizeof(req));
 		ASSERT(msg_len >= 1);
 
 		switch (req.type) {
@@ -152,7 +152,7 @@ static void io_server_run() {
 			ASSERT(msg_len >= 0); // TODO make this an error message
 
 			resp = 0;
-			try_reply(tid, &resp, sizeof(resp));
+			reply(tid, &resp, sizeof(resp));
 
 			for (int i = 0; i < msg_len; i++) {
 				ASSERT(!char_rbuf_full(&tx_buf));
@@ -177,7 +177,7 @@ static void io_server_run() {
 			ASSERT(shutdown_tid < 0 && "Got new RX request while shutting down");
 			ASSERT(msg_len == 8);
 			if (bytes_rx >= req.u.len) {
-				bytes_rx -= try_receive_data(tid, &rx_buf, req.u.len);
+				bytes_rx -= receive_data(tid, &rx_buf, req.u.len);
 			} else {
 				temp = (struct io_blocked_task) {
 					.tid = tid,
@@ -188,9 +188,9 @@ static void io_server_run() {
 			break;
 		case IO_RX_NTFY:
 			if (shutdown_tid < 0) {
-				// immediately try_reply to notifier to get more input
+				// immediately reply to notifier to get more input
 				resp = 0;
-				try_reply(tid, &resp, sizeof(resp));
+				reply(tid, &resp, sizeof(resp));
 			} else {
 				// we're shutting down - just drop the whole thing on the floor
 				// nobody should be listening for this input anyway
@@ -210,7 +210,7 @@ static void io_server_run() {
 				task = io_rbuf_empty(&rx_waiters) ? NULL : io_rbuf_peek(&rx_waiters);
 				if (!task || bytes_rx < task->byte_count) break;
 
-				bytes_rx -= try_receive_data(task->tid, &rx_buf, task->byte_count);
+				bytes_rx -= receive_data(task->tid, &rx_buf, task->byte_count);
 				io_rbuf_drop(&rx_waiters, 1);
 			}
 			break;
@@ -221,11 +221,11 @@ static void io_server_run() {
 			// we now need to wait for all characters of output to be flushed
 			break;
 		case IO_DUMP:
-			try_reply(tid, &rx_buf.l, sizeof(rx_buf.l));
+			reply(tid, &rx_buf.l, sizeof(rx_buf.l));
 			char_rbuf_init(&rx_buf);
 			break;
 		case IO_RXBUFLEN:
-			try_reply(tid, &rx_buf.l, sizeof(rx_buf.l));
+			reply(tid, &rx_buf.l, sizeof(rx_buf.l));
 			break;
 		default:
 			ASSERT(0 && "Unknown request made to IO server");
@@ -235,7 +235,7 @@ static void io_server_run() {
 
 cleanup:
 	ASSERT(char_rbuf_empty(&tx_buf));
-	try_reply(shutdown_tid, NULL, 0);
+	reply(shutdown_tid, NULL, 0);
 }
 
 #define NOTIFIER_COUNT 2
@@ -245,157 +245,115 @@ static void io_server_init(void) {
 	int channel;
 	int tid;
 
-	// our parent immediately try_sends us some bootstrap info
-	try_receive(&tid, &channel, sizeof(channel));
+	// our parent immediately sends us some bootstrap info
+	receive(&tid, &channel, sizeof(channel));
 	register_as((channel == COM1) ? COM1_SRV_NAME : COM2_SRV_NAME);
-	try_reply(tid, NULL, 0);
+	reply(tid, NULL, 0);
 
 	// start up notifiers, and give them their bootstrap info in turn
 	static void (*notifiers[NOTIFIER_COUNT])(void) = { rx_notifier, tx_notifier };
 
 	for (int i = 0; i < NOTIFIER_COUNT; i++) {
-		tid = try_create(LOWER(PRIORITY_MAX, 2), notifiers[i]);
-		ASSERT(tid > 0);
-		ASSERT(try_send(tid, &channel, sizeof(channel), NULL, 0) == 0);
+		tid = create(LOWER(PRIORITY_MAX, 2), notifiers[i]);
+		send(tid, &channel, sizeof(channel), NULL, 0);
 	}
 
 	io_server_run();
 }
 
 void ioserver(const int priority, const int channel) {
-	int tid = try_create(priority, io_server_init);
-	try_send(tid, &channel, sizeof(channel), NULL, 0);
+	int tid = create(priority, io_server_init);
+	send(tid, &channel, sizeof(channel), NULL, 0);
 }
 
 //
 // All of the code below is called by clients to the IO server
 //
-
 static int io_server_tid(int channel) {
 	static int tids[2] = {-1 , -1};
-	if (tids[channel] < 0) {
-		switch (channel) {
-		case COM1:
-			tids[channel] = whois(COM1_SRV_NAME);
-			break;
-		case COM2:
-			tids[channel] = whois(COM2_SRV_NAME);
-			break;
-		default:
-			ASSERT(0 && "No IO server for unknown COM channel");
-			break;
-		}
-	}
+	static const char* srv_names[2] = {COM1_SRV_NAME, COM2_SRV_NAME};
+	ASSERT(channel >= 0 && channel <= 1);
+	if (tids[channel] < 0) tids[channel] = whois(srv_names[channel]);
 	return tids[channel];
 }
 
-
 // bw analogues to the functions below
-static int bw_putc(const char c, const int channel) {
+static void bw_putc(const char c, const int channel) {
 	/* KASSERT(!usermode()); */
 	while(!uart_canwritefifo(channel));
 	uart_write(channel, c);
-	return 0;
 }
-
-static int bw_puts(const char *str, const int channel) {
+static void bw_puts(const char *str, const int channel) {
 	/* KASSERT(!usermode()); */
 	while (*str) bw_putc(*str++, channel);
-	return 0;
 }
-
-static int bw_put_buf(const char *buf, int len, const int channel) {
+static void bw_put_buf(const char *buf, int len, const int channel) {
 	while (len-- > 0) bw_putc(*buf++, channel);
-	return 0;
 }
-
-static int bw_gets(char *buf, int len, const int channel) {
+static void bw_gets(char *buf, int len, const int channel) {
 	/* KASSERT(!usermode()); */
 	while (len-- > 0) {
 		while (!uart_canread(channel));
 		*buf++ = uart_read(channel);
 	}
-	return 0;
 }
 
-int fput_buf(const char *buf, int buflen, const int channel) {
-	if (channel == COM2_DEBUG) return bw_put_buf(buf, buflen, COM2);
-	struct io_request req;
-	unsigned resp;
+// functions which interact with the io server
+void fput_buf(const char *buf, int buflen, const int channel) {
+	if (channel == COM2_DEBUG) { bw_put_buf(buf, buflen, COM2); return; }
 
 	KASSERT(usermode());
-
+	struct io_request req;
 	req.type = IO_TX;
 	memcpy(req.u.buf, buf, buflen);
 
+	unsigned resp = -1;
 	// TODO: offsetof() ?
 	unsigned msg_len = 4 + buflen; // need to worry about alignment when doing this calculation
-	int err = try_send(io_server_tid(channel), &req, msg_len, &resp, sizeof(resp));
-	ASSERT(err >= 0);
-
-	return (err < 0) ? -1 : 0;
+	send(io_server_tid(channel), &req, msg_len, &resp, sizeof(resp));
 }
-// functions which interact with the io server
-int fputs(const char *str, const int channel) {
-	if (channel == COM2_DEBUG) return bw_puts(str, COM2);
-
-	KASSERT(usermode());
+void fputs(const char *str, const int channel) {
+	if (channel == COM2_DEBUG) { bw_puts(str, COM2); return; }
+	ASSERT(usermode());
 	int len = strlen(str);
 	ASSERT(len <= MAX_STR_LEN);
-	return fput_buf(str, len, channel);
+	fput_buf(str, len, channel);
 }
-
-int fputc(const char c, const int channel) {
-	if (channel == COM2_DEBUG) return bw_putc(c, COM2);
-
-	KASSERT(usermode());
-	return fput_buf(&c, 1, channel);
+void fputc(const char c, const int channel) {
+	if (channel == COM2_DEBUG) { bw_putc(c, COM2); return; }
+	ASSERT(usermode());
+	fput_buf(&c, 1, channel);
 }
-
-int fgets(char *buf, int len, const int channel) {
-	if (channel == COM2_DEBUG) return bw_gets(buf, len, COM2);
-
-	KASSERT(usermode());
-	struct io_request req;
-
-	req.type = IO_RX;
-	req.u.len = len;
-
+void fgets(char *buf, int len, const int channel) {
+	if (channel == COM2_DEBUG) { bw_gets(buf, len, COM2); return; }
+	ASSERT(usermode());
+	struct io_request req = (struct io_request) { .type = IO_RX, .u.len = len };
 	unsigned msg_len = sizeof(req) - sizeof(req.u.buf) + sizeof(req.u.len);
-	int err = try_send(io_server_tid(channel), &req, msg_len, buf, len);
-	ASSERT(err >= 0);
-
-	return err;
+	send(io_server_tid(channel), &req, msg_len, buf, len);
 }
-
 int fgetc(int channel) {
-	char c;
-	int err = fgets(&c, 1, channel);
-	return (err < 0) ? err : c;
+	char c = -1;
+	fgets(&c, 1, channel);
+	return c;
 }
-
 int fbuflen(const int channel) {
 	struct io_request req;
 	req.type = IO_RXBUFLEN;
 	unsigned msg_len = sizeof(req) - sizeof(req.u.buf) + sizeof(req.u.len);
 	int resp;
-	int err = try_send(io_server_tid(channel), &req, msg_len, &resp, sizeof(resp));
-	ASSERT(err >= 0);
+	send(io_server_tid(channel), &req, msg_len, &resp, sizeof(resp));
 	return resp;
 }
-
 int fdump(const int channel) {
 	struct io_request req;
 	req.type = IO_DUMP;
 	unsigned msg_len = sizeof(req) - sizeof(req.u.buf) + sizeof(req.u.len);
 	int resp;
-	int err = try_send(io_server_tid(channel), &req, msg_len, &resp, sizeof(resp));
-	ASSERT(err >= 0);
-	return err;
+	send(io_server_tid(channel), &req, msg_len, &resp, sizeof(resp));
+	return resp;
 }
-
 // blocks until all output in the buffers is flushed, and the server is shutting down
 void ioserver_stop(const int channel) {
 	unsigned char msg = IO_STOP;
-	try_send(io_server_tid(channel), &msg, sizeof(msg), NULL, 0);
+	send(io_server_tid(channel), &msg, sizeof(msg), NULL, 0);
 }

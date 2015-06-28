@@ -11,14 +11,14 @@
 #endif
 
 // all of these functions are blocking
-int fput_buf(const char *buf, int buflen, const int channel);
-int fputs(const char *str, const int channel);
-int fputc(const char c, const int channel);
+void fput_buf(const char *buf, int buflen, const int channel);
+void fputs(const char *str, const int channel);
+void fputc(const char c, const int channel);
 
 // gets currently blocks until the *entire* buffer is filled with input
 // we'll want to change this for COM2, so that it will return as soon as ENTER
 // is hit
-int fgets(char *buf, int len, const int channel);
+void fgets(char *buf, int len, const int channel);
 int fgetc(const int channel);
 
 int fprintf(int channel, const char *format, ...);
