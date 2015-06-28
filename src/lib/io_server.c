@@ -291,20 +291,25 @@ static int io_server_tid(int channel) {
 
 
 // bw analogues to the functions below
-int bw_putc(const char c, const int channel) {
+static int bw_putc(const char c, const int channel) {
 	/* KASSERT(!usermode()); */
 	while(!uart_canwritefifo(channel));
 	uart_write(channel, c);
 	return 0;
 }
 
-int bw_puts(const char *str, const int channel) {
+static int bw_puts(const char *str, const int channel) {
 	/* KASSERT(!usermode()); */
 	while (*str) bw_putc(*str++, channel);
 	return 0;
 }
 
-int bw_gets(char *buf, int len, const int channel) {
+static int bw_put_buf(const char *buf, int len, const int channel) {
+	while (len-- > 0) bw_putc(*buf++, channel);
+	return 0;
+}
+
+static int bw_gets(char *buf, int len, const int channel) {
 	/* KASSERT(!usermode()); */
 	while (len-- > 0) {
 		while (!uart_canread(channel));
@@ -314,8 +319,11 @@ int bw_gets(char *buf, int len, const int channel) {
 }
 
 int fput_buf(const char *buf, int buflen, const int channel) {
+	if (channel == COM2_DEBUG) return bw_put_buf(buf, buflen, COM2);
 	struct io_request req;
 	unsigned resp;
+
+	KASSERT(usermode());
 
 	req.type = IO_TX;
 	memcpy(req.u.buf, buf, buflen);
@@ -331,9 +339,7 @@ int fput_buf(const char *buf, int buflen, const int channel) {
 int fputs(const char *str, const int channel) {
 	if (channel == COM2_DEBUG) return bw_puts(str, COM2);
 
-	if (!usermode()) {
-		KASSERT(0);
-	}
+	KASSERT(usermode());
 	int len = strlen(str);
 	ASSERT(len <= MAX_STR_LEN);
 	return fput_buf(str, len, channel);

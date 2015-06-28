@@ -233,33 +233,58 @@ struct specific_node_context {
 
 static bool break_at_specific_node(const struct track_edge *e, void *context_) {
 	struct specific_node_context *context = (struct specific_node_context*) context_;
-	context->distance += e->dist;
-	return e->dest == context->node;
+	if (e->src == context->node) {
+		return 1;
+	} else {
+		context->distance += e->dist;
+		return 0;
+	}
+}
+
+
+#define SILENT_ERROR -1
+#define TELEPORT_ERROR -2
+int calculate_actual_velocity(struct internal_train_state *train_state,
+		const struct track_node *sensor_node, const struct switch_state *switches, int ticks) {
+
+	ASSERT(sensor_node != NULL);
+
+	if (position_is_uninitialized(&train_state->last_known_position)) return SILENT_ERROR;
+
+	const int delta_t = ticks - train_state->last_known_time;
+
+	if (delta_t == 0) return SILENT_ERROR;
+
+	// calculate how far the train went since we last saw it
+	// this should require no change for TC2's robustness against errors, since we want to
+	// do sensor attribution before this function is even called
+	struct specific_node_context context = { sensor_node, - train_state->last_known_position.displacement };
+	const struct track_node *ending_node = track_go_forwards(train_state->last_known_position.edge->src,
+		switches, break_at_specific_node, &context);
+	if (ending_node != sensor_node) {
+		// if there is no path from the last position to this node, either because
+		// we entered a cycle, or hit an exit node
+		return TELEPORT_ERROR;
+	}
+
+	ASSERT(ending_node != NULL);
+
+	const int actual_distance = context.distance;
+	ASSERT(actual_distance >= 0);
+
+	return (actual_distance * 1000) / delta_t;
 }
 
 static void update_train_velocity_estimate(const struct trainsrv_state *state, struct internal_train_state *train_state,
 		const struct track_node *sensor_node, int ticks) {
 
-	if (position_is_uninitialized(&train_state->last_known_position)) return;
-
-	const int delta_t = ticks - train_state->last_known_time;
-
-	if (delta_t == 0) {
-		displaysrv_console_feedback(state->displaysrv_tid, "Supposedly took 0 time to travel between sensors");
-		return;
-	}
-
-	// calculate how far the train went since we last saw it
-	struct specific_node_context context = { sensor_node, 0 };
-	if (track_go_forwards(train_state->last_known_position.edge->src,
-				&state->switches, break_at_specific_node, &context) == NULL) {
-		// if there is no path from the last position to this node
+	const int actual_velocity = calculate_actual_velocity(train_state, sensor_node, &state->switches, ticks);
+	if (actual_velocity == TELEPORT_ERROR) {
 		displaysrv_console_feedback(state->displaysrv_tid, "The train supposedly teleported");
 		return;
+	} else if (actual_velocity == SILENT_ERROR) {
+		return;
 	}
-
-	const int actual_distance = context.distance;
-	const int actual_velocity = (actual_distance * 1000) / delta_t;
 
 	// v' = (1 - alpha) * v + alpha * v_actual
 	// empirically chosen to give a good update
@@ -331,7 +356,7 @@ void update_switch(struct trainsrv_state *state, int sw, enum sw_direction dir) 
 	switch_set(&state->switches, sw, dir);
 }
 
-void trains_init(struct trainsrv_state *state) {
+void trainsrv_state_init(struct trainsrv_state *state) {
 	memset(state, 0, sizeof(*state));
 	for (int i = 1; i <= 18; i++) {
 		tc_switch_switch(i, CURVED);
