@@ -88,7 +88,7 @@ static void initialize_train_velocity_table(struct internal_train_state *train_s
 		is_accelerated_coef = -315;
 		break;
 	default:
-		memset(train_state->est_velocities, 0, sizeof(*train_state->est_velocities));
+		memset(train_state->est_velocities, 1, sizeof(*train_state->est_velocities));
 		return;
 	}
 
@@ -98,6 +98,15 @@ static void initialize_train_velocity_table(struct internal_train_state *train_s
 		int is_accelerated = (i + 1) % 2;
 		train_state->est_velocities[i] = offset + speed * speed_coef + is_accelerated * is_accelerated_coef;
 	}
+	// Useful speeds for debugging!
+	train_state->est_velocities[0] = 1; // Avoid div/0
+	train_state->est_velocities[1] = 10;
+	train_state->est_velocities[2] = 20;
+	train_state->est_velocities[3] = 30;
+	train_state->est_velocities[4] = 40;
+	train_state->est_velocities[5] = 50;
+	train_state->est_velocities[6] = 60;
+	train_state->est_velocities[7] = 70;
 }
 
 static struct internal_train_state* allocate_train_state(struct trainsrv_state *state, int train_id) {
