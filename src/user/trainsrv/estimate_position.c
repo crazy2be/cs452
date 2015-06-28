@@ -224,8 +224,12 @@ struct specific_node_context {
 
 static bool break_at_specific_node(const struct track_edge *e, void *context_) {
 	struct specific_node_context *context = (struct specific_node_context*) context_;
-	context->distance += e->dist;
-	return e->dest == context->node;
+	if (e->src == context->node) {
+		return 1;
+	} else {
+		context->distance += e->dist;
+		return 0;
+	}
 }
 
 

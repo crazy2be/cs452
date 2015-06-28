@@ -31,6 +31,7 @@ static void test_actual_velocity(void) {
 	memset(&ts, 0, sizeof(ts));
 	struct switch_state switches;
 	memset(&switches, 0, sizeof(switches));
+	int actual_velocity;
 
 	ASSERT(-1 == calculate_actual_velocity(&ts, d12, &switches, 67)); // test uninitialized case
 
@@ -38,7 +39,8 @@ static void test_actual_velocity(void) {
 	ts.last_known_position.edge = &c15->edge[0];
 	ts.last_known_position.displacement = 0;
 	ts.last_known_time = 0;
-	ASSERT(4040 == calculate_actual_velocity(&ts, d12, &switches, 100));
+	actual_velocity = calculate_actual_velocity(&ts, d12, &switches, 100);
+	ASSERTF(4040 == actual_velocity, "actual_velocity = %d", actual_velocity);
 
 	// start at a non-zero displacement
 	ts.last_known_position.edge = &c15->edge[0];
@@ -46,21 +48,20 @@ static void test_actual_velocity(void) {
 	ts.last_known_time = 0;
 	ASSERT(4000 == calculate_actual_velocity(&ts, d12, &switches, 100));
 
-	/* ASSERT(-1 == calculate_actual_velocity(&ts, d12, &switches, 0)); // 0 delta_t case */
+	ASSERT(-1 == calculate_actual_velocity(&ts, d12, &switches, 0)); // 0 delta_t case
 
 	(void) b8;
 	// trip a sensor at a position not reachable from the previous position (the teleport case)
-	/* ts.last_known_position.edge = &b8->edge[0]; */
-	/* ts.last_known_position.displacement = 0; */
-	/* ts.last_known_time = 0; */
-	/* printf("actual_speed = %d", calculate_actual_velocity(&ts, d12, &switches, 100)); */
-	/* ASSERT(-2 == calculate_actual_velocity(&ts, d12, &switches, 100)); */
+	ts.last_known_position.edge = &b8->edge[0];
+	ts.last_known_position.displacement = 0;
+	ts.last_known_time = 0;
+	printf("actual_speed = %d", calculate_actual_velocity(&ts, d12, &switches, 100));
+	ASSERT(-3 == calculate_actual_velocity(&ts, d12, &switches, 100));
 
 }
 
 void track_tests(void) {
 	init_tracka(track);
 	test_next_sensor();
-	(void) test_actual_velocity;
-	/* test_actual_velocity(); */
+	test_actual_velocity();
 }
