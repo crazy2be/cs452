@@ -562,9 +562,9 @@ void displaysrv_start(void) {
 }
 
 void displaysrv(void) {
-	int tid = try_create(HIGHER(PRIORITY_MIN, 1), displaysrv_start);
+	int tid = create(HIGHER(PRIORITY_MIN, 1), displaysrv_start);
 	// block until displaysrv has registered itself with the nameserver
-	ASSERT(signal_try_send(tid) == 0);
+	signal_send(tid);
 }
 
 // external interface to displaysrv

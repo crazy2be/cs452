@@ -78,7 +78,7 @@ void try_sending_task(void) {
 		ASSERT(rep.sum == msg.a + msg.b);
 		ASSERT(rep.prod == msg.a * msg.b);
 	}
-	signal_try_send(parent_tid());
+	signal_send(parent_tid());
 }
 
 void receiving_task(void) {
@@ -95,7 +95,7 @@ void receiving_task(void) {
 		ASSERT(try_reply(tid, &rep, sizeof(rep)) == REPLY_SUCCESSFUL);
 	}
 	printf("Receive done" EOL);
-	signal_try_send(parent_tid());
+	signal_send(parent_tid());
 }
 
 void misbehaving_try_sending_task(void) {
@@ -118,7 +118,7 @@ void misbehaving_try_sending_task(void) {
 	ASSERT(try_send(misbehaving_receiving_tid, &msg, sizeof(msg), &rep, sizeof(rep)) == SEND_INCOMPLETE);
 	printf("Misbehaving try_send done" EOL);
 
-	signal_try_send(parent_tid());
+	signal_send(parent_tid());
 }
 
 void misbehaving_receiving_task(void) {
@@ -145,7 +145,7 @@ void misbehaving_receiving_task(void) {
 	ASSERT(try_reply(tid, &rep, sizeof(rep)) == REPLY_SUCCESSFUL);
 	printf("Misbehaving try_receive done" EOL);
 
-	signal_try_send(parent_tid());
+	signal_send(parent_tid());
 }
 
 void hashtable_tests(void) {

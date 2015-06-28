@@ -26,7 +26,7 @@ void client_task(void) {
 		delay(rpy.delay_time);
 		printf("tid: %d, interval: %d, round: %d" EOL, tid(), rpy.delay_time, i);
 	}
-	signal_try_send(parent_tid());
+	signal_send(parent_tid());
 }
 
 void init(void) {

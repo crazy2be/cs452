@@ -194,8 +194,8 @@ void start_calibrate(void) {
 }
 
 void calibratesrv(void) {
-	int tid = try_create(HIGHER(PRIORITY_MIN, 1), start_calibrate);
-	signal_try_send(tid);
+	int tid = create(HIGHER(PRIORITY_MIN, 1), start_calibrate);
+	signal_send(tid);
 }
 
 void calibrate_try_send_sensors(int calibratesrv, struct sensor_state *st) {

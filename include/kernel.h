@@ -2,6 +2,7 @@
 
 /** @file */
 #include <util.h>
+#include <assert.h>
 
 /**
  * Main entrypoint into the kernel
