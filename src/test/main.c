@@ -62,6 +62,14 @@ void memset_tests(void) {
 	}
 }
 
+void sqrti_tests(void) {
+	for (unsigned n = 0; n < 1000; n++) {
+		unsigned m = sqrti(n);
+		ASSERT(m * m <= n);
+		ASSERT((m+1) * (m+1) > n);
+	}
+}
+
 void lssb_tests(void) {
 	int i;
 	ASSERT(0 == least_significant_set_bit(0xffffffff));
@@ -210,6 +218,7 @@ void init_task(void) {
 	hashtable_tests();
 	memcpy_tests();
 	memset_tests();
+	sqrti_tests();
 	min_heap_tests();
 	track_tests();
 	ASSERT(1);
