@@ -85,19 +85,19 @@ static void trains_server(void) {
 	for (;;) {
 		int tid = -1;
 		struct trains_request req;
-		try_receive(&tid, &req, sizeof(req));
+		receive(&tid, &req, sizeof(req));
 
 		/* printf("Trains server got message! %d"EOL, req.type); */
 		switch (req.type) {
 		case QUERY_ACTIVE: {
 			int active_trains[MAX_ACTIVE_TRAINS];
 			handle_query_active(&state, active_trains);
-			try_reply(tid, &active_trains, sizeof(active_trains));
+			reply(tid, &active_trains, sizeof(active_trains));
 			break;
 		}
 		case QUERY_SPATIALS: {
 			struct train_state ts = handle_query_spatials(&state, req.train_number);
-			try_reply(tid, &ts, sizeof(ts));
+			reply(tid, &ts, sizeof(ts));
 			break;
 		}
 		case QUERY_ARRIVAL:
@@ -106,22 +106,22 @@ static void trains_server(void) {
 			break;
 		case SEND_SENSORS:
 			handle_sensors(&state, req.sensors);
-			try_reply(tid, NULL, 0);
+			reply(tid, NULL, 0);
 			break;
 		case SET_SPEED:
 			// TODO: What do we do if we are already reversing or something?
 			handle_set_speed(&state, req.train_number, req.speed);
-			try_reply(tid, NULL, 0);
+			reply(tid, NULL, 0);
 			break;
 		case REVERSE:
 			handle_reverse(&state, req.train_number);
-			try_reply(tid, NULL, 0);
+			reply(tid, NULL, 0);
 			break;
 		case SWITCH_SWITCH:
 			handle_switch(&state, req.switch_number, req.direction);
 			// TODO: we need to reanchor the trains here
 			/* displaysrv_update_switch(displaysrv, &switches); */
-			try_reply(tid, NULL, 0);
+			reply(tid, NULL, 0);
 			break;
 		default:
 			WTF("UNKNOWN TRAINS REQ %d"EOL, req.type);
