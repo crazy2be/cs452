@@ -55,8 +55,7 @@ static void test_actual_velocity(void) {
 	ts.last_known_position.edge = &b8->edge[0];
 	ts.last_known_position.displacement = 0;
 	ts.last_known_time = 0;
-	printf("actual_speed = %d", calculate_actual_velocity(&ts, d12, &switches, 100));
-	ASSERT(-3 == calculate_actual_velocity(&ts, d12, &switches, 100));
+	ASSERT(-2 == calculate_actual_velocity(&ts, d12, &switches, 100));
 
 }
 
