@@ -38,7 +38,6 @@ void memcpy_tests(void) {
 			}
 		}
 	}
-
 }
 
 void memset_tests(void) {
@@ -47,13 +46,18 @@ void memset_tests(void) {
 	const char init = '\0';
 	const char filler = '@';
 
-	for (int len = 0; len < bufsz; len++) {
-		// naive memset
-		for (int i = 0; i < bufsz; i++) buf[i] = init;
-		memset(buf, filler, len);
-		for (int i = 0; i < bufsz; i++) {
-			const char expected = (i < len) ? filler : init;
-			ASSERTF(buf[i] == expected, "buf[%d] = %d != %d", i, buf[i], expected);
+	for (int lo = 0; lo < bufsz; lo++) {
+		for (int hi = lo; hi < bufsz; hi++) {
+			int len = hi - lo + 1;
+
+			// naive memset to clear out the memory
+			for (int i = 0; i < bufsz; i++) buf[i] = init;
+
+			memset(buf + lo, filler, len);
+			for (int i = 0; i < bufsz; i++) {
+				const char expected = (lo <= i && i <= hi) ? filler : init;
+				ASSERTF(buf[i] == expected, "buf[%d] = %d != %d", i, buf[i], expected);
+			}
 		}
 	}
 }
