@@ -94,7 +94,7 @@ void start_sensorsrv(void) {
 	for (;;) {
 		try_send_sensor_poll();
 		/* printf("%d bytes in the buffer before" EOL, fbuflen(COM1)); */
-		ASSERT(fgets((char*) &sensors, 10, COM1) >= 0);
+		fgets((char*) &sensors, 10, COM1);
 		sensors.ticks = time();
 
 		// notify the tasks which need to know about sensor updates

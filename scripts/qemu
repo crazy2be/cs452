@@ -31,7 +31,7 @@ case "$1" in
 		exec $base -s -S
 		;;
 	debug)
-		exec arm-none-eabi-gdb -ex "target remote localhost:1234" $2
+		exec arm-none-eabi-gdb -ex "target remote localhost:1234" -ex "break halt" $2
 		;;
 	*)
 		echo "Unknown command"
