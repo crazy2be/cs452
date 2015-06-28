@@ -18,6 +18,6 @@
 #define ASSERT(stmt) ASSERTF(stmt, "No details provided")
 #define ASSERTOK(syscall) ({ \
 		int result2 = (syscall); \
-		ASSERTF(result2 >= 0, "Syscall '" STRINGIFY2(syscall) "' failed with code %d", result2); })
+		ASSERTF(result2 >= 0, "Syscall '" STRINGIFY2(syscall) "' failed with code %d", result2); result2; })
 
 #define WTF(fmt, ...) ASSERTF(false, fmt, ##__VA_ARGS__);
