@@ -47,7 +47,7 @@ void sensor_each_new(struct sensor_state *old, struct sensor_state *new,
 	}
 }
 
-static void try_send_sensor_poll(void) {
+static void tc_send_sensor_poll(void) {
 #ifdef QEMU
 	fputs("Sending sensor poll"EOL, COM1);
 #else
@@ -92,7 +92,7 @@ void start_sensorsrv(void) {
 	sensors.ticks = time();
 	trains_send_sensors(sensors);
 	for (;;) {
-		try_send_sensor_poll();
+		tc_send_sensor_poll();
 		/* printf("%d bytes in the buffer before" EOL, fbuflen(COM1)); */
 		fgets((char*) &sensors, 10, COM1);
 		sensors.ticks = time();
@@ -108,5 +108,5 @@ void start_sensorsrv(void) {
 }
 
 void sensorsrv(void) {
-	try_create(HIGHER(PRIORITY_MIN, 6), start_sensorsrv);
+	create(HIGHER(PRIORITY_MIN, 6), start_sensorsrv);
 }

@@ -14,14 +14,14 @@
 #include "../kernel/drivers/timer.h"
 #include "track.h"
 
-struct init_try_reply {
+struct init_reply {
 	int delay_time;
 	int delay_count;
 };
 
 void client_task(void) {
-	struct init_try_reply rpy;
-	try_send(1, NULL, 0, &rpy, sizeof(rpy));
+	struct init_reply rpy;
+	send(1, NULL, 0, &rpy, sizeof(rpy));
 	for (int i = 0; i < rpy.delay_count; i++) {
 		delay(rpy.delay_time);
 		printf("tid: %d, interval: %d, round: %d" EOL, tid(), rpy.delay_time, i);
@@ -33,12 +33,12 @@ void init(void) {
 	start_servers();
 
 	for (int i = 0; i < 4; i++) {
-		try_create(LOWER(PRIORITY_MAX, i + 3), client_task);
+		create(LOWER(PRIORITY_MAX, i + 3), client_task);
 	}
-	struct init_try_reply rpys[4] = {{10, 20}, {23, 9}, {33, 6}, {71, 3}};
+	struct init_reply rpys[4] = {{10, 20}, {23, 9}, {33, 6}, {71, 3}};
 	int tids[4] = {};
-	for (int i = 0; i < 4; i++) try_receive(&tids[i], NULL, 0);
-	for (int i = 0; i < 4; i++) try_reply(tids[i], &rpys[i], sizeof(rpys[i]));
+	for (int i = 0; i < 4; i++) receive(&tids[i], NULL, 0);
+	for (int i = 0; i < 4; i++) reply(tids[i], &rpys[i], sizeof(rpys[i]));
 
 	for (int i = 0; i < 4; i++) signal_recv();
 

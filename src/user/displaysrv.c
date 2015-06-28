@@ -509,7 +509,7 @@ void ptid(void) { printf("Displayserver tid: %d"EOL, tid()); }
 void displaysrv_start(void) {
 	register_as(DISPLAYSRV_NAME);
 	ptid();
-	try_create(HIGHER(PRIORITY_MIN, 2), clock_update_task);
+	create(HIGHER(PRIORITY_MIN, 2), clock_update_task);
 	signal_recv();
 
 	initial_draw();
@@ -524,9 +524,9 @@ void displaysrv_start(void) {
 	int tid;
 
 	for (;;) {
-		ASSERT(try_receive(&tid, &req, sizeof(req)) > 0);
+		receive(&tid, &req, sizeof(req));
 		// requests are fire and forget, and provide no feedback
-		ASSERT(try_reply(tid, NULL, 0) == REPLY_SUCCESSFUL);
+		reply(tid, NULL, 0);
 
 		switch (req.type) {
 		case UPDATE_SWITCH:

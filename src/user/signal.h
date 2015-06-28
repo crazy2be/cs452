@@ -1,6 +1,6 @@
 #pragma once
 
-// wrappers of try_send and try_receive
+// wrappers of send and receive
 
 // signal the task with that tid
 void signal_send(int tid);
