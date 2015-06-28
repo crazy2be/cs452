@@ -102,7 +102,7 @@ static void trains_server(void) {
 		}
 		case QUERY_ARRIVAL:
 			handle_query_arrival(&state, req.train_number, req.distance);
-			try_reply(tid, NULL, 0);
+			reply(tid, NULL, 0);
 			break;
 		case SEND_SENSORS:
 			handle_sensors(&state, req.sensors);
