@@ -41,6 +41,23 @@ void memcpy_tests(void) {
 
 }
 
+void memset_tests(void) {
+	const unsigned bufsz = 80;
+	unsigned char buf[bufsz];
+	const char init = '\0';
+	const char filler = '@';
+
+	for (int len = 0; len < bufsz; len++) {
+		// naive memset
+		for (int i = 0; i < bufsz; i++) buf[i] = init;
+		memset(buf, filler, len);
+		for (int i = 0; i < bufsz; i++) {
+			const char expected = (i < len) ? filler : init;
+			ASSERTF(buf[i] == expected, "buf[%d] = %d != %d", i, buf[i], expected);
+		}
+	}
+}
+
 void lssb_tests(void) {
 	int i;
 	ASSERT(0 == least_significant_set_bit(0xffffffff));
@@ -188,6 +205,7 @@ void init_task(void) {
 	lssb_tests();
 	hashtable_tests();
 	memcpy_tests();
+	memset_tests();
 	min_heap_tests();
 	track_tests();
 	ASSERT(1);
