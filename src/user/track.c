@@ -16,8 +16,13 @@ const struct track_node *track_node_from_sensor(int sensor) {
 
 const struct track_node *track_go_forwards(const struct track_node *cur,
 		const struct switch_state *sw, break_cond cb, void *ctx) {
+	int iterations = 0;
 	for (;;) {
-		if (cur->type == NODE_EXIT) break;
+		// If we've done more iterations than there are nodes in the track,
+		// we must have cycles in our path, which indicates an error condition.
+		// Just return NULL.
+		if (iterations++ > TRACK_MAX) return NULL;
+		else if (cur->type == NODE_EXIT) break;
 
 		// choose which node we pass down to
 		int index = cur->type == NODE_BRANCH &&

@@ -5,10 +5,26 @@
 #include "../displaysrv.h"
 #include "../nameserver.h"
 
-int train_velocity_from_state(struct internal_train_state *train_state) {
+static inline int* train_velocity_entry(struct internal_train_state *train_state) {
 	int cur_speed = train_state->current_speed_setting;
 	int i = cur_speed*2 + (train_state->previous_speed_setting >= cur_speed) - 1;
-	return train_state->est_velocities[i];
+	return &train_state->est_velocities[i];
+}
+
+int train_velocity_from_state(struct internal_train_state *train_state) {
+	return *train_velocity_entry(train_state);
+}
+
+int train_velocity(struct trainsrv_state *state, int train) {
+	struct internal_train_state *train_state = get_train_state(state, train);
+	ASSERT(train_state != NULL);
+	return train_velocity_from_state(train_state);
+}
+
+int get_estimated_distance_travelled(struct internal_train_state *train_state, int now) {
+	const int delta_t = now - train_state->last_known_time;
+	const int velocity = train_velocity_from_state(train_state);
+	return delta_t * velocity / 1000;
 }
 
 // travel down the track for that many mm, and see which node we end at
@@ -42,11 +58,9 @@ struct position get_estimated_train_position(struct trainsrv_state *state,
 
 	// find how much time has passed since the recorded position on the internal
 	// train state, and how far we expect to have moved since then
-	const int delta_t = time() - train_state->last_known_time;
-	const int velocity = train_velocity_from_state(train_state);
 	const struct track_edge *last_edge = train_state->last_known_position.edge;
 
-	position.displacement += delta_t * velocity / 1000;
+	position.displacement += get_estimated_distance_travelled(train_state, time());
 
 	// we special case the first edge like this since track_go_forwards takes a node, but we
 	// start part of the way down an *edge*
@@ -129,15 +143,17 @@ static struct internal_train_state* allocate_train_state(struct trainsrv_state *
 
 static void reanchor(struct trainsrv_state *state,
 					 struct internal_train_state *train_state) {
+	int now = time();
 	train_state->last_known_position = get_estimated_train_position(state, train_state);
-	train_state->last_known_time = time();
+	train_state->last_known_time = now;
+	train_state->mm_to_next_sensor -= get_estimated_distance_travelled(train_state, now);
 }
+
 static void reanchor_all(struct trainsrv_state *state) {
 	for (int i = 0; i < state->num_active_trains; i++) {
 		reanchor(state, &state->train_states[i]);
 	}
 }
-
 
 int update_train_speed(struct trainsrv_state *state, int train_id, int speed) {
 	struct internal_train_state *train_state = get_train_state(state, train_id);
@@ -174,18 +190,11 @@ int update_train_direction(struct trainsrv_state *state, int train_id) {
 	return train_state->current_speed_setting;
 }
 
-int train_velocity(struct trainsrv_state *state, int train) {
-	struct internal_train_state *train_state = get_train_state(state, train);
-	ASSERT(train_state != NULL);
-	return train_velocity_from_state(train_state);
-}
-
-static void update_train_position_from_sensor(struct trainsrv_state *state,
-		struct internal_train_state *train_state,
-		int sensor, int ticks) {
-
-	const struct track_node *sensor_node = track_node_from_sensor(sensor);
-	ASSERT(sensor_node != NULL && sensor_node->type == NODE_SENSOR && sensor_node->num == sensor);
+// called each time we hit a sensor
+// prints out how far away we thought we were from the sensor at the time
+// we hit it
+static void log_position_estimation_error(const struct trainsrv_state *state,
+		struct internal_train_state *train_state, const struct track_node *sensor_node, int ticks) {
 
 	// if we had an estimated position for this train, ideally it should be estimated as
 	// being very near to the tripped sensor when this happens
@@ -193,12 +202,10 @@ static void update_train_position_from_sensor(struct trainsrv_state *state,
 	if (train_state->next_sensor != NULL) {
 		char feedback[80];
 		char sens_name[4];
-		sensor_repr(sensor, sens_name);
+		sensor_repr(sensor_node->num, sens_name);
 		ASSERTF(train_state->next_sensor->type == NODE_SENSOR, "sensor node was %x from %x, track = %x", (unsigned) train_state->next_sensor, (unsigned) train_state, (unsigned) track);
 		if (train_state->next_sensor == sensor_node) {
-			const int delta_t = time() - train_state->last_known_time;
-			const int velocity = train_velocity_from_state(train_state);
-			const int delta_d = train_state->mm_to_next_sensor - delta_t * velocity / 1000;
+			const int delta_d = train_state->mm_to_next_sensor - get_estimated_distance_travelled(train_state, time());
 			snprintf(feedback, sizeof(feedback), "Train was estimated at %d mm away from sensor %s when tripped (%d total)",
 					delta_d, sens_name, train_state->mm_to_next_sensor);
 			displaysrv_console_feedback(state->displaysrv_tid, feedback);
@@ -217,6 +224,68 @@ static void update_train_position_from_sensor(struct trainsrv_state *state,
 		ASSERT(train_state->next_sensor->type == NODE_EXIT);
 		train_state->next_sensor = NULL;
 	}
+}
+
+struct specific_node_context {
+	const struct track_node *node;
+	int distance;
+};
+
+static bool break_at_specific_node(const struct track_edge *e, void *context_) {
+	struct specific_node_context *context = (struct specific_node_context*) context_;
+	context->distance += e->dist;
+	return e->dest == context->node;
+}
+
+static void update_train_velocity_estimate(const struct trainsrv_state *state, struct internal_train_state *train_state,
+		const struct track_node *sensor_node, int ticks) {
+
+	if (position_is_uninitialized(&train_state->last_known_position)) return;
+
+	const int delta_t = ticks - train_state->last_known_time;
+
+	if (delta_t == 0) {
+		displaysrv_console_feedback(state->displaysrv_tid, "Supposedly took 0 time to travel between sensors");
+		return;
+	}
+
+	// calculate how far the train went since we last saw it
+	struct specific_node_context context = { sensor_node, 0 };
+	if (track_go_forwards(train_state->last_known_position.edge->src,
+				&state->switches, break_at_specific_node, &context) == NULL) {
+		// if there is no path from the last position to this node
+		displaysrv_console_feedback(state->displaysrv_tid, "The train supposedly teleported");
+		return;
+	}
+
+	const int actual_distance = context.distance;
+	const int actual_velocity = (actual_distance * 1000) / delta_t;
+
+	// v' = (1 - alpha) * v + alpha * v_actual
+	// empirically chosen to give a good update
+	const int alpha = 100;
+	const int divisor = 1000;
+
+	/* char buf[80]; */
+	/* snprintf(buf, sizeof(buf), "Updated velocity estimate is %d", actual_velocity); */
+	/* displaysrv_console_feedback(state->displaysrv_tid, buf); */
+
+	int *velocity_entry = train_velocity_entry(train_state);
+	*velocity_entry = ((divisor - alpha) * *velocity_entry + alpha * actual_velocity) / divisor;
+}
+
+static void update_train_position_from_sensor(const struct trainsrv_state *state,
+		struct internal_train_state *train_state,
+		int sensor, int ticks) {
+
+	const struct track_node *sensor_node = track_node_from_sensor(sensor);
+	ASSERT(sensor_node != NULL && sensor_node->type == NODE_SENSOR && sensor_node->num == sensor);
+
+	log_position_estimation_error(state, train_state, sensor_node, ticks);
+
+	// adjust estimate for train speed
+	(void) update_train_velocity_estimate;
+	update_train_velocity_estimate(state, train_state, sensor_node, ticks);
 
 	// update internal train state
 	train_state->last_known_position.edge = &sensor_node->edge[0];
