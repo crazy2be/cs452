@@ -5,10 +5,10 @@
 #include <kernel.h>
 
 void start_servers(void) {
-	create(LOWER(PRIORITY_MAX, 4), nameserver);
+	try_create(LOWER(PRIORITY_MAX, 4), nameserver);
 	ioserver(LOWER(PRIORITY_MAX, 3), COM1);
 	ioserver(LOWER(PRIORITY_MAX, 3), COM2);
-	create(LOWER(PRIORITY_MAX, 1), clockserver);
+	try_create(LOWER(PRIORITY_MAX, 1), clockserver);
 }
 
 void stop_servers(void) {

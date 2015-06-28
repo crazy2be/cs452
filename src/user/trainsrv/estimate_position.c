@@ -347,5 +347,5 @@ void trains_init(struct trainsrv_state *state) {
 	tc_deactivate_switch();
 	state->displaysrv_tid = whois(DISPLAYSRV_NAME);
 	displaysrv_update_switch(state->displaysrv_tid, &state->switches);
-	//calibrate_send_switches(whois(CALIBRATESRV_NAME), &state->switches);
+	//calibrate_try_send_switches(whois(CALIBRATESRV_NAME), &state->switches);
 }

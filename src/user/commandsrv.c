@@ -226,5 +226,5 @@ void commandsrv_start(void) {
 }
 
 void commandsrv(void) {
-	create(HIGHER(PRIORITY_MIN, 5), commandsrv_start);
+	try_create(HIGHER(PRIORITY_MIN, 5), commandsrv_start);
 }

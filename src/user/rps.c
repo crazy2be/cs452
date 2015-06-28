@@ -33,7 +33,7 @@ void rps_client(void) {
 	int resp_len;
 
 	req = CONNECT;
-	resp_len = send(server, &req, sizeof(req), &resp, sizeof(resp));
+	resp_len = try_send(server, &req, sizeof(req), &resp, sizeof(resp));
 	ASSERT(resp_len == sizeof(resp));
 	ASSERT(resp == RESP_CONNECTED);
 	printf("Client %d connected" EOL, tid());
@@ -43,7 +43,7 @@ void rps_client(void) {
 	for (unsigned i = 0; i < rounds_to_play; i++) {
 		int move = rand() % 3;
 		req = MOVE_ROCK + move;
-		resp_len = send(server, &req, sizeof(req), &resp, sizeof(resp));
+		resp_len = try_send(server, &req, sizeof(req), &resp, sizeof(resp));
 		ASSERT(resp_len == sizeof(resp));
 
 		switch (resp) {
@@ -66,7 +66,7 @@ void rps_client(void) {
 	}
 
 	req = QUIT;
-	resp_len = send(server, &req, sizeof(req), &resp, sizeof(resp));
+	resp_len = try_send(server, &req, sizeof(req), &resp, sizeof(resp));
 	ASSERT(resp_len == sizeof(resp));
 	ASSERT(resp == RESP_QUIT);
 	printf("Client %d quit" EOL, tid());
@@ -83,12 +83,12 @@ struct rps_client_status {
 	int status;
 };
 
-void rps_reply(int tid, unsigned resp) {
-	ASSERT(REPLY_SUCCESSFUL == reply(tid, &resp, sizeof(resp)));
+void rps_try_reply(int tid, unsigned resp) {
+	ASSERT(REPLY_SUCCESSFUL == try_reply(tid, &resp, sizeof(resp)));
 }
 
 void rps_quit(int tid, struct rps_client_status *status, unsigned *clients_left) {
-	rps_reply(tid, RESP_QUIT);
+	rps_try_reply(tid, RESP_QUIT);
 	status[tid - MIN_CLIENT_TID].status = STATUS_QUIT;
 	(*clients_left)--;
 }
@@ -103,7 +103,7 @@ void rps_server(void) {
 	while (clients_left > 0) {
 		int tid;
 		enum rps_req req;
-		int req_len = receive(&tid, &req, sizeof(req));
+		int req_len = try_receive(&tid, &req, sizeof(req));
 		ASSERT(req_len == sizeof(req));
 
 		switch (req) {
@@ -118,8 +118,8 @@ void rps_server(void) {
 				status[unpaired_tid - MIN_CLIENT_TID].status = STATUS_WAITING;
 
 				// tell clients the server is ready to respond
-				rps_reply(tid, RESP_CONNECTED);
-				rps_reply(unpaired_tid, RESP_CONNECTED);
+				rps_try_reply(tid, RESP_CONNECTED);
+				rps_try_reply(unpaired_tid, RESP_CONNECTED);
 
 				unpaired_tid = -1;
 			}
@@ -148,14 +148,14 @@ void rps_server(void) {
 				int partner_move = partner_status - STATUS_MOVED_ROCK + MOVE_ROCK;
 				int diff = move - partner_move;
 				if (diff == 0) {
-					rps_reply(tid, RESP_DRAW);
-					rps_reply(partner, RESP_DRAW);
+					rps_try_reply(tid, RESP_DRAW);
+					rps_try_reply(partner, RESP_DRAW);
 				} else if (diff == 1 || diff == -2) {
-					rps_reply(tid, RESP_WON);
-					rps_reply(partner, RESP_LOST);
+					rps_try_reply(tid, RESP_WON);
+					rps_try_reply(partner, RESP_LOST);
 				} else {
-					rps_reply(tid, RESP_LOST);
-					rps_reply(partner, RESP_WON);
+					rps_try_reply(tid, RESP_LOST);
+					rps_try_reply(partner, RESP_WON);
 				}
 				status[partner - MIN_CLIENT_TID].status = STATUS_WAITING;
 			}
@@ -172,12 +172,12 @@ void rps_server(void) {
 
 void rps_init_task(void) {
 	int tid;
-	tid = create(PRIORITY_MAX, nameserver);
+	tid = try_create(PRIORITY_MAX, nameserver);
 	printf("Got %d as TID for name server" EOL, tid);
-	tid = create(PRIORITY_MIN, rps_server);
+	tid = try_create(PRIORITY_MIN, rps_server);
 	printf("Got %d as TID for rps server" EOL, tid);
 	for (int i = MIN_CLIENT_TID; i <= MAX_CLIENT_TID; i++) {
-		tid = create(PRIORITY_MIN, rps_client);
+		tid = try_create(PRIORITY_MIN, rps_client);
 		printf("Got %d as TID for client %d" EOL, tid, i);
 		ASSERT(i == tid);
 	}

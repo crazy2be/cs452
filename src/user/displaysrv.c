@@ -509,7 +509,7 @@ void ptid(void) { printf("Displayserver tid: %d"EOL, tid()); }
 void displaysrv_start(void) {
 	register_as(DISPLAYSRV_NAME);
 	ptid();
-	create(HIGHER(PRIORITY_MIN, 2), clock_update_task);
+	try_create(HIGHER(PRIORITY_MIN, 2), clock_update_task);
 	signal_recv();
 
 	initial_draw();
@@ -524,9 +524,9 @@ void displaysrv_start(void) {
 	int tid;
 
 	for (;;) {
-		ASSERT(receive(&tid, &req, sizeof(req)) > 0);
+		ASSERT(try_receive(&tid, &req, sizeof(req)) > 0);
 		// requests are fire and forget, and provide no feedback
-		ASSERT(reply(tid, NULL, 0) == REPLY_SUCCESSFUL);
+		ASSERT(try_reply(tid, NULL, 0) == REPLY_SUCCESSFUL);
 
 		switch (req.type) {
 		case UPDATE_SWITCH:
@@ -562,16 +562,16 @@ void displaysrv_start(void) {
 }
 
 void displaysrv(void) {
-	int tid = create(HIGHER(PRIORITY_MIN, 1), displaysrv_start);
+	int tid = try_create(HIGHER(PRIORITY_MIN, 1), displaysrv_start);
 	// block until displaysrv has registered itself with the nameserver
-	ASSERT(signal_send(tid) == 0);
+	ASSERT(signal_try_send(tid) == 0);
 }
 
 // external interface to displaysrv
 
 static void displaysrv_send(int displaysrv, enum displaysrv_req_type type, struct displaysrv_req *req) {
 	req->type = type;
-	ASSERTOK(send(displaysrv, req, sizeof(*req), NULL, 0));
+	send(displaysrv, req, sizeof(*req), NULL, 0);
 }
 
 void displaysrv_console_input(int displaysrv, char c) {

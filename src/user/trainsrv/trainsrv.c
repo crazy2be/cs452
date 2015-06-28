@@ -85,43 +85,43 @@ static void trains_server(void) {
 	for (;;) {
 		int tid = -1;
 		struct trains_request req;
-		receive(&tid, &req, sizeof(req));
+		try_receive(&tid, &req, sizeof(req));
 
 		/* printf("Trains server got message! %d"EOL, req.type); */
 		switch (req.type) {
 		case QUERY_ACTIVE: {
 			int active_trains[MAX_ACTIVE_TRAINS];
 			handle_query_active(&state, active_trains);
-			reply(tid, &active_trains, sizeof(active_trains));
+			try_reply(tid, &active_trains, sizeof(active_trains));
 			break;
 		}
 		case QUERY_SPATIALS: {
 			struct train_state ts = handle_query_spatials(&state, req.train_number);
-			reply(tid, &ts, sizeof(ts));
+			try_reply(tid, &ts, sizeof(ts));
 			break;
 		}
 		case QUERY_ARRIVAL:
 			handle_query_arrival(&state, req.train_number, req.distance);
-			reply(tid, NULL, 0);
+			try_reply(tid, NULL, 0);
 			break;
 		case SEND_SENSORS:
 			handle_sensors(&state, req.sensors);
-			reply(tid, NULL, 0);
+			try_reply(tid, NULL, 0);
 			break;
 		case SET_SPEED:
 			// TODO: What do we do if we are already reversing or something?
 			handle_set_speed(&state, req.train_number, req.speed);
-			reply(tid, NULL, 0);
+			try_reply(tid, NULL, 0);
 			break;
 		case REVERSE:
 			handle_reverse(&state, req.train_number);
-			reply(tid, NULL, 0);
+			try_reply(tid, NULL, 0);
 			break;
 		case SWITCH_SWITCH:
 			handle_switch(&state, req.switch_number, req.direction);
 			// TODO: we need to reanchor the trains here
 			/* displaysrv_update_switch(displaysrv, &switches); */
-			reply(tid, NULL, 0);
+			try_reply(tid, NULL, 0);
 			break;
 		default:
 			WTF("UNKNOWN TRAINS REQ %d"EOL, req.type);
@@ -130,8 +130,8 @@ static void trains_server(void) {
 	}
 }
 
-int start_trains(void) {
-	return create(HIGHER(PRIORITY_MIN, 2), trains_server);
+void start_trains(void) {
+	create(HIGHER(PRIORITY_MIN, 2), trains_server);
 }
 
 static int trains_tid(void) {
@@ -143,7 +143,7 @@ static int trains_tid(void) {
 }
 
 static void trains_send(struct trains_request req, void *rpy, int rpyl) {
-	ASSERTOK(send(trains_tid(), &req, sizeof(req), rpy, rpyl));
+	send(trains_tid(), &req, sizeof(req), rpy, rpyl);
 }
 #define TSEND(req) trains_send(req, NULL, 0)
 #define TSEND2(req, rpy) trains_send(req, rpy, sizeof(*(rpy)))

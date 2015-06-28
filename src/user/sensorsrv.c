@@ -47,7 +47,7 @@ void sensor_each_new(struct sensor_state *old, struct sensor_state *new,
 	}
 }
 
-static void send_sensor_poll(void) {
+static void try_send_sensor_poll(void) {
 #ifdef QEMU
 	fputs("Sending sensor poll"EOL, COM1);
 #else
@@ -92,7 +92,7 @@ void start_sensorsrv(void) {
 	sensors.ticks = time();
 	trains_send_sensors(sensors);
 	for (;;) {
-		send_sensor_poll();
+		try_send_sensor_poll();
 		/* printf("%d bytes in the buffer before" EOL, fbuflen(COM1)); */
 		ASSERT(fgets((char*) &sensors, 10, COM1) >= 0);
 		sensors.ticks = time();
@@ -100,7 +100,7 @@ void start_sensorsrv(void) {
 		// notify the tasks which need to know about sensor updates
 		/* printf("%d bytes in the buffer after" EOL, fbuflen(COM1)); */
 		/* displaysrv_update_sensor(displaysrv, &sensors); */
-		//calibrate_send_sensors(calibratesrv, &sensors);
+		//calibrate_try_send_sensors(calibratesrv, &sensors);
 		trains_send_sensors(sensors);
 	}
 	/* delay(100); */
@@ -108,5 +108,5 @@ void start_sensorsrv(void) {
 }
 
 void sensorsrv(void) {
-	create(HIGHER(PRIORITY_MIN, 6), start_sensorsrv);
+	try_create(HIGHER(PRIORITY_MIN, 6), start_sensorsrv);
 }

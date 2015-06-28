@@ -66,7 +66,7 @@ static int misbehaving_receiving_tid = -1;
 static int producers = 20;
 
 // webscale multiplication!
-void sending_task(void) {
+void try_sending_task(void) {
 	for (int i = 0; i < 10; i++) {
 		struct Msg msg;
 		struct Reply rep;
@@ -74,11 +74,11 @@ void sending_task(void) {
 		msg.a = i * 4;
 		msg.b = i * 17 + 128;
 
-		ASSERT(send(receiving_tid, &msg, sizeof(msg), &rep, sizeof(rep)) == sizeof(rep));
+		ASSERT(try_send(receiving_tid, &msg, sizeof(msg), &rep, sizeof(rep)) == sizeof(rep));
 		ASSERT(rep.sum == msg.a + msg.b);
 		ASSERT(rep.prod == msg.a * msg.b);
 	}
-	signal_send(parent_tid());
+	signal_try_send(parent_tid());
 }
 
 void receiving_task(void) {
@@ -87,65 +87,65 @@ void receiving_task(void) {
 		struct Reply rep;
 		int tid;
 
-		ASSERT(receive(&tid, &msg, sizeof(msg)) == sizeof(msg));
+		ASSERT(try_receive(&tid, &msg, sizeof(msg)) == sizeof(msg));
 
 		rep.sum = msg.a + msg.b;
 		rep.prod = msg.a * msg.b;
 
-		ASSERT(reply(tid, &rep, sizeof(rep)) == REPLY_SUCCESSFUL);
+		ASSERT(try_reply(tid, &rep, sizeof(rep)) == REPLY_SUCCESSFUL);
 	}
 	printf("Receive done" EOL);
-	signal_send(parent_tid());
+	signal_try_send(parent_tid());
 }
 
-void misbehaving_sending_task(void) {
+void misbehaving_try_sending_task(void) {
 	struct Msg msg;
 	struct Reply rep;
 
-	// check sending to impossible tasks
-	ASSERT(send(-6, &msg, sizeof(msg), &rep, sizeof(rep)) == SEND_IMPOSSIBLE_TID);
-	ASSERT(send(267, &msg, sizeof(msg), &rep, sizeof(rep)) == SEND_INVALID_TID);
-	ASSERT(send(254, &msg, sizeof(msg), &rep, sizeof(rep)) == SEND_INVALID_TID);
-	ASSERT(send(tid(), &msg, sizeof(msg), &rep, sizeof(rep)) == SEND_INVALID_TID);
+	// check try_sending to impossible tasks
+	ASSERT(try_send(-6, &msg, sizeof(msg), &rep, sizeof(rep)) == SEND_IMPOSSIBLE_TID);
+	ASSERT(try_send(267, &msg, sizeof(msg), &rep, sizeof(rep)) == SEND_INVALID_TID);
+	ASSERT(try_send(254, &msg, sizeof(msg), &rep, sizeof(rep)) == SEND_INVALID_TID);
+	ASSERT(try_send(tid(), &msg, sizeof(msg), &rep, sizeof(rep)) == SEND_INVALID_TID);
 
-	int child = create(PRIORITY_MAX, nop);
-	// the child should exit immediately, so we shouldn't be able to send to it
-	ASSERT(send(child, &msg, sizeof(msg), &rep, sizeof(rep)) == SEND_INVALID_TID);
+	int child = try_create(PRIORITY_MAX, nop);
+	// the child should exit immediately, so we shouldn't be able to try_send to it
+	ASSERT(try_send(child, &msg, sizeof(msg), &rep, sizeof(rep)) == SEND_INVALID_TID);
 
-	ASSERT(send(misbehaving_receiving_tid, &msg, sizeof(msg), &rep, sizeof(rep)) == sizeof(rep));
+	ASSERT(try_send(misbehaving_receiving_tid, &msg, sizeof(msg), &rep, sizeof(rep)) == sizeof(rep));
 
-	// the other task should exit before we have a chance to send
-	ASSERT(send(misbehaving_receiving_tid, &msg, sizeof(msg), &rep, sizeof(rep)) == SEND_INCOMPLETE);
-	printf("Misbehaving send done" EOL);
+	// the other task should exit before we have a chance to try_send
+	ASSERT(try_send(misbehaving_receiving_tid, &msg, sizeof(msg), &rep, sizeof(rep)) == SEND_INCOMPLETE);
+	printf("Misbehaving try_send done" EOL);
 
-	signal_send(parent_tid());
+	signal_try_send(parent_tid());
 }
 
 void misbehaving_receiving_task(void) {
 	struct Msg msg;
 	struct Reply rep;
 
-	ASSERT(reply(-6, &rep, sizeof(rep)) == REPLY_IMPOSSIBLE_TID);
-	ASSERT(reply(267, &rep, sizeof(rep)) == REPLY_INVALID_TID);
-	ASSERT(reply(254, &rep, sizeof(rep)) == REPLY_INVALID_TID);
-	ASSERT(reply(tid(), &rep, sizeof(rep)) == REPLY_INVALID_TID);
+	ASSERT(try_reply(-6, &rep, sizeof(rep)) == REPLY_IMPOSSIBLE_TID);
+	ASSERT(try_reply(267, &rep, sizeof(rep)) == REPLY_INVALID_TID);
+	ASSERT(try_reply(254, &rep, sizeof(rep)) == REPLY_INVALID_TID);
+	ASSERT(try_reply(tid(), &rep, sizeof(rep)) == REPLY_INVALID_TID);
 
-	int child = create(PRIORITY_MAX, nop);
-	// the child should exit immediately, so we shouldn't be able to reply to it
-	ASSERT(reply(child, &rep, sizeof(rep)) == REPLY_INVALID_TID);
+	int child = try_create(PRIORITY_MAX, nop);
+	// the child should exit immediately, so we shouldn't be able to try_reply to it
+	ASSERT(try_reply(child, &rep, sizeof(rep)) == REPLY_INVALID_TID);
 
-	child = create(PRIORITY_MIN, nop);
-	// we shouldn't be able to reply to somebody that hasn't sent a message to us
+	child = try_create(PRIORITY_MIN, nop);
+	// we shouldn't be able to try_reply to somebody that hasn't sent a message to us
 	// to do this test, we rely on the child not scheduling before us
-	ASSERT(reply(child, &rep, sizeof(rep)) == REPLY_UNSOLICITED);
+	ASSERT(try_reply(child, &rep, sizeof(rep)) == REPLY_UNSOLICITED);
 
 	int tid;
-	ASSERT(receive(&tid, &msg, sizeof(msg)) == sizeof(msg));
-	ASSERT(reply(tid, &rep, sizeof(rep) + 1) == REPLY_TOO_LONG);
-	ASSERT(reply(tid, &rep, sizeof(rep)) == REPLY_SUCCESSFUL);
-	printf("Misbehaving receive done" EOL);
+	ASSERT(try_receive(&tid, &msg, sizeof(msg)) == sizeof(msg));
+	ASSERT(try_reply(tid, &rep, sizeof(rep) + 1) == REPLY_TOO_LONG);
+	ASSERT(try_reply(tid, &rep, sizeof(rep)) == REPLY_SUCCESSFUL);
+	printf("Misbehaving try_receive done" EOL);
 
-	signal_send(parent_tid());
+	signal_try_send(parent_tid());
 }
 
 void hashtable_tests(void) {
@@ -191,10 +191,10 @@ void init_task(void) {
 	min_heap_tests();
 	track_tests();
 	ASSERT(1);
-	ASSERT(create(-1, child) == CREATE_INVALID_PRIORITY);
-	ASSERT(create(32, child) == CREATE_INVALID_PRIORITY);
+	ASSERT(try_create(-1, child) == CREATE_INVALID_PRIORITY);
+	ASSERT(try_create(32, child) == CREATE_INVALID_PRIORITY);
 
-	while (create(PRIORITY_MIN, &nop) < 255);
+	while (try_create(PRIORITY_MIN, &nop) < 255);
 
 	stop_servers();
 }
@@ -202,12 +202,12 @@ void init_task(void) {
 void message_suite(void) {
 	start_servers();
 
-	receiving_tid = create(PRIORITY_MIN, receiving_task);
+	receiving_tid = try_create(PRIORITY_MIN, receiving_task);
 	for (int i = 0; i < producers; i++) {
-		create(PRIORITY_MIN, sending_task);
+		try_create(PRIORITY_MIN, try_sending_task);
 	}
-	misbehaving_receiving_tid = create(PRIORITY_MIN - 1, misbehaving_receiving_task);
-	create(PRIORITY_MIN - 1, misbehaving_sending_task);
+	misbehaving_receiving_tid = try_create(PRIORITY_MIN - 1, misbehaving_receiving_task);
+	try_create(PRIORITY_MIN - 1, misbehaving_try_sending_task);
 
 	for (int i = 0; i < producers + 3; i++) signal_recv();
 
@@ -239,11 +239,11 @@ void io_suite(void) {
 void destroy_worker(void) {
 	int r, tid2;
 
-	ASSERT(receive(&tid2, &r, sizeof(r)) == sizeof(r));
-	ASSERT(reply(tid2, NULL, 0) == REPLY_SUCCESSFUL);
+	ASSERT(try_receive(&tid2, &r, sizeof(r)) == sizeof(r));
+	ASSERT(try_reply(tid2, NULL, 0) == REPLY_SUCCESSFUL);
 
-	ASSERT(receive(&tid2, NULL, 0) == 0);
-	ASSERT(reply(tid2, &r, sizeof(r)) == REPLY_SUCCESSFUL);
+	ASSERT(try_receive(&tid2, NULL, 0) == 0);
+	ASSERT(try_reply(tid2, &r, sizeof(r)) == REPLY_SUCCESSFUL);
 }
 
 void destroy_init(void) {
@@ -255,7 +255,7 @@ void destroy_init(void) {
 		int n = 0;
 		// make tasks until we run out
 		for (;;) {
-			int tid = create(HIGHER(PRIORITY_MIN, 2), destroy_worker);
+			int tid = try_create(HIGHER(PRIORITY_MIN, 2), destroy_worker);
 			ASSERT(tid >= 0 || tid == CREATE_INSUFFICIENT_RESOURCES);
 			if (tid < 0) break;
 			tids[n++] = tid;
@@ -268,12 +268,12 @@ void destroy_init(void) {
 
 		for (int i = 0; i < n; i++) {
 			rands[i] = rand();
-			ASSERT(send(tids[i], &rands[i], sizeof(rands[i]), NULL, 0) == 0);
+			ASSERT(try_send(tids[i], &rands[i], sizeof(rands[i]), NULL, 0) == 0);
 		}
 
 		for (int i = n - 1; i >= 0; i--) {
 			int resp;
-			ASSERT(send(tids[i], NULL, 0, &resp, sizeof(resp)) == 4);
+			ASSERT(try_send(tids[i], NULL, 0, &resp, sizeof(resp)) == 4);
 			ASSERT(resp == rands[i]);
 		}
 	}

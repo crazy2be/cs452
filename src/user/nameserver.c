@@ -21,7 +21,7 @@ void nameserver(void) {
 	for (;;) {
 		int tid, resp, err;
 		struct nameserver_request req;
-		receive(&tid, &req, sizeof(req));
+		try_receive(&tid, &req, sizeof(req));
 
 		switch (req.type) {
 		case WHOIS:
@@ -41,7 +41,7 @@ void nameserver(void) {
 			break;
 		}
 
-		reply(tid, &resp, sizeof(resp));
+		try_reply(tid, &resp, sizeof(resp));
 	}
 }
 
@@ -57,8 +57,8 @@ int whois(const char *name) {
 	req.type = WHOIS;
 	strcpy(req.name, name);
 
-	// could optimize to only send the used part of the req
-	resp = send(NAMESERVER_TID, &req, sizeof(req), &tid, sizeof(tid));
+	// could optimize to only try_send the used part of the req
+	resp = try_send(NAMESERVER_TID, &req, sizeof(req), &tid, sizeof(tid));
 
 	if (resp != sizeof(tid)) {
 		return resp;
@@ -78,7 +78,7 @@ int register_as(const char *name) {
 
 	req.type = REGISTER_AS;
 	strcpy(req.name, name);
-	resp = send(NAMESERVER_TID, &req, sizeof(req), &success, sizeof(success));
+	resp = try_send(NAMESERVER_TID, &req, sizeof(req), &success, sizeof(success));
 
 	if (resp != sizeof(success)) {
 		return resp;
