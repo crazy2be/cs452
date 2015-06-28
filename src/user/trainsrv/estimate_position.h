@@ -69,4 +69,4 @@ int update_train_direction(struct trainsrv_state *state, int train_id);
 void update_sensors(struct trainsrv_state *state, struct sensor_state sens);
 void update_switch(struct trainsrv_state *state, int sw, enum sw_direction dir);
 
-void trains_init(struct trainsrv_state *state);
+void trainsrv_state_init(struct trainsrv_state *state);

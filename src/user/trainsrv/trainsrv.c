@@ -80,7 +80,7 @@ static void trains_server(void) {
 	register_as("trains");
 	struct trainsrv_state state;
 
-	trains_init(&state);
+	trainsrv_state_init(&state);
 
 	for (;;) {
 		int tid = -1;
