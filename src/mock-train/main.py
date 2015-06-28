@@ -287,4 +287,43 @@ def main():
 
 	pygame.quit()
 
-main()
+from itertools import izip
+from numpy.random import randint
+import numpy.random
+from graph_tool import Graph
+import graph_tool.draw
+
+g = Graph()
+g.add_vertex(4)
+eprop_double = g.new_edge_property("double")
+eprop_title = g.new_edge_property("string")
+def weight(e, n):
+   eprop_double[e] = n
+   eprop_title[e] = "{0:.2f}".format(n)
+
+weight(g.add_edge(g.vertex(0), g.vertex(1)), 10)
+weight(g.add_edge(g.vertex(1), g.vertex(2)), 20)
+weight(g.add_edge(g.vertex(2), g.vertex(3)), 10)
+weight(g.add_edge(g.vertex(3), g.vertex(0)), 20)
+# insert some random links#
+#for s,t in izip(randint(0, 100, 100), randint(0, 100, 100)):
+#    g.add_edge(g.vertex(s), g.vertex(t))
+
+#for e in g.edges():
+#    n = numpy.random.random()*100
+#    eprop_double[e] = n
+#    eprop_title[e] = "{0:.2f}".format(n)
+
+
+#vprop_double = g.new_vertex_property("double")            # Double-precision floating point
+#vprop_double[g.vertex(10)] = 3.1416
+
+#vprop_vint = g.new_vertex_property("vector<int>")         # Vector of ints
+#vprop_vint[g.vertex(40)] = [1, 3, 42, 54]
+
+
+#gprop_bool = g.new_edge_property("bool")                  # Boolean
+#gprop_bool[g] = True
+
+pos = graph_tool.draw.fruchterman_reingold_layout(g, weight=eprop_double)
+graph_tool.draw.interactive_window(g, pos=pos, edge_text=eprop_title)
