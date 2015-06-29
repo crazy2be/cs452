@@ -475,9 +475,10 @@ static void console_backspace(void) {
 }
 
 static void console_feedback(char *fb) {
+	puts("\e[s");
 	clear_line(FEEDBACK_Y_OFFSET);
 	puts(fb);
-	reset_console_cursor();
+	puts("\e[u");
 }
 
 static void console_clear(void) {

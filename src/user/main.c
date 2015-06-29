@@ -53,7 +53,7 @@ void fuck_the_police(void) {
 void test_init(void) {
 	// initialize the track
 
-	init_tracka(track);
+	init_trackb(track);
 
 	start_servers();
 
