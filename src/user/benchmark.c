@@ -18,21 +18,21 @@
 #define ITERATIONS 2000
 
 
-static void try_sender(void) {
-	unsigned char try_send_buf[BENCHMARK_MSG_SIZE];
+static void sender(void) {
+	unsigned char send_buf[BENCHMARK_MSG_SIZE];
 	unsigned char recv_buf[BENCHMARK_MSG_SIZE];
 	for (unsigned j = 0; j < BENCHMARK_MSG_SIZE; j++) {
-		try_send_buf[j] = 0xcd;
+		send_buf[j] = 0xcd;
 	}
 	for (unsigned i = 0; i < ITERATIONS; i++) {
-		try_send(RECEIVER_TID, try_send_buf, BENCHMARK_MSG_SIZE, recv_buf, BENCHMARK_MSG_SIZE);
+		send(RECEIVER_TID, send_buf, BENCHMARK_MSG_SIZE, recv_buf, BENCHMARK_MSG_SIZE);
 		/* for (unsigned j = 0; j < BENCHMARK_MSG_SIZE; j++) { */
 		/*     ASSERT(recv_buf[j] == 0xab); */
 		/* } */
 	}
 }
 
-static void try_receiver(void) {
+static void receiver(void) {
 	int tid;
 	unsigned char recv_buf[BENCHMARK_MSG_SIZE];
 	unsigned char repl_buf[BENCHMARK_MSG_SIZE];
@@ -40,13 +40,13 @@ static void try_receiver(void) {
 		repl_buf[j] = 0xab;
 	}
 	for (unsigned i = 0; i < ITERATIONS; i++) {
-		try_receive(&tid, recv_buf, BENCHMARK_MSG_SIZE);
+		receive(&tid, recv_buf, BENCHMARK_MSG_SIZE);
 		/* for (unsigned j = 0; j < BENCHMARK_MSG_SIZE; j++) { */
 		/*     ASSERT(recv_buf[j] == 0xcd); */
 		/* } */
-		try_reply(tid, repl_buf, BENCHMARK_MSG_SIZE);
+		reply(tid, repl_buf, BENCHMARK_MSG_SIZE);
 	}
-	try_send(parent_tid(), 0, 0, recv_buf, BENCHMARK_MSG_SIZE);
+	send(parent_tid(), 0, 0, recv_buf, BENCHMARK_MSG_SIZE);
 }
 
 void benchmark(void) {
@@ -55,9 +55,9 @@ void benchmark(void) {
 
 	unsigned start = debug_timer_useconds();
 
-	try_create(SEND_PRIORITY, try_sender);
-	try_create(RECV_PRIORITY, try_receiver);
-	try_receive(&tid, &dummy, sizeof(dummy));
+	create(SEND_PRIORITY, sender);
+	create(RECV_PRIORITY, receiver);
+	receive(&tid, &dummy, sizeof(dummy));
 
 	unsigned end = debug_timer_useconds();
 

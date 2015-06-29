@@ -39,19 +39,14 @@ void nameserver(void) {
 }
 
 int try_whois(const char *name) {
-	int tid, resp, name_len;
 	struct nameserver_request req;
-
-	name_len = strlen(name);
-	if (name_len > MAX_KEYLEN) return -2;
-
 	req.type = WHOIS;
+	ASSERT(strlen(name) <= MAX_KEYLEN);
 	strcpy(req.name, name);
 
-	// could optimize to only try_send the used part of the req
-	resp = try_send(NAMESERVER_TID, &req, sizeof(req), &tid, sizeof(tid));
-	if (resp != sizeof(tid)) return resp;
-
+	int tid = -1;
+	// could optimize to only send the used part of the req
+	send(NAMESERVER_TID, &req, sizeof(req), &tid, sizeof(tid));
 	return tid;
 }
 

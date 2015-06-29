@@ -85,21 +85,19 @@ static int handle_sensor_update(struct sensor_state *sensors, struct sensor_stat
 #include "../clockserver.h"
 static void delay_task(void) {
 	int delay_amount = -1, tid = -1;
-	int r = try_receive(&tid, &delay_amount, sizeof(delay_amount));
-	ASSERTF(r == 4, "%d", r);
-	ASSERT(try_reply(tid, NULL, 0) == 0);
+	receive(&tid, &delay_amount, sizeof(delay_amount));
+	reply(tid, NULL, 0);
 	//printf("Delaying for %d %d"EOL, delay_amount, tid);
 	delay(delay_amount);
 	//printf("Delayed for %d %d"EOL, delay_amount, tid);
 	struct calibrate_req req = (struct calibrate_req) { .type = DELAY_PASSED };
-	int r2 = try_send(tid, &req, sizeof(req), NULL, 0);
-	ASSERTF(r2 == 0, "%d %d", r2, tid);
+	send(tid, &req, sizeof(req), NULL, 0);
 }
 static void enque_delay(int amount) {
-	int tid = try_create(PRIORITY_MAX, delay_task); // TODO: What priority?
+	int tid = create(PRIORITY_MAX, delay_task); // TODO: What priority?
 	//printf("Created delay task with tid %d"EOL, tid);
 	printf("Delaying for %d"EOL, amount);
-	ASSERT(try_send(tid, &amount, sizeof(amount), NULL, 0) == 0);
+	send(tid, &amount, sizeof(amount), NULL, 0);
 }
 
 // for each speed {
@@ -130,8 +128,8 @@ void start_calibrate(void) {
 	printf("Starting up..."EOL);
 	for (;;) {
 		struct calibrate_req req = {};
-		try_receive(&tid, &req, sizeof(req));
-		try_reply(tid, NULL, 0);
+		receive(&tid, &req, sizeof(req));
+		reply(tid, NULL, 0);
 		if (req.type == UPDATE_SWITCH) {
 			// TODO: we don't really handle switches being toggled while the
 			// trains are running, since the next sensor the train hits might
@@ -197,18 +195,15 @@ void calibratesrv(void) {
 	int tid = create(HIGHER(PRIORITY_MIN, 1), start_calibrate);
 	signal_send(tid);
 }
-
-void calibrate_try_send_sensors(int calibratesrv, struct sensor_state *st) {
+void calibrate_send_sensors(int calibratesrv, struct sensor_state *st) {
 	struct calibrate_req req;
 	req.type = UPDATE_SENSOR;
 	req.u.sensors = *st;
-	int r = try_send(calibratesrv, &req, sizeof(req), NULL, 0);
-	ASSERTF(0 == r, "%d", r);
+	send(calibratesrv, &req, sizeof(req), NULL, 0);
 }
-
-void calibrate_try_send_switches(int calibratesrv, struct switch_state *st) {
+void calibrate_send_switches(int calibratesrv, struct switch_state *st) {
 	struct calibrate_req req;
 	req.type = UPDATE_SWITCH;
 	req.u.switches = *st;
-	ASSERT(0 == try_send(calibratesrv, &req, sizeof(req), NULL, 0));
+	send(calibratesrv, &req, sizeof(req), NULL, 0);
 }
