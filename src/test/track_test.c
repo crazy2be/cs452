@@ -187,6 +187,12 @@ void test_train_alert_srv(void){
 	client2 = start_await_client(58, (struct position){ &track[55].edge[0], 30 }); // d8
 	stub_trainsrv_spatials(58, state);
 
+	// check that updating things does nothing if not on final approach
+	train_alert_update_train_speed(58);
+	switch_set(&switches, 9, 1);
+	train_alert_update_switch(switches);
+
+
 	// now at d8
 	state.position = (struct position) { &track[55].edge[0], 0 };
 	train_alert_update_train(58, state.position);

@@ -197,8 +197,11 @@ static void handle_wakeup_call(struct wakeup_call_data *data,
 
 static void handle_train_speed_update(int train_id, struct alert_request_state **states_for_train) {
 	struct alert_request_state *state = states_for_train[train_id - 1];
-	if (state != NULL) {
-		ASSERTF(0, "Updated speed for train %d while on a final approach", train_id);
+	while (state != NULL) {
+		if (state->state == FINAL_APPROACH) {
+			ASSERTF(0, "Updated speed for train %d while on a final approach", train_id);
+		}
+		state = state->next_state;
 	}
 }
 
@@ -209,7 +212,7 @@ static void handle_switch_update(struct switch_state switches, struct switch_sta
 			// do a bit of poking at the internals since I don't want to write
 			// a fancy interface for something I don't know if I'll do again
 			// If this pattern emerges elsewhere, revisit
-			if ((switches.packed ^ old_switches.packed) & state->disrupting_switches.packed) {
+			if (state->state == FINAL_APPROACH && ((switches.packed ^ old_switches.packed) & state->disrupting_switches.packed)) {
 				ASSERTF(0, "Switches were updated under us while train %d was on final approach", state->request.train_id);
 			}
 			state = state->next_state;
