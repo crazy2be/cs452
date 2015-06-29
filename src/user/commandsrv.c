@@ -68,6 +68,10 @@ static inline int is_alphanum(char c) {
 	return is_alpha(c) || is_digit(c);
 }
 
+static inline char to_upper(char c) {
+	return ('a' <= c && c <= 'z') ? c + 'A' - 'a' : c;
+}
+
 static void consume_whitespace(char *cmd, int *ip) {
 	int i = *ip;
 	while (cmd[i] && is_whitespace(cmd[i])) i++;
@@ -129,20 +133,21 @@ static const struct track_node* get_node(char *cmd, int *ip) {
 		if (is_whitespace(cmd[i])) {
 			break;
 		} else if (is_alphanum(cmd[i])) {
-			buf[j] = cmd[i++];
+			buf[j] = to_upper(cmd[i++]);
 		} else {
 			// unknown character
 			return NULL;
 		}
 	}
-	if (j == 0 || is_whitespace(cmd[i])) {
-		// name was empty, or got cut off 
+	if (j == 0 || !is_whitespace(cmd[i])) {
+		// name was empty, or got cut off
 		return NULL;
 	}
 	buf[j] = '\0';
 
 	for (j = 0; j < sizeof(track) / sizeof(track[0]); j++) {
 		if (strcmp(track[j].name, buf) == 0) {
+			*ip = i;
 			return &track[j];
 		}
 	}
@@ -188,9 +193,7 @@ static void handle_stop(int displaysrv, int train, struct position pos) {
 static void process_command(char *cmd, int displaysrv) {
 	int i = 0;
 	enum command_type type = get_command_type(cmd, &i);
-	/* printf("Consuming whitespace at %d" EOL, i); */
 	consume_whitespace(cmd, &i);
-	/* printf("SWITCHING ON TYPE %d" EOL, type); */
 	switch (type) {
 	case TR:
 		{
@@ -269,14 +272,17 @@ static void process_command(char *cmd, int displaysrv) {
 			int displacement;
 			const struct track_node *node;
 			if (get_integer(cmd, &i, &train)) {
+				printf("failed to parse train" EOL);
 				break;
 			}
 			consume_whitespace(cmd, &i);
 			if ((node = get_node(cmd, &i)) == NULL) {
+				printf("failed to parse node" EOL);
 				break;
 			}
 			consume_whitespace(cmd, &i);
 			if (get_integer(cmd, &i, &displacement)) {
+				printf("failed to parse displacement" EOL);
 				break;
 			}
 			consume_whitespace(cmd, &i);
@@ -285,6 +291,7 @@ static void process_command(char *cmd, int displaysrv) {
 			if (cmd[i] != '\0') {
 				edge_choice = displacement;
 				if (get_integer(cmd, &i, &displacement)) {
+					printf("failed to parse displacement (2)" EOL);
 					break;
 				}
 			}
@@ -296,6 +303,9 @@ static void process_command(char *cmd, int displaysrv) {
 			} else if (!(1 <= train && train <= 80)) {
 				displaysrv_console_feedback(displaysrv, "Invalid train number");
 			} else {
+				char buf[80];
+				snprintf(buf, sizeof(buf), "Got STP %d %s:%d + %d", train, node->name, edge_choice, displacement);
+				displaysrv_console_feedback(displaysrv, buf);
 				handle_stop(displaysrv, train, (struct position) { &node->edge[edge_choice], displacement });
 			}
 			return;
