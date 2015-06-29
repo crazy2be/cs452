@@ -210,8 +210,8 @@ TEST_COM2_EXPECTED=scripts/test_com2_expected
 
 test: $(TEST_BIN)
 	./scripts/qemu_capture $(TEST_BIN) $(TEST_ELF) $(TEST_COM1_OUTPUT) $(TEST_COM2_OUTPUT)
-	diff -y $(TEST_COM1_EXPECTED) $(TEST_COM1_OUTPUT)
-	diff -y $(TEST_COM2_EXPECTED) $(TEST_COM2_OUTPUT)
+	diff --text -y $(TEST_COM1_EXPECTED) $(TEST_COM1_OUTPUT)
+	diff --text -y $(TEST_COM2_EXPECTED) $(TEST_COM2_OUTPUT)
 
 format:
 	astyle -R --style=java --keep-one-line-statements --suffix=none \
