@@ -61,12 +61,12 @@ void irq_setup(void) {
 // intended to be called after the shutdown of the kernel, so as not to mess with redboot
 void irq_cleanup(void) {
 #ifndef QEMU
-    VWRITE(VIC1_BASE + ENABLE_OFFSET, 0);
-    VWRITE(VIC2_BASE + ENABLE_OFFSET, 0);
+	VWRITE(VIC1_BASE + ENABLE_OFFSET, 0);
+	VWRITE(VIC2_BASE + ENABLE_OFFSET, 0);
 #else
-    VWRITE(0x10140010, 0);
+	VWRITE(0x10140010, 0);
 #endif
-    __asm__ __volatile__ ("msr cpsr_c, #0x13");
+	__asm__ __volatile__ ("msr cpsr_c, #0x13");
 }
 
 unsigned long long irq_get_interrupt(void) {

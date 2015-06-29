@@ -3,7 +3,10 @@
 #include "track_control.h"
 #include "../clockserver.h"
 
-struct reverse_info { int train; int speed; };
+struct reverse_info {
+	int train;
+	int speed;
+};
 static void reverse_task(void) {
 	int tid;
 	struct reverse_info info;
@@ -20,12 +23,15 @@ void start_reverse(int train, int speed) {
 	int tid = create(HIGHER(PRIORITY_MIN, 2), reverse_task);
 	struct reverse_info info = (struct reverse_info) {
 		.train = train,
-		.speed = speed,
+		 .speed = speed,
 	};
 	send(tid, &info, sizeof(info), NULL, 0);
 }
 
-struct switch_info { int sw; enum sw_direction d; };
+struct switch_info {
+	int sw;
+	enum sw_direction d;
+};
 static void switch_task(void) {
 	int tid;
 	struct switch_info info;
@@ -41,7 +47,7 @@ void start_switch(int sw, enum sw_direction d) {
 	int tid = create(HIGHER(PRIORITY_MIN, 2), switch_task);
 	struct switch_info info = (struct switch_info) {
 		.sw = sw,
-		.d = d,
+		 .d = d,
 	};
 	send(tid, &info, sizeof(info), NULL, 0);
 }

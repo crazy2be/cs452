@@ -252,9 +252,9 @@ void io_suite(void) {
 	start_servers();
 	fputs("Hello COM1" EOL, COM1);
 	fprintf(COM1, "Hello COM1 9000 = %d, 0 = %d, -1 = %d or %u, 117 = %d, 0x7f = 0x%x, hello = %s" EOL,
-			9000, 0, -1, -1, 117, 0x7f, "hello");
+	        9000, 0, -1, -1, 117, 0x7f, "hello");
 	ASSERT(87 == snprintf(buf, sizeof(buf), "Hello COM1 9 = %d, 0 = %d, -1 = %d or %u, 117 = %d, 0x7f = 0x%x, hello = %s" EOL,
-		9, 0, -1, -1, 117, 0x7f, "hello"));
+	                      9, 0, -1, -1, 117, 0x7f, "hello"));
 	fputs(buf, COM1);
 
 	ASSERT(4 == snprintf(buf, sizeof(buf), "1234"));

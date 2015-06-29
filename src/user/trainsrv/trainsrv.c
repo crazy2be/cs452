@@ -154,7 +154,7 @@ int trains_query_active(int *trains_out) {
 void trains_query_spatials(int train, struct train_state *state_out) {
 	TSEND2(((struct trains_request) {
 		.type = QUERY_SPATIALS,
-		.train_number = train,
+		 .train_number = train,
 	}), state_out);
 }
 
@@ -162,8 +162,8 @@ int trains_query_arrival_time(int train, int distance) {
 	int rpy = -1;
 	TSEND2(((struct trains_request) {
 		.type = QUERY_ARRIVAL,
-		.train_number = train,
-		.distance = distance,
+		 .train_number = train,
+		  .distance = distance,
 	}), &rpy);
 	return rpy;
 }
@@ -171,29 +171,29 @@ int trains_query_arrival_time(int train, int distance) {
 void trains_send_sensors(struct sensor_state state) {
 	TSEND(((struct trains_request) {
 		.type = SEND_SENSORS,
-		.sensors = state,
+		 .sensors = state,
 	}));
 }
 
 void trains_set_speed(int train, int speed) {
 	TSEND(((struct trains_request) {
 		.type = SET_SPEED,
-		.train_number = train,
-		.speed = speed,
+		 .train_number = train,
+		  .speed = speed,
 	}));
 }
 
 void trains_reverse(int train) {
 	TSEND(((struct trains_request) {
 		.type = REVERSE,
-		.train_number = train,
+		 .train_number = train,
 	}));
 }
 
 void trains_switch(int switch_number, enum sw_direction d) {
 	TSEND(((struct trains_request) {
 		.type = SWITCH_SWITCH,
-		.switch_number = switch_number,
-		.direction = d,
+		 .switch_number = switch_number,
+		  .direction = d,
 	}));
 }

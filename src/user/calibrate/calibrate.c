@@ -30,7 +30,7 @@ struct bookkeeping {
 // Therefore, we can trace out the path that the train would have taken given the orientation
 // of the switches.
 static int distance_between_nodes(const struct track_node *src,
-		const struct track_node *dst, const struct switch_state *switches) {
+                                  const struct track_node *dst, const struct switch_state *switches) {
 
 	// we expect to periodically skip some sensors because of misfiring sensors
 	// we allow ourselves to skip at most 1 sensor in a row before throwing up our hands
@@ -90,7 +90,9 @@ static void delay_task(void) {
 	//printf("Delaying for %d %d"EOL, delay_amount, tid);
 	delay(delay_amount);
 	//printf("Delayed for %d %d"EOL, delay_amount, tid);
-	struct calibrate_req req = (struct calibrate_req) { .type = DELAY_PASSED };
+	struct calibrate_req req = (struct calibrate_req) {
+		.type = DELAY_PASSED
+	};
 	send(tid, &req, sizeof(req), NULL, 0);
 }
 static void enque_delay(int amount) {
@@ -167,8 +169,8 @@ void start_calibrate(void) {
 				const int distance = distance_between_nodes(bk.last_node, current, &switches);
 				const int delta_t = req.u.sensors.ticks - bk.time_at_last_sensor;
 				printf("data: %d, %d, %s, %s, %d, %d"EOL,
-					   train_speeds[train_speed_idx - 1], train_speeds[train_speed_idx],
-					   bk.last_node->name, current->name, delta_t, distance);
+				       train_speeds[train_speed_idx - 1], train_speeds[train_speed_idx],
+				       bk.last_node->name, current->name, delta_t, distance);
 			}
 
 			bk.last_node = current;

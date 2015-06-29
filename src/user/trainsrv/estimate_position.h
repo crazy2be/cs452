@@ -61,7 +61,7 @@ struct trainsrv_state {
 int train_velocity_from_state(struct internal_train_state *train_state);
 int train_velocity(struct trainsrv_state *state, int train);
 struct position get_estimated_train_position(struct trainsrv_state *state,
-		struct internal_train_state *train_state);
+        struct internal_train_state *train_state);
 
 struct internal_train_state* get_train_state(struct trainsrv_state *state, int train_id);
 

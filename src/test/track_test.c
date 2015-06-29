@@ -25,7 +25,7 @@ static void test_next_sensor(void) {
 }
 
 int calculate_actual_velocity(struct internal_train_state *train_state,
-		const struct track_node *sensor_node, const struct switch_state *switches, int ticks);
+                              const struct track_node *sensor_node, const struct switch_state *switches, int ticks);
 
 static void test_actual_velocity(void) {
 	const struct track_node *b8, *c15, *d12;
@@ -64,7 +64,10 @@ static void test_actual_velocity(void) {
 	ASSERT(-2 == calculate_actual_velocity(&ts, d12, &switches, 100));
 }
 
-struct train_alert_client_params { int train_id; struct position position; };
+struct train_alert_client_params {
+	int train_id;
+	struct position position;
+};
 
 void test_train_alert_client(void) {
 	struct train_alert_client_params params;
@@ -105,7 +108,9 @@ void int_test_train_alert_srv(void) {
 
 	trains_start();
 
-	int child = start_await_client(58, (struct position){ &track[95].edge[0], 50 });
+	int child = start_await_client(58, (struct position) {
+		&track[95].edge[0], 50
+	});
 
 	// test case where switches are in the wrong orientation (and possibly change)
 
@@ -149,7 +154,7 @@ void stub_trainsrv_arrival(int train_id, int distance, int ticks) {
 	reply(tid, &ticks, sizeof(ticks));
 }
 
-void test_train_alert_srv(void){
+void test_train_alert_srv(void) {
 	init_tracka(track);
 	start_servers();
 
@@ -163,11 +168,15 @@ void test_train_alert_srv(void){
 	int ticks, client, client2;
 
 	// test alert request which will be started immediately
-	client = start_await_client(58, (struct position){ &track[95].edge[0], 50 });
+	client = start_await_client(58, (struct position) {
+		&track[95].edge[0], 50
+	});
 	memzero(&state);
 	stub_trainsrv_spatials(58, state);
 
-	state.position = (struct position) { &track[57].edge[0], 0 };
+	state.position = (struct position) {
+		&track[57].edge[0], 0
+	};
 	train_alert_update_train(58, state.position);
 	stub_trainsrv_arrival(58, track[57].edge[0].dist + 50, 100);
 
@@ -179,12 +188,18 @@ void test_train_alert_srv(void){
 	// also test that multiple waiters on the same train works
 
 	// currently at d10
-	state.position = (struct position) { &track[57].edge[0], 0 };
+	state.position = (struct position) {
+		&track[57].edge[0], 0
+	};
 
-	client = start_await_client(58, (struct position){ &track[71].edge[0], 70 }); // e8
+	client = start_await_client(58, (struct position) {
+		&track[71].edge[0], 70
+	}); // e8
 	stub_trainsrv_spatials(58, state);
 
-	client2 = start_await_client(58, (struct position){ &track[55].edge[0], 30 }); // d8
+	client2 = start_await_client(58, (struct position) {
+		&track[55].edge[0], 30
+	}); // d8
 	stub_trainsrv_spatials(58, state);
 
 	// check that updating things does nothing if not on final approach
@@ -194,13 +209,17 @@ void test_train_alert_srv(void){
 
 
 	// now at d8
-	state.position = (struct position) { &track[55].edge[0], 0 };
+	state.position = (struct position) {
+		&track[55].edge[0], 0
+	};
 	train_alert_update_train(58, state.position);
 
 	stub_trainsrv_arrival(58, 30, 60);
 
 	// now at e8
-	state.position = (struct position) { &track[71].edge[0], 0 };
+	state.position = (struct position) {
+		&track[71].edge[0], 0
+	};
 	train_alert_update_train(58, state.position);
 
 	stub_trainsrv_arrival(58, 70, 150);

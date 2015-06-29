@@ -181,7 +181,7 @@ static void io_server_run() {
 			} else {
 				temp = (struct io_blocked_task) {
 					.tid = tid,
-					.byte_count = req.u.len,
+					 .byte_count = req.u.len,
 				};
 				io_rbuf_put(&rx_waiters, temp);
 			}
@@ -300,7 +300,10 @@ static void bw_gets(char *buf, int len, const int channel) {
 
 // functions which interact with the io server
 void fput_buf(const char *buf, int buflen, const int channel) {
-	if (channel == COM2_DEBUG) { bw_put_buf(buf, buflen, COM2); return; }
+	if (channel == COM2_DEBUG) {
+		bw_put_buf(buf, buflen, COM2);
+		return;
+	}
 
 	KASSERT(usermode());
 	struct io_request req;
@@ -313,21 +316,32 @@ void fput_buf(const char *buf, int buflen, const int channel) {
 	send(io_server_tid(channel), &req, msg_len, &resp, sizeof(resp));
 }
 void fputs(const char *str, const int channel) {
-	if (channel == COM2_DEBUG) { bw_puts(str, COM2); return; }
+	if (channel == COM2_DEBUG) {
+		bw_puts(str, COM2);
+		return;
+	}
 	ASSERT(usermode());
 	int len = strlen(str);
 	ASSERT(len <= MAX_STR_LEN);
 	fput_buf(str, len, channel);
 }
 void fputc(const char c, const int channel) {
-	if (channel == COM2_DEBUG) { bw_putc(c, COM2); return; }
+	if (channel == COM2_DEBUG) {
+		bw_putc(c, COM2);
+		return;
+	}
 	ASSERT(usermode());
 	fput_buf(&c, 1, channel);
 }
 void fgets(char *buf, int len, const int channel) {
-	if (channel == COM2_DEBUG) { bw_gets(buf, len, COM2); return; }
+	if (channel == COM2_DEBUG) {
+		bw_gets(buf, len, COM2);
+		return;
+	}
 	ASSERT(usermode());
-	struct io_request req = (struct io_request) { .type = IO_RX, .u.len = len };
+	struct io_request req = (struct io_request) {
+		.type = IO_RX, .u.len = len
+	};
 	unsigned msg_len = sizeof(req) - sizeof(req.u.buf) + sizeof(req.u.len);
 	send(io_server_tid(channel), &req, msg_len, buf, len);
 }

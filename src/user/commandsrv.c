@@ -24,7 +24,7 @@ static void get_command(char *buf, int buflen, int displaysrv) {
 				i--;
 				displaysrv_console_backspace(displaysrv);
 			}
-		// Avoid echoing arrow keys. TODO: We could add line editing.
+			// Avoid echoing arrow keys. TODO: We could add line editing.
 		} else if (c == 0x1B) {
 			parsing_esc = 1;
 		} else if (parsing_esc) {
@@ -98,30 +98,30 @@ static enum command_type get_command_type(char *cmd, int *ip) {
 static int get_integer(char *cmd, int *ip, int *out) {
 	int i = *ip;
 
-    int sign = 1;
-    int number = 0;
+	int sign = 1;
+	int number = 0;
 
-    if (cmd[i] == '-') {
-        sign = -1;
+	if (cmd[i] == '-') {
+		sign = -1;
 		i++;
-    }
+	}
 
-    for (;;) {
-        if (!is_digit(cmd[i])) {
-            // illegal number
-            return 1;
-        }
-        number = number * 10 + cmd[i++] - '0';
+	for (;;) {
+		if (!is_digit(cmd[i])) {
+			// illegal number
+			return 1;
+		}
+		number = number * 10 + cmd[i++] - '0';
 
-        if (is_whitespace(cmd[i])) {
-            break;
-        }
-    }
+		if (is_whitespace(cmd[i])) {
+			break;
+		}
+	}
 
-    *out = sign * number;
+	*out = sign * number;
 	*ip = i;
 
-    return 0;
+	return 0;
 }
 
 static const struct track_node* get_node(char *cmd, int *ip) {
@@ -174,7 +174,10 @@ static void handle_rv(int displaysrv, int train) {
 }
 
 
-struct stop_task_params { int train; struct position pos; };
+struct stop_task_params {
+	int train;
+	struct position pos;
+};
 static void stop_task(void) {
 	int tid;
 	struct stop_task_params params;
@@ -195,122 +198,120 @@ static void process_command(char *cmd, int displaysrv) {
 	enum command_type type = get_command_type(cmd, &i);
 	consume_whitespace(cmd, &i);
 	switch (type) {
-	case TR:
-		{
-			int train, speed;
-			if (get_integer(cmd, &i, &train)) {
-				break;
-			}
-			consume_whitespace(cmd, &i);
-			if (get_integer(cmd, &i, &speed)) {
-				break;
-			}
-			if (!(0 <= speed && speed <= 14)) {
-				displaysrv_console_feedback(displaysrv, "Invalid speed");
-			} else if (!(1 <= train && train <= 80)) {
-				displaysrv_console_feedback(displaysrv, "Invalid train number");
-			} else {
-				handle_tr(displaysrv, train, speed);
-			}
-			return;
+	case TR: {
+		int train, speed;
+		if (get_integer(cmd, &i, &train)) {
+			break;
 		}
-	case SW:
-		{
-			int sw;
-			enum sw_direction pos;
-			if (get_integer(cmd, &i, &sw)) {
-				break;
-			}
-			consume_whitespace(cmd, &i);
-			switch (cmd[i++]) {
-			case 'C':
-			case 'c':
-				pos = CURVED;
-				break;
-			case 'S':
-			case 's':
-				pos = STRAIGHT;
-				break;
-			default:
-				goto unknown;
-			}
-			if (cmd[i] != '\0') break;
-			/* printf("Parsed command SW %d %d" EOL, sw, pos); */
-			if (!((1 <= sw && sw <= 18) || (146 <= sw && sw <= 156))) {
-				displaysrv_console_feedback(displaysrv, "Invalid switch");
-			} else {
-				handle_sw(displaysrv, sw, pos);
-			}
-			return;
+		consume_whitespace(cmd, &i);
+		if (get_integer(cmd, &i, &speed)) {
+			break;
 		}
-	case RV:
-		{
-			int train;
-			if (get_integer(cmd, &i, &train)) {
-				break;
-			}
-			if (!(1 <= train && train <= 80)) {
-				displaysrv_console_feedback(displaysrv, "Invalid train number");
-			} else {
-				handle_rv(displaysrv, train);
-			}
-			return;
+		if (!(0 <= speed && speed <= 14)) {
+			displaysrv_console_feedback(displaysrv, "Invalid speed");
+		} else if (!(1 <= train && train <= 80)) {
+			displaysrv_console_feedback(displaysrv, "Invalid train number");
+		} else {
+			handle_tr(displaysrv, train, speed);
 		}
-		break;
+		return;
+	}
+	case SW: {
+		int sw;
+		enum sw_direction pos;
+		if (get_integer(cmd, &i, &sw)) {
+			break;
+		}
+		consume_whitespace(cmd, &i);
+		switch (cmd[i++]) {
+		case 'C':
+		case 'c':
+			pos = CURVED;
+			break;
+		case 'S':
+		case 's':
+			pos = STRAIGHT;
+			break;
+		default:
+			goto unknown;
+		}
+		if (cmd[i] != '\0') break;
+		/* printf("Parsed command SW %d %d" EOL, sw, pos); */
+		if (!((1 <= sw && sw <= 18) || (146 <= sw && sw <= 156))) {
+			displaysrv_console_feedback(displaysrv, "Invalid switch");
+		} else {
+			handle_sw(displaysrv, sw, pos);
+		}
+		return;
+	}
+	case RV: {
+		int train;
+		if (get_integer(cmd, &i, &train)) {
+			break;
+		}
+		if (!(1 <= train && train <= 80)) {
+			displaysrv_console_feedback(displaysrv, "Invalid train number");
+		} else {
+			handle_rv(displaysrv, train);
+		}
+		return;
+	}
+	break;
 	case QUIT:
 		displaysrv_quit(displaysrv);
 		stop_servers();
 		break;
-	case STOP:
-		{
-			// command can be in the form:
-			//     stp <train> <node> <edge choice> <displacement>
-			// OR
-			//     stp <train> <node> <displacement>
-			int train;
-			int edge_choice = 0;
-			int displacement;
-			const struct track_node *node;
-			if (get_integer(cmd, &i, &train)) {
-				printf("failed to parse train" EOL);
-				break;
-			}
-			consume_whitespace(cmd, &i);
-			if ((node = get_node(cmd, &i)) == NULL) {
-				printf("failed to parse node" EOL);
-				break;
-			}
-			consume_whitespace(cmd, &i);
-			if (get_integer(cmd, &i, &displacement)) {
-				printf("failed to parse displacement" EOL);
-				break;
-			}
-			consume_whitespace(cmd, &i);
-
-			// 4th argument is optional
-			if (cmd[i] != '\0') {
-				edge_choice = displacement;
-				if (get_integer(cmd, &i, &displacement)) {
-					printf("failed to parse displacement (2)" EOL);
-					break;
-				}
-			}
-
-			if (!(0 == edge_choice || (1 == edge_choice && node->type == NODE_BRANCH))) {
-				displaysrv_console_feedback(displaysrv, "Invalid edge selection");
-			} else if (!(0 <= displacement && displacement <= node->edge[edge_choice].dist)) {
-				displaysrv_console_feedback(displaysrv, "Overlong displacement");
-			} else if (!(1 <= train && train <= 80)) {
-				displaysrv_console_feedback(displaysrv, "Invalid train number");
-			} else {
-				char buf[80];
-				snprintf(buf, sizeof(buf), "Got STP %d %s:%d + %d", train, node->name, edge_choice, displacement);
-				displaysrv_console_feedback(displaysrv, buf);
-				handle_stop(displaysrv, train, (struct position) { &node->edge[edge_choice], displacement });
-			}
-			return;
+	case STOP: {
+		// command can be in the form:
+		//     stp <train> <node> <edge choice> <displacement>
+		// OR
+		//     stp <train> <node> <displacement>
+		int train;
+		int edge_choice = 0;
+		int displacement;
+		const struct track_node *node;
+		if (get_integer(cmd, &i, &train)) {
+			printf("failed to parse train" EOL);
+			break;
 		}
-		break;
+		consume_whitespace(cmd, &i);
+		if ((node = get_node(cmd, &i)) == NULL) {
+			printf("failed to parse node" EOL);
+			break;
+		}
+		consume_whitespace(cmd, &i);
+		if (get_integer(cmd, &i, &displacement)) {
+			printf("failed to parse displacement" EOL);
+			break;
+		}
+		consume_whitespace(cmd, &i);
+
+		// 4th argument is optional
+		if (cmd[i] != '\0') {
+			edge_choice = displacement;
+			if (get_integer(cmd, &i, &displacement)) {
+				printf("failed to parse displacement (2)" EOL);
+				break;
+			}
+		}
+
+		if (!(0 == edge_choice || (1 == edge_choice && node->type == NODE_BRANCH))) {
+			displaysrv_console_feedback(displaysrv, "Invalid edge selection");
+		} else if (!(0 <= displacement && displacement <= node->edge[edge_choice].dist)) {
+			displaysrv_console_feedback(displaysrv, "Overlong displacement");
+		} else if (!(1 <= train && train <= 80)) {
+			displaysrv_console_feedback(displaysrv, "Invalid train number");
+		} else {
+			char buf[80];
+			snprintf(buf, sizeof(buf), "Got STP %d %s:%d + %d", train, node->name, edge_choice, displacement);
+			displaysrv_console_feedback(displaysrv, buf);
+			handle_stop(displaysrv, train, (struct position) {
+				&node->edge[edge_choice], displacement
+			});
+		}
+		return;
+	}
+	break;
 	default:
 		break;
 	}

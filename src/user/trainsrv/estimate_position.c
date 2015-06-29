@@ -48,7 +48,7 @@ static bool break_after_distance(const struct track_edge *e, void *ctx) {
 }
 
 struct position get_estimated_train_position(struct trainsrv_state *state,
-		struct internal_train_state *train_state) {
+        struct internal_train_state *train_state) {
 
 	struct position position = train_state->last_known_position;
 
@@ -144,7 +144,7 @@ static struct internal_train_state* allocate_train_state(struct trainsrv_state *
 // currently active trains
 
 static void reanchor(struct trainsrv_state *state,
-					 struct internal_train_state *train_state) {
+                     struct internal_train_state *train_state) {
 	int now = time();
 	train_state->last_known_position = get_estimated_train_position(state, train_state);
 	train_state->last_known_time = now;
@@ -196,7 +196,7 @@ int update_train_direction(struct trainsrv_state *state, int train_id) {
 // prints out how far away we thought we were from the sensor at the time
 // we hit it
 static void log_position_estimation_error(const struct trainsrv_state *state,
-		struct internal_train_state *train_state, const struct track_node *sensor_node, int ticks) {
+        struct internal_train_state *train_state, const struct track_node *sensor_node, int ticks) {
 
 	// if we had an estimated position for this train, ideally it should be estimated as
 	// being very near to the tripped sensor when this happens
@@ -209,18 +209,18 @@ static void log_position_estimation_error(const struct trainsrv_state *state,
 		if (train_state->next_sensor == sensor_node) {
 			const int delta_d = train_state->mm_to_next_sensor - get_estimated_distance_travelled(train_state, time());
 			snprintf(feedback, sizeof(feedback), "Train was estimated at %d mm away from sensor %s when tripped (%d total)",
-					delta_d, sens_name, train_state->mm_to_next_sensor);
+			         delta_d, sens_name, train_state->mm_to_next_sensor);
 			displaysrv_console_feedback(state->displaysrv_tid, feedback);
 		} else {
 			char exp_sens_name[4];
 			sensor_repr(train_state->next_sensor->num, exp_sens_name);
 			snprintf(feedback, sizeof(feedback), "Train was expected to hit sensor %s, actually hit %s",
-					exp_sens_name, sens_name);
+			         exp_sens_name, sens_name);
 			displaysrv_console_feedback(state->displaysrv_tid, feedback);
 		}
 	}
 	train_state->next_sensor = track_next_sensor(sensor_node, &state->switches,
-			&train_state->mm_to_next_sensor);
+	                           &train_state->mm_to_next_sensor);
 
 	if (train_state->next_sensor->type != NODE_SENSOR) {
 		ASSERT(train_state->next_sensor->type == NODE_EXIT);
@@ -247,7 +247,7 @@ static bool break_at_specific_node(const struct track_edge *e, void *context_) {
 #define SILENT_ERROR -1
 #define TELEPORT_ERROR -2
 int calculate_actual_velocity(struct internal_train_state *train_state,
-		const struct track_node *sensor_node, const struct switch_state *switches, int ticks) {
+                              const struct track_node *sensor_node, const struct switch_state *switches, int ticks) {
 
 	ASSERT(sensor_node != NULL);
 
@@ -262,7 +262,7 @@ int calculate_actual_velocity(struct internal_train_state *train_state,
 	// do sensor attribution before this function is even called
 	struct specific_node_context context = { sensor_node, - train_state->last_known_position.displacement };
 	const struct track_node *ending_node = track_go_forwards(train_state->last_known_position.edge->src,
-		switches, break_at_specific_node, &context);
+	                                       switches, break_at_specific_node, &context);
 	if (ending_node != sensor_node) {
 		// if there is no path from the last position to this node, either because
 		// we entered a cycle, or hit an exit node
@@ -278,7 +278,7 @@ int calculate_actual_velocity(struct internal_train_state *train_state,
 }
 
 static void update_train_velocity_estimate(const struct trainsrv_state *state, struct internal_train_state *train_state,
-		const struct track_node *sensor_node, int ticks) {
+        const struct track_node *sensor_node, int ticks) {
 
 	const int actual_velocity = calculate_actual_velocity(train_state, sensor_node, &state->switches, ticks);
 	if (actual_velocity == TELEPORT_ERROR) {
@@ -302,8 +302,8 @@ static void update_train_velocity_estimate(const struct trainsrv_state *state, s
 }
 
 static void update_train_position_from_sensor(const struct trainsrv_state *state,
-		struct internal_train_state *train_state,
-		int sensor, int ticks) {
+        struct internal_train_state *train_state,
+        int sensor, int ticks) {
 
 	const struct track_node *sensor_node = track_node_from_sensor(sensor);
 	ASSERT(sensor_node != NULL && sensor_node->type == NODE_SENSOR && sensor_node->num == sensor);

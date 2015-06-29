@@ -85,7 +85,7 @@ static int csend(struct clockserver_request req) {
 int delay(int ticks) {
 	return csend((struct clockserver_request) {
 		.type = DELAY,
-		.ticks = ticks,
+		 .ticks = ticks,
 	});
 }
 int time() {
@@ -96,6 +96,6 @@ int time() {
 int delay_until(int ticks) {
 	return csend((struct clockserver_request) {
 		.type = DELAY_UNTIL,
-		.ticks = ticks,
+		 .ticks = ticks,
 	});
 }
