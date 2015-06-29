@@ -212,7 +212,7 @@ unknown:
 	displaysrv_console_feedback(displaysrv, "Unknown command");
 }
 
-void commandsrv_start(void) {
+void commandsrv_main(void) {
 	char buf[80];
 
 	int displaysrv = whois(DISPLAYSRV_NAME);
@@ -226,5 +226,5 @@ void commandsrv_start(void) {
 }
 
 void commandsrv(void) {
-	try_create(HIGHER(PRIORITY_MIN, 5), commandsrv_start);
+	create(HIGHER(PRIORITY_MIN, 5), commandsrv_main);
 }

@@ -68,6 +68,7 @@ int parent_tid(void);
 
 #define Send try_send
 #define send(...) ASSERTOK(try_send(__VA_ARGS__))
+// Returns the size of the message supplied by the replying task (or error)
 int try_send(int tid, const void *msg, int msglen, void *reply, int replylen);
 #define SEND_IMPOSSIBLE_TID -1
 #define SEND_INVALID_TID -2

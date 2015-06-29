@@ -95,7 +95,7 @@ static int misbehaving_receiving_tid = -1;
 static int producers = 20;
 
 // webscale multiplication!
-void try_sending_task(void) {
+void sending_task(void) {
 	for (int i = 0; i < 10; i++) {
 		struct Msg msg;
 		struct Reply rep;
@@ -121,13 +121,13 @@ void receiving_task(void) {
 		rep.sum = msg.a + msg.b;
 		rep.prod = msg.a * msg.b;
 
-		ASSERT(try_reply(tid, &rep, sizeof(rep)) == REPLY_SUCCESSFUL);
+		reply(tid, &rep, sizeof(rep));
 	}
 	printf("Receive done" EOL);
 	signal_send(parent_tid());
 }
 
-void misbehaving_try_sending_task(void) {
+void misbehaving_sending_task(void) {
 	struct Msg msg;
 	struct Reply rep;
 
@@ -137,7 +137,7 @@ void misbehaving_try_sending_task(void) {
 	ASSERT(try_send(254, &msg, sizeof(msg), &rep, sizeof(rep)) == SEND_INVALID_TID);
 	ASSERT(try_send(tid(), &msg, sizeof(msg), &rep, sizeof(rep)) == SEND_INVALID_TID);
 
-	int child = try_create(PRIORITY_MAX, nop);
+	int child = create(PRIORITY_MAX, nop);
 	// the child should exit immediately, so we shouldn't be able to try_send to it
 	ASSERT(try_send(child, &msg, sizeof(msg), &rep, sizeof(rep)) == SEND_INVALID_TID);
 
@@ -233,12 +233,12 @@ void init_task(void) {
 void message_suite(void) {
 	start_servers();
 
-	receiving_tid = try_create(PRIORITY_MIN, receiving_task);
+	receiving_tid = create(PRIORITY_MIN, receiving_task);
 	for (int i = 0; i < producers; i++) {
-		try_create(PRIORITY_MIN, try_sending_task);
+		create(PRIORITY_MIN, sending_task);
 	}
-	misbehaving_receiving_tid = try_create(PRIORITY_MIN - 1, misbehaving_receiving_task);
-	try_create(PRIORITY_MIN - 1, misbehaving_try_sending_task);
+	misbehaving_receiving_tid = create(PRIORITY_MIN - 1, misbehaving_receiving_task);
+	create(PRIORITY_MIN - 1, misbehaving_sending_task);
 
 	for (int i = 0; i < producers + 3; i++) signal_recv();
 
@@ -271,10 +271,10 @@ void destroy_worker(void) {
 	int r, tid2;
 
 	ASSERT(try_receive(&tid2, &r, sizeof(r)) == sizeof(r));
-	ASSERT(try_reply(tid2, NULL, 0) == REPLY_SUCCESSFUL);
+	reply(tid2, NULL, 0);
 
 	ASSERT(try_receive(&tid2, NULL, 0) == 0);
-	ASSERT(try_reply(tid2, &r, sizeof(r)) == REPLY_SUCCESSFUL);
+	reply(tid2, &r, sizeof(r));
 }
 
 void destroy_init(void) {
