@@ -14,14 +14,14 @@ static const unsigned stack_canary[4] = { 0xdeadbeef, 0xdeadbeef, 0xdeadbeef, 0x
 void tasks_init(void) {
 	memset(&tasks, 0, sizeof(tasks));
 
-	/* struct prng prng; */
+	struct prng prng;
 	// TODO: Could make this some sort of less-deterministic value.
-	/* prng_init(&prng, 37); */
-	/* for (int i = 0; i < NUM_TD; i++) { */
-	/* 	for (int j = 0; j < USER_STACK_SIZE; j++) { */
-	/* 		stacks[i][j] = prng_gen(&prng); */
-	/* 	} */
-	/* } */
+	prng_init(&prng, 37);
+	for (int i = 0; i < NUM_TD; i++) {
+		for (int j = 0; j < USER_STACK_SIZE; j++) {
+			stacks[i][j] = prng_gen(&prng);
+		}
+	}
 
 	task_queue_init(&free_tds);
 	for (int i = 0; i < NUM_TD; i++) {
