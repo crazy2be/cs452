@@ -17,7 +17,7 @@ static inline int switch_packed_num(int num) {
 	if (1 <= num && num <= 18) {
 		return num;
 	} else if (145 <= num && num <= 156) {
-		return num - 153 + 18 + 1;
+		return num - 145 + 18 + 1;
 	} else {
 		ASSERT(0 && "Unknown switch number");
 		return -1;
