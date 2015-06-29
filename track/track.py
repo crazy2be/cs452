@@ -23,7 +23,8 @@ class TrackNode():
   typ = -1
   num = -1
   reverse = None # TrackNode in the same location, but opposite direction.
-  edge = [TrackEdge(), TrackEdge()] # TrackEdge[2]
+  def __init__(self):
+    self.edge = [TrackEdge(), TrackEdge()]
 
 def init_tracka():
   track = [

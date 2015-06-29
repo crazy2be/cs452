@@ -302,12 +302,11 @@ for (vi, node) in enumerate(tracka):
 	node.i = vi
 
 for node in tracka:
-	print node.i
 	v = g.vertex(node.i)
 	n_title[v] = node.name
+	g.add_edge(g.vertex(node.i), g.vertex(node.reverse.i))
 	for edge in node.edge:
-		print edge.src.num, edge.dest.num
-		print vars(edge.src), vars(edge.dest)
+		if edge.src is None: continue
 		g.add_edge(g.vertex(edge.src.i), g.vertex(edge.dest.i))
 
 
