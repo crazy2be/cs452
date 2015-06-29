@@ -23,6 +23,7 @@ void exited_main(void);
 
 void sleep(int n);
 void *memset(void *ptr, int value, int num);
+#define memzero(ptr) memset(ptr, 0, sizeof(*(ptr)))
 typedef unsigned size_t;
 void* memcpy(void *dst, const void *src, size_t len);
 

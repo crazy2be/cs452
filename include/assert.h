@@ -20,4 +20,10 @@
 		int result2 = (syscall); \
 		ASSERTF(result2 >= 0, "Syscall '" STRINGIFY2(syscall) "' failed with code %d", result2); result2; })
 
+#define ASSERT_INTEQ(ra, rb) ({\
+		int a = (ra); \
+		int b = (rb); \
+		ASSERTF(a == b, "%d != %d", a, b); \
+		});
+
 #define WTF(fmt, ...) ASSERTF(false, fmt, ##__VA_ARGS__);

@@ -1,6 +1,7 @@
 #include "../user/track.h"
 #include "../user/trainsrv/estimate_position.h"
 #include "../user/trainsrv/train_alert_srv.h"
+#include "../user/trainsrv/trainsrv_request.h"
 #include "../user/nameserver.h"
 #include "../user/displaysrv.h"
 #include "../user/signal.h"
@@ -63,9 +64,24 @@ static void test_actual_velocity(void) {
 	ASSERT(-2 == calculate_actual_velocity(&ts, d12, &switches, 100));
 }
 
+struct train_alert_client_params { int train_id; struct position position; };
+
 void test_train_alert_client(void) {
-	int ticks = train_alert_at(58, (struct position){ &track[95].edge[0], 50 });
-	send(parent_tid(), &ticks, sizeof(ticks), NULL, 0);
+	struct train_alert_client_params params;
+	int tid;
+	receive(&tid, &params, sizeof(params));
+	reply(tid, NULL, 0);
+	// wait until 50mm past MR8
+	int ticks = train_alert_at(params.train_id, params.position);
+	receive(&tid, NULL, 0);
+	reply(tid, &ticks, sizeof(ticks));
+}
+
+int start_await_client(int train_id, struct position position) {
+	struct train_alert_client_params params = { train_id, position };
+	int tid = create(PRIORITY_MAX, test_train_alert_client);
+	send(tid, &params, sizeof(params), NULL, 0);
+	return tid;
 }
 
 // no-op displaysrv for testing
@@ -79,7 +95,8 @@ void stub_displaysrv(void) {
 	}
 }
 
-void test_train_alert_srv(void) {
+void int_test_train_alert_srv(void) {
+	// smoke test of trainsrv & train_alertsrv
 	init_tracka(track);
 	start_servers();
 
@@ -88,7 +105,7 @@ void test_train_alert_srv(void) {
 
 	trains_start();
 
-	create(PRIORITY_MAX, test_train_alert_client);
+	int child = start_await_client(58, (struct position){ &track[95].edge[0], 50 });
 
 	// test case where switches are in the wrong orientation (and possibly change)
 
@@ -105,12 +122,93 @@ void test_train_alert_srv(void) {
 	sensors.ticks = 100;
 	trains_send_sensors(sensors);
 
-	int ticks, tid;
-	receive(&tid, &ticks, sizeof(ticks));
-	reply(tid, NULL, 0);
+	int ticks;
+	send(child, NULL, 0, &ticks, sizeof(ticks));
 
-	printf("Got an alert at time %d" EOL, ticks);
+	printf("Finished train srv smoke test" EOL);
 
+	stop_servers();
+}
+
+void stub_trainsrv_spatials(int train_id, struct train_state state) {
+	struct trains_request req;
+	int tid;
+	receive(&tid, &req, sizeof(req));
+	ASSERT_INTEQ(req.type, QUERY_SPATIALS);
+	ASSERT_INTEQ(req.train_number, train_id);
+	reply(tid, &state, sizeof(state));
+}
+
+void stub_trainsrv_arrival(int train_id, int distance, int ticks) {
+	struct trains_request req;
+	int tid;
+	receive(&tid, &req, sizeof(req));
+	ASSERT_INTEQ(req.type, QUERY_ARRIVAL);
+	ASSERT_INTEQ(req.train_number, train_id);
+	ASSERT_INTEQ(req.distance, distance);
+	reply(tid, &ticks, sizeof(ticks));
+}
+
+void test_train_alert_srv(void){
+	init_tracka(track);
+	start_servers();
+
+	// we pretend to be the trainsrv to reply with fake positional data
+	register_as("trains");
+
+	struct switch_state switches;
+	memzero(&switches);
+	train_alert_start(switches, false);
+	struct train_state state;
+	int ticks, client, client2;
+
+	// test alert request which will be started immediately
+	client = start_await_client(58, (struct position){ &track[95].edge[0], 50 });
+	memzero(&state);
+	stub_trainsrv_spatials(58, state);
+
+	state.position = (struct position) { &track[57].edge[0], 0 };
+	train_alert_update_train(58, state.position);
+	stub_trainsrv_arrival(58, track[57].edge[0].dist + 50, 100);
+
+	send(client, NULL, 0, &ticks, sizeof(ticks));
+	ASSERT_INTEQ(ticks, 100);
+
+	// test alert request which will wait until the train moves into position
+	// the train is currently at d10, we want to wait until it moves past d8 & e8
+	// also test that multiple waiters on the same train works
+
+	// currently at d10
+	state.position = (struct position) { &track[57].edge[0], 0 };
+
+	client = start_await_client(58, (struct position){ &track[71].edge[0], 70 }); // e8
+	stub_trainsrv_spatials(58, state);
+
+	client2 = start_await_client(58, (struct position){ &track[55].edge[0], 30 }); // d8
+	stub_trainsrv_spatials(58, state);
+
+	// now at d8
+	state.position = (struct position) { &track[55].edge[0], 0 };
+	train_alert_update_train(58, state.position);
+
+	stub_trainsrv_arrival(58, 30, 60);
+
+	// now at e8
+	state.position = (struct position) { &track[71].edge[0], 0 };
+	train_alert_update_train(58, state.position);
+
+	stub_trainsrv_arrival(58, 70, 150);
+
+	send(client, NULL, 0, &ticks, sizeof(ticks));
+	ASSERT_INTEQ(ticks, 150);
+
+	send(client2, NULL, 0, &ticks, sizeof(ticks));
+	ASSERT_INTEQ(ticks, 60);
+
+	// test multiple waiters
+	// TODO: implement and test switch flipping functionality
+
+	printf("Finished train alert test" EOL);
 	stop_servers();
 }
 

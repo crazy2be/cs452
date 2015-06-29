@@ -2,8 +2,6 @@
 
 #include "../clockserver.h"
 #include "../nameserver.h"
-#include "../request_type.h"
-#include "../switch_state.h"
 #include "../displaysrv.h"
 #include "../calibrate/calibrate.h"
 #include "../track.h"
@@ -12,23 +10,11 @@
 #include "delayed_commands.h"
 #include "estimate_position.h"
 #include "train_alert_srv.h"
+#include "trainsrv_request.h"
 
 #include <util.h>
 #include <kernel.h>
 #include <assert.h>
-
-struct trains_request {
-	enum request_type type;
-
-	int train_number;
-	int speed;
-
-	int switch_number;
-	enum sw_direction direction; // TODO: union?
-
-	int distance;
-	struct sensor_state sensors;
-};
 
 //
 // train position estimation code
@@ -81,10 +67,13 @@ static void handle_switch(struct trainsrv_state *state, int sw, enum sw_directio
 
 static void trains_server(void) {
 	register_as("trains");
-	train_alert_start(true);
 	struct trainsrv_state state;
 
 	trainsrv_state_init(&state);
+
+	train_alert_start(state.switches, true);
+
+	// TODO: we should block the creating task from continuing until init is done
 
 	for (;;) {
 		int tid = -1;
