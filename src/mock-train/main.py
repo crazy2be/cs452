@@ -288,6 +288,7 @@ def main():
 	pygame.quit()
 
 from itertools import izip
+import numpy as np
 from numpy.random import randint
 import numpy.random
 from graph_tool import Graph
@@ -304,7 +305,15 @@ n_title = g.new_vertex_property("string")
 n_color = g.new_vertex_property("string")
 e_title = g.new_edge_property("string")
 e_weight = g.new_edge_property("double")
-pos = g.new_vertex_property("vector<double>")
+import pickle
+if os.path.isfile('previous_pos.pickle') and len(open('previous_pos.pickle').read()) > 0:
+	previous_pos = g.own_property(pickle.load(open('previous_pos.pickle')))
+else:
+	print "Generating random layout."
+	previous_pos = g.new_vertex_property("vector<double>")
+	for node in tracka:
+		previous_pos[g.vertex(node.i)] = (np.random.random(), np.random.random())
+
 for node in tracka:
 	v = g.vertex(node.i)
 	n_title[v] = node.name
@@ -336,7 +345,10 @@ for node in tracka:
 
 
 #pos = graph_tool.draw.fruchterman_reingold_layout(g, weight=eprop_double)
-pos = graph_tool.draw.sfdp_layout(g, eweight=e_weight)
+pos = graph_tool.draw.sfdp_layout(g, eweight=e_weight, pos=previous_pos)
 print pos
-graph_tool.draw.interactive_window(g, pos=pos, vertex_text=n_title,
+print graph_tool.topology.is_planar(g)
+new_pos, _ = graph_tool.draw.interactive_window(g, pos=pos, vertex_text=n_title,
 								   edge_text=e_title, vertex_fill_color=n_color)
+print "Done"
+pickle.dump(new_pos, open('previous_pos.pickle', 'w'))
