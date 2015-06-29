@@ -11,6 +11,7 @@
 #include "track_control.h"
 #include "delayed_commands.h"
 #include "estimate_position.h"
+#include "train_alert_srv.h"
 
 #include <util.h>
 #include <kernel.h>
@@ -54,12 +55,14 @@ static int handle_query_arrival(struct trainsrv_state *state, int train, int dis
 
 static struct train_state handle_query_spatials(struct trainsrv_state *state, int train) {
 	struct internal_train_state *train_state = get_train_state(state, train);
-	ASSERT(train_state != NULL);
-
-	return (struct train_state) {
-		get_estimated_train_position(state, train_state),
-		train_velocity_from_state(train_state),
-	};
+	struct train_state out;
+	if (train_state == NULL) {
+		memset(&out, 0, sizeof(out));
+	} else {
+		out.position = get_estimated_train_position(state, train_state);
+		out.velocity = train_velocity_from_state(train_state);
+	}
+	return out;
 }
 
 static void handle_query_active(struct trainsrv_state *state, int *trains) {
@@ -78,6 +81,7 @@ static void handle_switch(struct trainsrv_state *state, int sw, enum sw_directio
 
 static void trains_server(void) {
 	register_as("trains");
+	train_alert_start(true);
 	struct trainsrv_state state;
 
 	trainsrv_state_init(&state);
@@ -130,7 +134,7 @@ static void trains_server(void) {
 	}
 }
 
-void start_trains(void) {
+void trains_start(void) {
 	create(HIGHER(PRIORITY_MIN, 2), trains_server);
 }
 

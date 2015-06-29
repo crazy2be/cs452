@@ -314,7 +314,7 @@ void destroy_init(void) {
 
 void trains_init(void) {
 	start_servers();
-	start_trains();
+	trains_start();
 	trains_set_speed(14, 6);
 	trains_reverse(14);
 	printf("Done trains test" EOL);
@@ -328,4 +328,5 @@ int main(int argc, char *argv[]) {
 	boot(message_suite, PRIORITY_MIN, 0);
 	boot(io_suite, PRIORITY_MIN, 0);
 	boot(destroy_init, HIGHER(PRIORITY_MIN, 1), 0);
+	boot(test_train_alert_srv, HIGHER(PRIORITY_MIN, 1), 0);
 }

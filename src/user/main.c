@@ -63,7 +63,7 @@ void test_init(void) {
 	commandsrv();
 	//calibratesrv();
 	sensorsrv();
-	start_trains();
+	trains_start();
 
 	/* printf("Hello world" EOL); */
 	/* char buf[] = {0xE2, 0x94, 0x90}; */

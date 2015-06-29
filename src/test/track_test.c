@@ -1,5 +1,10 @@
 #include "../user/track.h"
 #include "../user/trainsrv/estimate_position.h"
+#include "../user/trainsrv/train_alert_srv.h"
+#include "../user/nameserver.h"
+#include "../user/displaysrv.h"
+#include "../user/signal.h"
+#include "../user/servers.h"
 #include <assert.h>
 
 static void test_next_sensor(void) {
@@ -56,6 +61,53 @@ static void test_actual_velocity(void) {
 	ts.last_known_position.displacement = 0;
 	ts.last_known_time = 0;
 	ASSERT(-2 == calculate_actual_velocity(&ts, d12, &switches, 100));
+}
+
+void test_train_alert_client(void) {
+	int ticks = train_alert_at(58, (struct position){ &track[95].edge[0], 50 });
+	send(parent_tid(), &ticks, sizeof(ticks), NULL, 0);
+}
+
+// no-op displaysrv for testing
+void stub_displaysrv(void) {
+	register_as(DISPLAYSRV_NAME);
+	signal_recv();
+	for (;;) {
+		int tid;
+		receive(&tid, NULL, 0);
+		reply(tid, NULL, 0);
+	}
+}
+
+void test_train_alert_srv(void) {
+	init_tracka(track);
+	start_servers();
+
+	int t = create(HIGHER(PRIORITY_MIN, 1), stub_displaysrv);
+	signal_send(t);
+
+	trains_start();
+
+	create(PRIORITY_MAX, test_train_alert_client);
+
+	// test case where switches are in the wrong orientation (and possibly change)
+
+	struct sensor_state sensors;
+	memset(&sensors, 0, sizeof(sensors));
+	trains_send_sensors(sensors);
+	trains_set_speed(58, 8);
+
+	sensor_set(&sensors, 77, 1); // e14
+	sensors.ticks = 50;
+	trains_send_sensors(sensors);
+
+	sensor_set(&sensors, 72, 1); // e9
+	sensors.ticks = 100;
+	trains_send_sensors(sensors);
+
+	int ticks, tid;
+	receive(&tid, &ticks, sizeof(ticks));
+	reply(tid, NULL, 0);
 
 }
 

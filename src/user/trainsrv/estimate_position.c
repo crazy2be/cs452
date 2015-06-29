@@ -1,5 +1,6 @@
 #include "estimate_position.h"
 #include "track_control.h"
+#include "train_alert_srv.h"
 #include "../clockserver.h"
 #include "../track.h"
 #include "../displaysrv.h"
@@ -129,6 +130,7 @@ static struct internal_train_state* allocate_train_state(struct trainsrv_state *
 	struct internal_train_state *train_state = &state->train_states[state->num_active_trains++];
 	memset(train_state, 0, sizeof(*train_state));
 	state->state_for_train[train_id - 1] = train_state;
+	train_state->train_id = train_id;
 
 	// initialize estimated speeds based on train id
 	//int train_scaling_factor = 0;
@@ -316,6 +318,9 @@ static void update_train_position_from_sensor(const struct trainsrv_state *state
 	train_state->last_known_position.edge = &sensor_node->edge[0];
 	train_state->last_known_position.displacement = 0;
 	train_state->last_known_time = ticks;
+
+	// tell the train_alert server about this
+	train_alert_update_train(train_state->train_id, train_state->last_known_position);
 }
 
 static void sensor_cb(int sensor, void *ctx) {

@@ -1,7 +1,7 @@
 #include "position.h"
 #include <util.h>
 
-int position_is_uninitialized(struct position *p) {
+int position_is_uninitialized(const struct position *p) {
 	return p->edge == NULL;
 }
 
