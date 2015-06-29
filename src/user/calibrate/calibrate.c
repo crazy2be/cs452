@@ -79,10 +79,10 @@ static int handle_sensor_update(struct sensor_state *sensors, struct sensor_stat
 	int sensor_changed = -1;
 	for (int i = 0; i <= SENSOR_COUNT; i++) {
 		int s = sensor_get(sensors, i);
-		if (s && s != sensor_get(old_sensors, i)) {
-			ASSERTF(sensor_changed == -1, "%d %d", i, sensor_changed);
-			sensor_changed = i;
-		}
+		if (!s || s == sensor_get(old_sensors, i)) continue;
+		if (sensor_changed >= 0)
+			printf("Warning: More than one sensor changed. Ignoring %d."EOL, sensor_changed);
+		sensor_changed = i;
 	}
 	return sensor_changed;
 }
@@ -106,13 +106,13 @@ static void enque_delay(int amount) {
 }
 static bool next_speed(struct bookkeeping *bk) {
 	bk->train_speed_idx++;
-	if (bk->train_speed_idx >= ARRAY_LENGTH(s_train_speeds)) return true;
+	if (bk->train_speed_idx >= ARRAY_LENGTH(s_train_speeds)) return false;
 	printf("Changing from speed %d to speed %d..."EOL,
 		   s_train_speeds[bk->train_speed_idx - 1], s_train_speeds[bk->train_speed_idx]);
 	tc_set_speed(CALIB_TRAIN_NUMBER, s_train_speeds[bk->train_speed_idx]);
 	enque_delay(10*100); // 10 seconds
 	bk->waiting_for_warmup = true;
-	return false;
+	return true;
 }
 
 // for each speed {
@@ -149,20 +149,19 @@ void start_calibrate(void) {
 			//printf("Sensor %s was hit" EOL, buf);
 
 			const struct track_node *current = track_node_from_sensor(changed);
-			if (bk.last_node == NULL) {
-				// we don't print a data point if we don't have a last position
-				bk.last_node = current;
-				bk.time_at_last_sensor = req.u.sensors.ticks;
-				old_sensors = req.u.sensors;
-				continue;
+			if (bk.last_node != NULL) {
+				const int distance = distance_between_nodes(bk.last_node, current, &switches);
+				const int delta_t = req.u.sensors.ticks - bk.time_at_last_sensor;
+				printf("data: %d, %d, %s, %s, %d, %d"EOL,
+					s_train_speeds[bk.train_speed_idx - 1],
+					s_train_speeds[bk.train_speed_idx],
+					bk.last_node->name, current->name, delta_t, distance);
 			}
 
-			const int distance = distance_between_nodes(bk.last_node, current, &switches);
-			const int delta_t = req.u.sensors.ticks - bk.time_at_last_sensor;
-			printf("data: %d, %d, %s, %s, %d, %d"EOL,
-				s_train_speeds[bk.train_speed_idx - 1],
-				s_train_speeds[bk.train_speed_idx],
-				bk.last_node->name, current->name, delta_t, distance);
+			// we don't print a data point if we don't have a last position
+			bk.last_node = current;
+			bk.time_at_last_sensor = req.u.sensors.ticks;
+			old_sensors = req.u.sensors;
 		} else if (req.type == DELAY_PASSED) {
 			if (!next_speed(&bk)) break;
 		} else {
