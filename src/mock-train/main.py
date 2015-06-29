@@ -297,17 +297,30 @@ import track
 tracka = track.init_tracka()
 g = Graph()
 g.add_vertex(len(tracka))
-n_title = g.new_vertex_property("string")
 for (vi, node) in enumerate(tracka):
 	node.i = vi
 
+n_title = g.new_vertex_property("string")
+n_color = g.new_vertex_property("string")
+e_title = g.new_edge_property("string")
+e_weight = g.new_edge_property("double")
+pos = g.new_vertex_property("vector<double>")
 for node in tracka:
 	v = g.vertex(node.i)
 	n_title[v] = node.name
-	g.add_edge(g.vertex(node.i), g.vertex(node.reverse.i))
+	e = g.add_edge(g.vertex(node.i), g.vertex(node.reverse.i))
+	e_weight[e] = 0.0
+	if node.typ == track.NODE_SENSOR: n_color[v] = "blue"
+	elif node.typ == track.NODE_BRANCH: n_color[v] = "orange"
+	elif node.typ == track.NODE_MERGE: n_color[v] = "yellow"
+	elif node.typ == track.NODE_ENTER: n_color[v] = "green"
+	elif node.typ == track.NODE_EXIT: n_color[v] = "red"
+	else: n_color[v] = "white"
 	for edge in node.edge:
 		if edge.src is None: continue
-		g.add_edge(g.vertex(edge.src.i), g.vertex(edge.dest.i))
+		e = g.add_edge(g.vertex(edge.src.i), g.vertex(edge.dest.i))
+		e_weight[e] = edge.dist
+		e_title[e] = "%.2f" % (edge.dist)
 
 
 #g.add_vertex(4)
@@ -323,5 +336,7 @@ for node in tracka:
 
 
 #pos = graph_tool.draw.fruchterman_reingold_layout(g, weight=eprop_double)
-pos = graph_tool.draw.fruchterman_reingold_layout(g)
-graph_tool.draw.interactive_window(g, pos=pos, vertex_text=n_title)
+pos = graph_tool.draw.sfdp_layout(g, eweight=e_weight)
+print pos
+graph_tool.draw.interactive_window(g, pos=pos, vertex_text=n_title,
+								   edge_text=e_title, vertex_fill_color=n_color)
