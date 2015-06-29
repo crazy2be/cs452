@@ -194,7 +194,8 @@ void hashtable_tests(void) {
 	const unsigned seed = 0xab32719c;
 	prng_init(&gen, seed);
 	for (i = 0; i < reps; i++) {
-		prng_gens(&gen, buf, MAX_KEYLEN + 1);
+		prng_gen_buf(&gen, buf, sizeof(buf));
+		buf[sizeof(buf) - 1] = '\0';
 
 		// assert that there are no collisions with our key generation
 		ASSERT(HASHTABLE_KEY_NOT_FOUND == hashtable_get(&ht, buf, &val));
@@ -204,7 +205,8 @@ void hashtable_tests(void) {
 
 	prng_init(&gen, seed);
 	for (i = 0; i < reps; i++) {
-		prng_gens(&gen, buf, MAX_KEYLEN + 1);
+		prng_gen_buf(&gen, buf, sizeof(buf));
+		buf[sizeof(buf) - 1] = '\0';
 
 		ASSERT(HASHTABLE_SUCCESS == hashtable_get(&ht, buf, &val));
 		ASSERT(i == val);
