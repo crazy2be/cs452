@@ -104,10 +104,11 @@ static void trains_server(void) {
 			reply(tid, &ts, sizeof(ts));
 			break;
 		}
-		case QUERY_ARRIVAL:
-			handle_query_arrival(&state, req.train_number, req.distance);
-			reply(tid, NULL, 0);
+		case QUERY_ARRIVAL: {
+			int ticks = handle_query_arrival(&state, req.train_number, req.distance);
+			reply(tid, &ticks, sizeof(ticks));
 			break;
+		}
 		case SEND_SENSORS:
 			handle_sensors(&state, req.sensors);
 			reply(tid, NULL, 0);

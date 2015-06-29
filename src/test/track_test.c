@@ -109,6 +109,9 @@ void test_train_alert_srv(void) {
 	receive(&tid, &ticks, sizeof(ticks));
 	reply(tid, NULL, 0);
 
+	printf("Got an alert at time %d" EOL, ticks);
+
+	stop_servers();
 }
 
 void track_tests(void) {

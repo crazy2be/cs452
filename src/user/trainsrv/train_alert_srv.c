@@ -84,6 +84,7 @@ static void wakeup_call_task(void) {
 
 static void request_wakeup_call(struct alert_request_state *state, int time) {
 	ASSERT(state->state == WAITING);
+	state->state = FINAL_APPROACH;
 	// 1 higher priority than the rest of the server
 	int tid = create(HIGHER(PRIORITY_MIN, 4), wakeup_call_task);
 	struct wakeup_call_data data = { state, state->nonce, time };
@@ -104,6 +105,7 @@ static bool break_for_final_approach(const struct track_edge *edge, void *contex
 
 static void check_if_train_on_final_approach(struct alert_request_state *state,
 		const struct position *current_position, const struct switch_state *switches) {
+	printf("checking position of train %d" EOL, state->request.train_id);
 	if (position_is_uninitialized(current_position)) return;
 	const struct position *target_position = &state->request.position;
 
@@ -122,6 +124,8 @@ static void check_if_train_on_final_approach(struct alert_request_state *state,
 
 	const int arrival_time = trains_query_arrival_time(state->request.train_id, distance_left);
 
+	printf("Requesting wakeup call for train %d in %d ticks" EOL, state->request.train_id, arrival_time);
+
 	request_wakeup_call(state, arrival_time);
 }
 
@@ -138,6 +142,7 @@ static void handle_alert_request(struct alert_request_state *state,
 		const struct switch_state *switches) {
 
 	state->nonce = 0;
+	state->state = WAITING;
 
 	struct train_state train_state;
 	trains_query_spatials(state->request.train_id, &train_state);
@@ -159,13 +164,14 @@ static void handle_wakeup_call(struct wakeup_call_data *data,
 	reply(state->tid, &data->ticks, sizeof(data->ticks));
 
 	// remove the state from the list, and add it to the freelist
-	struct alert_request_state *prev_state = states_for_train[state->request.train_id];
-	while (prev_state != NULL && prev_state->next_state != state) prev_state = prev_state->next_state;
+	printf("trying to remove state for train %d" EOL, state->request.train_id);
+	struct alert_request_state **prev_state = &states_for_train[state->request.train_id];
+	while (*prev_state && *prev_state != state) prev_state = &(*prev_state)->next_state;
 
 	// we should have found a state to remove
-	ASSERT(prev_state != NULL);
+	ASSERT(*prev_state != NULL);
 
-	prev_state->next_state = state->next_state;
+	*prev_state = state->next_state;
 	state->next_state = *freelist;
 	*freelist = state;
 }
@@ -187,6 +193,7 @@ static void train_server_run(bool actually_delay) {
 		int tid;
 		struct alertsrv_request req;
 		receive(&tid, &req, sizeof(req));
+		printf("Got request of type %d" EOL, req.type);
 
 		switch (req.type) {
 		case ALERT: {
@@ -197,6 +204,9 @@ static void train_server_run(bool actually_delay) {
 			state->request = req.u.alert;
 
 			freelist = freelist->next_state;
+			printf("adding state for train %d" EOL, state->request.train_id);
+			state->next_state = states_for_train[req.u.alert.train_id];
+			states_for_train[req.u.alert.train_id] = state;
 
 			handle_alert_request(state, &switches);
 			break;
