@@ -6,8 +6,12 @@
 #include "nameserver.h"
 #include "displaysrv.h"
 #include "trainsrv.h"
+#include "trainsrv/train_alert_srv.h"
+#include "track.h"
 
-void get_command(char *buf, int buflen, int displaysrv) {
+#define COMMANDSRV_PRIORITY HIGHER(PRIORITY_MIN, 5)
+
+static void get_command(char *buf, int buflen, int displaysrv) {
 	int i = 0;
 	static int parsing_esc = 0;
 	for (;;) {
@@ -60,16 +64,20 @@ static inline int is_digit(char c) {
 	return '0' <= c && c <= '9';
 }
 
-void consume_whitespace(char *cmd, int *ip) {
+static inline int is_alphanum(char c) {
+	return is_alpha(c) || is_digit(c);
+}
+
+static void consume_whitespace(char *cmd, int *ip) {
 	int i = *ip;
 	while (cmd[i] && is_whitespace(cmd[i])) i++;
 	*ip = i;
 };
 
-enum command_type { TR, SW, RV, QUIT, INVALID };
-char *command_listing[] = { "tr", "sw", "rv", "q" };
+enum command_type { TR, SW, RV, QUIT, STOP, INVALID };
+char *command_listing[] = { "tr", "sw", "rv", "q", "stp" };
 
-enum command_type get_command_type(char *cmd, int *ip) {
+static enum command_type get_command_type(char *cmd, int *ip) {
 	int i = *ip;
 	while (is_alpha(cmd[i])) {
 		i++;
@@ -83,7 +91,7 @@ enum command_type get_command_type(char *cmd, int *ip) {
 	return INVALID;
 }
 
-int get_integer(char *cmd, int *ip, int *out) {
+static int get_integer(char *cmd, int *ip, int *out) {
 	int i = *ip;
 
     int sign = 1;
@@ -95,7 +103,7 @@ int get_integer(char *cmd, int *ip, int *out) {
     }
 
     for (;;) {
-        if (cmd[i] < '0' || cmd[i] > '9') {
+        if (!is_digit(cmd[i])) {
             // illegal number
             return 1;
         }
@@ -112,26 +120,72 @@ int get_integer(char *cmd, int *ip, int *out) {
     return 0;
 }
 
+static const struct track_node* get_node(char *cmd, int *ip) {
+	int i = *ip;
+	char buf[6]; // buffer for name of node: max name length + null term
+
+	int j;
+	for (j = 0; j < 3; j++) {
+		if (is_whitespace(cmd[i])) {
+			break;
+		} else if (is_alphanum(cmd[i])) {
+			buf[j] = cmd[i++];
+		} else {
+			// unknown character
+			return NULL;
+		}
+	}
+	if (j == 0 || is_whitespace(cmd[i])) {
+		// name was empty, or got cut off 
+		return NULL;
+	}
+	buf[j] = '\0';
+
+	for (j = 0; j < sizeof(track) / sizeof(track[0]); j++) {
+		if (strcmp(track[j].name, buf) == 0) {
+			return &track[j];
+		}
+	}
+	return NULL;
+}
+
 //
 // High level interface
 //
 
-void handle_tr(int displaysrv, int train, int speed) {
+static void handle_tr(int displaysrv, int train, int speed) {
 	trains_set_speed(train, speed);
 	displaysrv_console_feedback(displaysrv, "");
 }
 
-void handle_sw(int displaysrv, int sw, enum sw_direction pos) {
+static void handle_sw(int displaysrv, int sw, enum sw_direction pos) {
 	trains_switch(sw, pos);
 	displaysrv_console_feedback(displaysrv, "");
 }
 
-void handle_rv(int displaysrv, int train) {
+static void handle_rv(int displaysrv, int train) {
 	trains_reverse(train);
 	displaysrv_console_feedback(displaysrv, "");
 }
 
-void process_command(char *cmd, int displaysrv) {
+
+struct stop_task_params { int train; struct position pos; };
+static void stop_task(void) {
+	int tid;
+	struct stop_task_params params;
+	receive(&tid, &params, sizeof(params));
+	reply(tid, NULL, 0);
+	train_alert_at(params.train, params.pos);
+	trains_set_speed(params.train, 0);
+}
+
+static void handle_stop(int displaysrv, int train, struct position pos) {
+	int tid = create(COMMANDSRV_PRIORITY, stop_task);
+	struct stop_task_params params = { train, pos };
+	send(tid, &params, sizeof(params), NULL, 0);
+}
+
+static void process_command(char *cmd, int displaysrv) {
 	int i = 0;
 	enum command_type type = get_command_type(cmd, &i);
 	/* printf("Consuming whitespace at %d" EOL, i); */
@@ -204,6 +258,49 @@ void process_command(char *cmd, int displaysrv) {
 		displaysrv_quit(displaysrv);
 		stop_servers();
 		break;
+	case STOP:
+		{
+			// command can be in the form:
+			//     stp <train> <node> <edge choice> <displacement>
+			// OR
+			//     stp <train> <node> <displacement>
+			int train;
+			int edge_choice = 0;
+			int displacement;
+			const struct track_node *node;
+			if (get_integer(cmd, &i, &train)) {
+				break;
+			}
+			consume_whitespace(cmd, &i);
+			if ((node = get_node(cmd, &i)) == NULL) {
+				break;
+			}
+			consume_whitespace(cmd, &i);
+			if (get_integer(cmd, &i, &displacement)) {
+				break;
+			}
+			consume_whitespace(cmd, &i);
+
+			// 4th argument is optional
+			if (cmd[i] != '\0') {
+				edge_choice = displacement;
+				if (get_integer(cmd, &i, &displacement)) {
+					break;
+				}
+			}
+
+			if (!(0 == edge_choice || (1 == edge_choice && node->type == NODE_BRANCH))) {
+				displaysrv_console_feedback(displaysrv, "Invalid edge selection");
+			} else if (!(0 <= displacement && displacement <= node->edge[edge_choice].dist)) {
+				displaysrv_console_feedback(displaysrv, "Overlong displacement");
+			} else if (!(1 <= train && train <= 80)) {
+				displaysrv_console_feedback(displaysrv, "Invalid train number");
+			} else {
+				handle_stop(displaysrv, train, (struct position) { &node->edge[edge_choice], displacement });
+			}
+			return;
+		}
+		break;
 	default:
 		break;
 	}
@@ -220,11 +317,10 @@ void commandsrv_main(void) {
 
 	for (;;) {
 		get_command(buf, sizeof(buf), displaysrv);
-		printf("GOT COMMAND \"%s\"" EOL, buf);
 		process_command(buf, displaysrv);
 	}
 }
 
 void commandsrv(void) {
-	create(HIGHER(PRIORITY_MIN, 5), commandsrv_main);
+	create(COMMANDSRV_PRIORITY, commandsrv_main);
 }
