@@ -14,10 +14,14 @@
 //
 // We need to be robust against a couple of conditions:
 //
+// Neither of these are implemented yet (the first is closer to being implemented)
+//
 // 1. The switches changing after we begin a "final approach". This will
 //    redirect the train away from its predicted destination. We need to
 //    cancel any wakeups that might have been started because we thought
 //    we were on a final approach.
+// 2. In similar fashion, we want to be resilient to changing the speed
+//    of the train while it is on a final approach.
 
 struct alert_request {
 	struct position position;
