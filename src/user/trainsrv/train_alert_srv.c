@@ -36,13 +36,16 @@ struct wakeup_call_data {
 };
 
 struct alertsrv_request {
-	enum { ALERT, TRAIN_UPDATE, SWITCH_UPDATE, WAKEUP } type;
+	enum { ALERT, TRAIN_UPDATE, TRAIN_SPEED_UPDATE, SWITCH_UPDATE, WAKEUP } type;
 	union {
 		struct alert_request alert;
 		struct {
 			int train_id;
 			struct position position;
 		} train_update;
+		struct {
+			int train_id;
+		} train_speed_update;
 		struct switch_state switch_update;
 		struct wakeup_call_data wakeup;
 	} u;
@@ -98,10 +101,18 @@ static void request_wakeup_call(struct alert_request_state *state, int time, boo
 	send(tid, &data, sizeof(data), NULL, 0);
 }
 
-struct final_approach_ctx { const struct track_edge *target_edge; int distance; bool success; };
+struct final_approach_ctx {
+	const struct track_edge *target_edge;
+	int distance;
+	struct switch_state disrupting_switches;
+   	bool success;
+};
 
 static bool break_for_final_approach(const struct track_edge *edge, void *context_) {
 	struct final_approach_ctx *context = (struct final_approach_ctx*) context_;
+	if (edge->src->type == NODE_BRANCH) {
+		switch_set(&context->disrupting_switches, edge->src->num, 1);
+	}
 	if (edge == context->target_edge) {
 		context->success = true;
 		return 1;
@@ -120,7 +131,10 @@ static void check_if_train_on_final_approach(struct alert_request_state *state,
 	if (current_position->edge == target_position->edge
 			&& current_position->displacement > target_position->displacement) return;
 
-	struct final_approach_ctx context = { target_position->edge, false };
+	struct final_approach_ctx context;
+	memzero(&context);
+	context.target_edge = target_position->edge;
+
 	track_go_forwards(current_position->edge->src, switches, break_for_final_approach, &context);
 	if (!context.success) return;
 
@@ -137,7 +151,7 @@ static void check_if_train_on_final_approach(struct alert_request_state *state,
 static void handle_train_update(int train_id, struct position *position,
 		struct alert_request_state **states_for_train, struct switch_state *switches,
 		bool actually_delay) {
-	struct alert_request_state *state = states_for_train[train_id];
+	struct alert_request_state *state = states_for_train[train_id - 1];
 	while (state) {
 		check_if_train_on_final_approach(state, position, switches, actually_delay);
 		state = state->next_state;
@@ -170,7 +184,7 @@ static void handle_wakeup_call(struct wakeup_call_data *data,
 	reply(state->tid, &data->ticks, sizeof(data->ticks));
 
 	// remove the state from the list, and add it to the freelist
-	struct alert_request_state **prev_state = &states_for_train[state->request.train_id];
+	struct alert_request_state **prev_state = &states_for_train[state->request.train_id - 1];
 	while (*prev_state && *prev_state != state) prev_state = &(*prev_state)->next_state;
 
 	// we should have found a state to remove
@@ -179,6 +193,28 @@ static void handle_wakeup_call(struct wakeup_call_data *data,
 	*prev_state = state->next_state;
 	state->next_state = *freelist;
 	*freelist = state;
+}
+
+static void handle_train_speed_update(int train_id, struct alert_request_state **states_for_train) {
+	struct alert_request_state *state = states_for_train[train_id - 1];
+	if (state != NULL) {
+		ASSERTF(0, "Updated speed for train %d while on a final approach", train_id);
+	}
+}
+
+static void handle_switch_update(struct switch_state switches, struct switch_state old_switches, struct alert_request_state **states_for_train) {
+	for (int i = 0; i < NUM_TRAIN; i++) {
+		struct alert_request_state *state = states_for_train[i];
+		while (state != NULL) {
+			// do a bit of poking at the internals since I don't want to write
+			// a fancy interface for something I don't know if I'll do again
+			// If this pattern emerges elsewhere, revisit
+			if ((switches.packed ^ old_switches.packed) & state->disrupting_switches.packed) {
+				ASSERTF(0, "Switches were updated under us while train %d was on final approach", state->request.train_id);
+			}
+			state = state->next_state;
+		}
+	}
 }
 
 static void train_server_run(struct switch_state switches, bool actually_delay) {
@@ -207,8 +243,9 @@ static void train_server_run(struct switch_state switches, bool actually_delay) 
 			state->request = req.u.alert;
 
 			freelist = freelist->next_state;
-			state->next_state = states_for_train[req.u.alert.train_id];
-			states_for_train[req.u.alert.train_id] = state;
+			int offset = req.u.alert.train_id - 1;
+			state->next_state = states_for_train[offset];
+			states_for_train[offset] = state;
 
 			handle_alert_request(state, &switches, actually_delay);
 			break;
@@ -218,9 +255,13 @@ static void train_server_run(struct switch_state switches, bool actually_delay) 
 			handle_train_update(req.u.train_update.train_id, &req.u.train_update.position,
 					states_for_train, &switches, actually_delay);
 			break;
+		case TRAIN_SPEED_UPDATE:
+			reply(tid, NULL, 0);
+			handle_train_speed_update(req.u.train_speed_update.train_id, states_for_train);
+			break;
 		case SWITCH_UPDATE:
 			reply(tid, NULL, 0);
-			// TODO
+			handle_switch_update(req.u.switch_update, switches, states_for_train);
 			break;
 		case WAKEUP:
 			reply(tid, NULL, 0);
@@ -268,6 +309,13 @@ void train_alert_update_train(int train_id, struct position position) {
 	req.type = TRAIN_UPDATE;
 	req.u.train_update.train_id = train_id;
 	req.u.train_update.position = position;
+	send(train_alert_tid(), &req, sizeof(req), NULL, 0);
+}
+
+void train_alert_update_train_speed(int train_id) {
+	struct alertsrv_request req;
+	req.type = TRAIN_SPEED_UPDATE;
+	req.u.train_speed_update.train_id = train_id;
 	send(train_alert_tid(), &req, sizeof(req), NULL, 0);
 }
 
