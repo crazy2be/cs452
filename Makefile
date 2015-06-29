@@ -33,6 +33,13 @@ KERNEL_BIN = $(BUILD_DIR)/kernel.bin
 TEST_ELF = $(BUILD_DIR)/test_kernel.elf
 TEST_BIN = $(BUILD_DIR)/test_kernel.bin
 
+ifeq ($(TYPE),)
+TYPE = t
+else
+TYPE = c
+CFLAGS += -DCALIBRATE
+endif
+
 # try to autodetect environment
 ifeq ($(ENV),)
 ifeq ($(shell which arm-none-eabi-gcc), )
@@ -175,7 +182,7 @@ $(UNITY_OBJ): $(UNITY_SOURCE) $(GENERATED_SOURCES)
 clean:
 	rm -rf $(BUILD_DIR) $(GEN_SRC_DIR)
 
-ELF_DESTINATION = /u/cs452/tftp/ARM/$(USER)/k.elf
+ELF_DESTINATION = /u/cs452/tftp/ARM/$(USER)/$(TYPE).elf
 install: $(KERNEL_ELF)
 	cp $< $(ELF_DESTINATION)
 	chmod a+r $(ELF_DESTINATION)
@@ -205,7 +212,12 @@ sync-clean:
 
 sync:
 	rsync -avzd --exclude /build --exclude /.git --exclude /writeup . uw:cs452-kernel/
+
+rt: sync
 	ssh uw "bash -c 'cd cs452-kernel && make -j4 ENV=arm920t install'"
+
+rc: sync
+	ssh uw "bash -c 'cd cs452-kernel && make -j4 ENV=arm920t TYPE=c install'"
 
 all: $(KERNEL_ELF)
 

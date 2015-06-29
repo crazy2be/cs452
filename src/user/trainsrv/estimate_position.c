@@ -4,6 +4,7 @@
 #include "../track.h"
 #include "../displaysrv.h"
 #include "../nameserver.h"
+#include "../calibrate/calibrate.h"
 
 static inline int* train_velocity_entry(struct internal_train_state *train_state) {
 	int cur_speed = train_state->current_speed_setting;
@@ -370,7 +371,10 @@ void trainsrv_state_init(struct trainsrv_state *state) {
 	tc_switch_switch(156, CURVED);
 	switch_set(&state->switches, 156, CURVED);
 	tc_deactivate_switch();
+#ifdef CALIBRATE
+	calibrate_send_switches(whois(CALIBRATESRV_NAME), &state->switches);
+#else
 	state->displaysrv_tid = whois(DISPLAYSRV_NAME);
 	displaysrv_update_switch(state->displaysrv_tid, &state->switches);
-	//calibrate_try_send_switches(whois(CALIBRATESRV_NAME), &state->switches);
+#endif
 }

@@ -22,16 +22,21 @@ struct bookkeeping {
 	const struct track_node *last_node;
 	int distance_to_next_sensor;
 	int time_at_last_sensor;
+	int train_speed_idx;
+	bool waiting_for_warmup;
 };
 
-// Walk along the graph presented by the track, and calculate the distance between two nodes.
-// It's assumed that we had a sensor hit at the start and end nodes, and the switches were in
+#define CALIB_TRAIN_NUMBER 62
+static int s_train_speeds[] = {0, 8, 9, 10, 11, 12, 13, 14, 13, 12, 11, 10, 9, 8};
+
+// Walk along the graph presented by the track, and calculate the distance
+// between two nodes. It's assumed that we had a sensor hit at the start and
+// end nodes, and the switches were in
 // the given configuration.
-// Therefore, we can trace out the path that the train would have taken given the orientation
-// of the switches.
+// Therefore, we can trace out the path that the train would have taken given
+// the orientation of the switches.
 static int distance_between_nodes(const struct track_node *src,
 		const struct track_node *dst, const struct switch_state *switches) {
-
 	// we expect to periodically skip some sensors because of misfiring sensors
 	// we allow ourselves to skip at most 1 sensor in a row before throwing up our hands
 	const int max_missed_sensors = 1;
@@ -99,6 +104,16 @@ static void enque_delay(int amount) {
 	printf("Delaying for %d"EOL, amount);
 	send(tid, &amount, sizeof(amount), NULL, 0);
 }
+static bool next_speed(struct bookkeeping *bk) {
+	bk->train_speed_idx++;
+	if (bk->train_speed_idx >= ARRAY_LENGTH(s_train_speeds)) return true;
+	printf("Changing from speed %d to speed %d..."EOL,
+		   s_train_speeds[bk->train_speed_idx - 1], s_train_speeds[bk->train_speed_idx]);
+	trains_set_speed(CALIB_TRAIN_NUMBER, s_train_speeds[bk->train_speed_idx]);
+	enque_delay(10*100); // 10 seconds
+	bk->waiting_for_warmup = true;
+	return false;
+}
 
 // for each speed {
 //   set_speed to speed
@@ -106,7 +121,6 @@ static void enque_delay(int amount) {
 //   run for 60 seconds {
 //     when we hit a sensor {
 //       print sensor_from, sensor_to, speed, time, distance
-#define CALIB_TRAIN_NUMBER 62
 void start_calibrate(void) {
 	register_as(CALIBRATESRV_NAME);
 	signal_recv();
@@ -114,77 +128,54 @@ void start_calibrate(void) {
 	struct sensor_state old_sensors = {};
 	struct switch_state switches = {};
 
-	int has_switch_data = 0;
-	int has_sensor_data = 0;
-	int tid;
+	bool has_switch_data = false;
 	struct bookkeeping bk = {};
-	int train_speeds[] = {0, 8, 9, 10, 11, 12, 13, 14, 13, 12, 11, 10, 9, 8};
-	int train_speed_idx = 1;
 
-	trains_set_speed(CALIB_TRAIN_NUMBER, train_speeds[train_speed_idx]);
-	enque_delay(10*100); // 10 seconds
-	int waiting_for_warmup = 1;
-	printf("Tesitng %d"EOL, 100);
 	printf("Starting up..."EOL);
+	next_speed(&bk);
 	for (;;) {
 		struct calibrate_req req = {};
+		int tid = -1;
 		receive(&tid, &req, sizeof(req));
 		reply(tid, NULL, 0);
 		if (req.type == UPDATE_SWITCH) {
-			// TODO: we don't really handle switches being toggled while the
-			// trains are running, since the next sensor the train hits might
-			// be changed
+			ASSERT(!has_switch_data); // We can't switch while it's running!
 			switches = req.u.switches;
-			has_switch_data = 1;
+			has_switch_data = true;
 			printf("Got switch data..."EOL);
-		} else if (waiting_for_warmup) {
+		} else if (bk.waiting_for_warmup) {
 			if (req.type == DELAY_PASSED) {
 				enque_delay(60*100); // 60 seconds
-				waiting_for_warmup = 0;
+				bk.waiting_for_warmup = false;
 				printf("Warmup done!"EOL);
 			} // Drop others
 		} else if (req.type == UPDATE_SENSOR) {
 			ASSERT(has_switch_data);
-			if (!has_sensor_data) {
-				printf("Getting sensor baseline" EOL);
-				old_sensors = req.u.sensors;
-				has_sensor_data = 1;
-				continue;
-			}
-			//printf("Got sensor"EOL);
 			int changed = handle_sensor_update(&req.u.sensors, &old_sensors);
 			if (changed == -1) continue;
-
-			char buf[4];
-			sensor_repr(changed, buf);
+			///char buf[4];
+			//sensor_repr(changed, buf);
 			//printf("Sensor %s was hit" EOL, buf);
 
-			//calculate_distance_travelled(changed, sensors->ticks, switches, bk, track);
 			const struct track_node *current = track_node_from_sensor(changed);
-
-			// we don't print a data point if we don't have a last position
-			if (bk.last_node != NULL) {
-				const int distance = distance_between_nodes(bk.last_node, current, &switches);
-				const int delta_t = req.u.sensors.ticks - bk.time_at_last_sensor;
-				printf("data: %d, %d, %s, %s, %d, %d"EOL,
-					   train_speeds[train_speed_idx - 1], train_speeds[train_speed_idx],
-					   bk.last_node->name, current->name, delta_t, distance);
+			if (bk.last_node == NULL) {
+				// we don't print a data point if we don't have a last position
+				bk.last_node = current;
+				bk.time_at_last_sensor = req.u.sensors.ticks;
+				old_sensors = req.u.sensors;
+				continue;
 			}
 
-			bk.last_node = current;
-			bk.time_at_last_sensor = req.u.sensors.ticks;
-			old_sensors = req.u.sensors;
+			const int distance = distance_between_nodes(bk.last_node, current, &switches);
+			const int delta_t = req.u.sensors.ticks - bk.time_at_last_sensor;
+			printf("data: %d, %d, %s, %s, %d, %d"EOL,
+				s_train_speeds[bk.train_speed_idx - 1],
+				s_train_speeds[bk.train_speed_idx],
+				bk.last_node->name, current->name, delta_t, distance);
 		} else if (req.type == DELAY_PASSED) {
-			train_speed_idx++;
-			if (train_speed_idx >= ARRAY_LENGTH(train_speeds)) {
-				break;
-			}
-			printf("Changing from speed %d to speed %d..."EOL, train_speeds[train_speed_idx - 1], train_speeds[train_speed_idx]);
-			trains_set_speed(CALIB_TRAIN_NUMBER, train_speeds[train_speed_idx]);
-			enque_delay(10*100); // 10 seconds
-			waiting_for_warmup = 1;
+			if (!next_speed(&bk)) break;
 		} else {
-			ASSERTF(0, "Unknown request type %d", req.type);
+			WTF("Unknown request type %d", req.type);
 		}
 	}
 	printf("Done calibration!");

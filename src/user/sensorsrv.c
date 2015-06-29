@@ -68,8 +68,10 @@ void start_sensorsrv(void) {
 	/* fputc(COM1, 0x60); */
 
 	/* int displaysrv = whois(DISPLAYSRV_NAME); */
-// 	int calibratesrv = whois(CALIBRATESRV_NAME);
 	struct sensor_state sensors;
+#if CALIBRATE
+	int calibratesrv = whois(CALIBRATESRV_NAME);
+#else
 	// Test just to try and crash everything.
 	delay(100);
 	char test[10] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x10, 0x00, 0x00, 0x00, 0x00};
@@ -91,6 +93,7 @@ void start_sensorsrv(void) {
 	memcpy(sensors.packed, test4, sizeof(test4));
 	sensors.ticks = time();
 	trains_send_sensors(sensors);
+#endif
 	for (;;) {
 		tc_send_sensor_poll();
 		/* printf("%d bytes in the buffer before" EOL, fbuflen(COM1)); */
@@ -100,8 +103,11 @@ void start_sensorsrv(void) {
 		// notify the tasks which need to know about sensor updates
 		/* printf("%d bytes in the buffer after" EOL, fbuflen(COM1)); */
 		/* displaysrv_update_sensor(displaysrv, &sensors); */
-		//calibrate_try_send_sensors(calibratesrv, &sensors);
+#if CALIBRATE
+		calibrate_send_sensors(calibratesrv, &sensors);
+#else
 		trains_send_sensors(sensors);
+#endif
 	}
 	/* delay(100); */
 	/* printf("%d bytes in the buffer after stop" EOL, fbuflen(COM1)); */
