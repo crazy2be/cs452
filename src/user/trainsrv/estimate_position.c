@@ -360,10 +360,6 @@ void update_switch(struct trainsrv_state *state, int sw, enum sw_direction dir) 
 void trainsrv_state_init(struct trainsrv_state *state) {
 	memset(state, 0, sizeof(*state));
 	state->switches = tc_init_switches();
-#ifdef CALIBRATE
-	calibrate_send_switches(whois(CALIBRATESRV_NAME), &state->switches);
-#else
 	state->displaysrv_tid = whois(DISPLAYSRV_NAME);
 	displaysrv_update_switch(state->displaysrv_tid, &state->switches);
-#endif
 }

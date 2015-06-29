@@ -6,7 +6,7 @@
 #include "../track.h"
 #include "track_node.h"
 #include "track_data_new.h"
-#include "../trainsrv.h"
+#include "../trainsrv/track_control.h"
 #include "../track.h"
 #include <util.h>
 
@@ -109,7 +109,7 @@ static bool next_speed(struct bookkeeping *bk) {
 	if (bk->train_speed_idx >= ARRAY_LENGTH(s_train_speeds)) return true;
 	printf("Changing from speed %d to speed %d..."EOL,
 		   s_train_speeds[bk->train_speed_idx - 1], s_train_speeds[bk->train_speed_idx]);
-	trains_set_speed(CALIB_TRAIN_NUMBER, s_train_speeds[bk->train_speed_idx]);
+	tc_set_speed(CALIB_TRAIN_NUMBER, s_train_speeds[bk->train_speed_idx]);
 	enque_delay(10*100); // 10 seconds
 	bk->waiting_for_warmup = true;
 	return false;
@@ -125,32 +125,23 @@ void start_calibrate(void) {
 	register_as(CALIBRATESRV_NAME);
 	signal_recv();
 
-	struct sensor_state old_sensors = {};
-	struct switch_state switches = {};
-
-	bool has_switch_data = false;
-	struct bookkeeping bk = {};
-
 	printf("Starting up..."EOL);
+	struct bookkeeping bk = {};
+	struct sensor_state old_sensors = {};
+	struct switch_state switches = tc_init_switches();
 	next_speed(&bk);
 	for (;;) {
 		struct calibrate_req req = {};
 		int tid = -1;
 		receive(&tid, &req, sizeof(req));
 		reply(tid, NULL, 0);
-		if (req.type == UPDATE_SWITCH) {
-			ASSERT(!has_switch_data); // We can't switch while it's running!
-			switches = req.u.switches;
-			has_switch_data = true;
-			printf("Got switch data..."EOL);
-		} else if (bk.waiting_for_warmup) {
+		if (bk.waiting_for_warmup) {
 			if (req.type == DELAY_PASSED) {
 				enque_delay(60*100); // 60 seconds
 				bk.waiting_for_warmup = false;
 				printf("Warmup done!"EOL);
 			} // Drop others
 		} else if (req.type == UPDATE_SENSOR) {
-			ASSERT(has_switch_data);
 			int changed = handle_sensor_update(&req.u.sensors, &old_sensors);
 			if (changed == -1) continue;
 			///char buf[4];
@@ -179,7 +170,7 @@ void start_calibrate(void) {
 		}
 	}
 	printf("Done calibration!");
-	trains_set_speed(CALIB_TRAIN_NUMBER, 0);
+	tc_set_speed(CALIB_TRAIN_NUMBER, 0);
 }
 
 void calibratesrv(void) {
@@ -190,11 +181,5 @@ void calibrate_send_sensors(int calibratesrv, struct sensor_state *st) {
 	struct calibrate_req req;
 	req.type = UPDATE_SENSOR;
 	req.u.sensors = *st;
-	send(calibratesrv, &req, sizeof(req), NULL, 0);
-}
-void calibrate_send_switches(int calibratesrv, struct switch_state *st) {
-	struct calibrate_req req;
-	req.type = UPDATE_SWITCH;
-	req.u.switches = *st;
 	send(calibratesrv, &req, sizeof(req), NULL, 0);
 }
