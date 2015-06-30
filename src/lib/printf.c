@@ -33,7 +33,7 @@ static char bwa2i(char ch, const char **src, int base, int *nump) {
 }
 
 static void bwui2a(producer produce, void *produce_state, unsigned int num,
-		unsigned int base, int padding, char padchar, int negative) {
+                   unsigned int base, int padding, char padchar, int negative) {
 	int dgt;
 	unsigned int d = 1;
 
@@ -102,14 +102,13 @@ static void format(producer produce, void* produce_state, const char *fmt, va_li
 			case 'c':
 				produce(va_arg(va, char), produce_state);
 				break;
-			case 's':
-				{
-					char *str = va_arg(va, char*);
-					while (*str) {
-						produce(*str++, produce_state);
-					}
+			case 's': {
+				char *str = va_arg(va, char*);
+				while (*str) {
+					produce(*str++, produce_state);
 				}
-				break;
+			}
+			break;
 			case 'u':
 				bwui2a(produce, produce_state, va_arg(va, unsigned int), 10, w, lz, 0);
 				break;

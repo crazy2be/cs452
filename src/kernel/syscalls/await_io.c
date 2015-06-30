@@ -185,7 +185,7 @@ void io_irq_handler(int channel) {
 
 	int done = is_tx ? tx_handler(channel, irq_mask, td) : rx_handler(channel, td);
 
-	if (done){
+	if (done) {
 		syscall_set_return(td->context, 0);
 		task_schedule(td);
 		clear_awaiting_task(eid);
