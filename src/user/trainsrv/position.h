@@ -14,5 +14,5 @@ struct position {
 	int displacement;
 };
 
-int position_is_uninitialized(struct position *p);
+int position_is_uninitialized(const struct position *p);
 void position_reverse(struct position *p);

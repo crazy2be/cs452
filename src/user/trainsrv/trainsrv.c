@@ -2,8 +2,6 @@
 
 #include "../clockserver.h"
 #include "../nameserver.h"
-#include "../request_type.h"
-#include "../switch_state.h"
 #include "../displaysrv.h"
 #include "../calibrate/calibrate.h"
 #include "../track.h"
@@ -11,23 +9,12 @@
 #include "track_control.h"
 #include "delayed_commands.h"
 #include "estimate_position.h"
+#include "train_alert_srv.h"
+#include "trainsrv_request.h"
 
 #include <util.h>
 #include <kernel.h>
 #include <assert.h>
-
-struct trains_request {
-	enum request_type type;
-
-	int train_number;
-	int speed;
-
-	int switch_number;
-	enum sw_direction direction; // TODO: union?
-
-	int distance;
-	struct sensor_state sensors;
-};
 
 //
 // train position estimation code
@@ -54,12 +41,14 @@ static int handle_query_arrival(struct trainsrv_state *state, int train, int dis
 
 static struct train_state handle_query_spatials(struct trainsrv_state *state, int train) {
 	struct internal_train_state *train_state = get_train_state(state, train);
-	ASSERT(train_state != NULL);
-
-	return (struct train_state) {
-		get_estimated_train_position(state, train_state),
-		train_velocity_from_state(train_state),
-	};
+	struct train_state out;
+	if (train_state == NULL) {
+		memset(&out, 0, sizeof(out));
+	} else {
+		out.position = get_estimated_train_position(state, train_state);
+		out.velocity = train_velocity_from_state(train_state);
+	}
+	return out;
 }
 
 static void handle_query_active(struct trainsrv_state *state, int *trains) {
@@ -82,6 +71,10 @@ static void trains_server(void) {
 
 	trainsrv_state_init(&state);
 
+	train_alert_start(state.switches, true);
+
+	// TODO: we should block the creating task from continuing until init is done
+
 	for (;;) {
 		int tid = -1;
 		struct trains_request req;
@@ -100,10 +93,11 @@ static void trains_server(void) {
 			reply(tid, &ts, sizeof(ts));
 			break;
 		}
-		case QUERY_ARRIVAL:
-			handle_query_arrival(&state, req.train_number, req.distance);
-			reply(tid, NULL, 0);
+		case QUERY_ARRIVAL: {
+			int ticks = handle_query_arrival(&state, req.train_number, req.distance);
+			reply(tid, &ticks, sizeof(ticks));
 			break;
+		}
 		case SEND_SENSORS:
 			handle_sensors(&state, req.sensors);
 			reply(tid, NULL, 0);
@@ -130,7 +124,7 @@ static void trains_server(void) {
 	}
 }
 
-void start_trains(void) {
+void trains_start(void) {
 	create(HIGHER(PRIORITY_MIN, 2), trains_server);
 }
 
@@ -160,7 +154,7 @@ int trains_query_active(int *trains_out) {
 void trains_query_spatials(int train, struct train_state *state_out) {
 	TSEND2(((struct trains_request) {
 		.type = QUERY_SPATIALS,
-		.train_number = train,
+		 .train_number = train,
 	}), state_out);
 }
 
@@ -168,8 +162,8 @@ int trains_query_arrival_time(int train, int distance) {
 	int rpy = -1;
 	TSEND2(((struct trains_request) {
 		.type = QUERY_ARRIVAL,
-		.train_number = train,
-		.distance = distance,
+		 .train_number = train,
+		  .distance = distance,
 	}), &rpy);
 	return rpy;
 }
@@ -177,29 +171,29 @@ int trains_query_arrival_time(int train, int distance) {
 void trains_send_sensors(struct sensor_state state) {
 	TSEND(((struct trains_request) {
 		.type = SEND_SENSORS,
-		.sensors = state,
+		 .sensors = state,
 	}));
 }
 
 void trains_set_speed(int train, int speed) {
 	TSEND(((struct trains_request) {
 		.type = SET_SPEED,
-		.train_number = train,
-		.speed = speed,
+		 .train_number = train,
+		  .speed = speed,
 	}));
 }
 
 void trains_reverse(int train) {
 	TSEND(((struct trains_request) {
 		.type = REVERSE,
-		.train_number = train,
+		 .train_number = train,
 	}));
 }
 
 void trains_switch(int switch_number, enum sw_direction d) {
 	TSEND(((struct trains_request) {
 		.type = SWITCH_SWITCH,
-		.switch_number = switch_number,
-		.direction = d,
+		 .switch_number = switch_number,
+		  .direction = d,
 	}));
 }

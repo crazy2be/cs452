@@ -36,7 +36,7 @@ static int s_train_speeds[] = {0, 8, 9, 10, 11, 12, 13, 14, 13, 12, 11, 10, 9, 8
 // Therefore, we can trace out the path that the train would have taken given
 // the orientation of the switches.
 static int distance_between_nodes(const struct track_node *src,
-		const struct track_node *dst, const struct switch_state *switches) {
+                                  const struct track_node *dst, const struct switch_state *switches) {
 	// we expect to periodically skip some sensors because of misfiring sensors
 	// we allow ourselves to skip at most 1 sensor in a row before throwing up our hands
 	const int max_missed_sensors = 1;
@@ -145,9 +145,8 @@ void start_calibrate(void) {
 				const int distance = distance_between_nodes(bk.last_node, current, &switches);
 				const int delta_t = req.u.sensors.ticks - bk.time_at_last_sensor;
 				printf("data: %d, %d, %s, %s, %d, %d"EOL,
-					s_train_speeds[bk.train_speed_idx - 1],
-					s_train_speeds[bk.train_speed_idx],
-					bk.last_node->name, current->name, delta_t, distance);
+				       s_train_speeds[bk.train_speed_idx - 1], s_train_speeds[bk.train_speed_idx],
+				       bk.last_node->name, current->name, delta_t, distance);
 			}
 
 			// we don't print a data point if we don't have a last position

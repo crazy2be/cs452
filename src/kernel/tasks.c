@@ -66,19 +66,19 @@ struct task_descriptor *task_create(void *entrypoint, int priority, int parent_t
 	struct user_context *uc = ((struct user_context*) sp) - 1;
 	*uc = (struct user_context) {
 		.pc = (unsigned) entrypoint,
-		.lr = (unsigned) &exitk,
-		// leave most everything else uninitialized
-		.r12 = (unsigned) sp,
-		.cpsr = cpsr,
+		 .lr = (unsigned) &exitk,
+		  // leave most everything else uninitialized
+		  .r12 = (unsigned) sp,
+		   .cpsr = cpsr,
 	};
 
 	*task = (struct task_descriptor) {
 		.tid = tid,
-		.parent_tid = parent_tid,
-		.priority = priority,
-		.state = READY,
-		.context = uc,
-		.user_time_useconds = task->user_time_useconds, // Preserve
+		 .parent_tid = parent_tid,
+		  .priority = priority,
+		   .state = READY,
+		    .context = uc,
+		     .user_time_useconds = task->user_time_useconds, // Preserve
 	};
 
 	return task;
@@ -101,8 +101,8 @@ struct task_descriptor *task_next_scheduled() {
 
 int tid_valid(int tid) {
 	return tid >= 0
-			&& tasks[tid % NUM_TD].tid == tid
-			&& tasks[tid % NUM_TD].state != DEAD;
+	       && tasks[tid % NUM_TD].tid == tid
+	       && tasks[tid % NUM_TD].state != DEAD;
 }
 int tid_possible(int tid) {
 	return tid >= 0;

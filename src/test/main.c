@@ -252,9 +252,9 @@ void io_suite(void) {
 	start_servers();
 	fputs("Hello COM1" EOL, COM1);
 	fprintf(COM1, "Hello COM1 9000 = %d, 0 = %d, -1 = %d or %u, 117 = %d, 0x7f = 0x%x, hello = %s" EOL,
-			9000, 0, -1, -1, 117, 0x7f, "hello");
+	        9000, 0, -1, -1, 117, 0x7f, "hello");
 	ASSERT(87 == snprintf(buf, sizeof(buf), "Hello COM1 9 = %d, 0 = %d, -1 = %d or %u, 117 = %d, 0x7f = 0x%x, hello = %s" EOL,
-		9, 0, -1, -1, 117, 0x7f, "hello"));
+	                      9, 0, -1, -1, 117, 0x7f, "hello"));
 	fputs(buf, COM1);
 
 	ASSERT(4 == snprintf(buf, sizeof(buf), "1234"));
@@ -316,7 +316,7 @@ void destroy_init(void) {
 
 void trains_init(void) {
 	start_servers();
-	start_trains();
+	trains_start();
 	trains_set_speed(14, 6);
 	trains_reverse(14);
 	printf("Done trains test" EOL);
@@ -330,4 +330,7 @@ int main(int argc, char *argv[]) {
 	boot(message_suite, PRIORITY_MIN, 0);
 	boot(io_suite, PRIORITY_MIN, 0);
 	boot(destroy_init, HIGHER(PRIORITY_MIN, 1), 0);
+	boot(test_train_alert_srv, HIGHER(PRIORITY_MIN, 1), 0);
+	// TODO: get this test working
+	/* boot(int_test_train_alert_srv, HIGHER(PRIORITY_MIN, 1), 0); */
 }

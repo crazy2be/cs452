@@ -15,7 +15,7 @@ const struct track_node *track_node_from_sensor(int sensor) {
 
 
 const struct track_node *track_go_forwards(const struct track_node *cur,
-		const struct switch_state *sw, break_cond cb, void *ctx) {
+        const struct switch_state *sw, break_cond cb, void *ctx) {
 	int iterations = 0;
 	for (;;) {
 		// If we've done more iterations than there are nodes in the track,
@@ -26,7 +26,7 @@ const struct track_node *track_go_forwards(const struct track_node *cur,
 
 		// choose which node we pass down to
 		int index = cur->type == NODE_BRANCH &&
-			switch_get(sw, cur->num) == CURVED;
+		            switch_get(sw, cur->num) == CURVED;
 
 		const struct track_edge *e = &cur->edge[index];
 		if (cb(e, ctx)) break;
@@ -47,7 +47,7 @@ static bool break_on_sensor(const struct track_edge *e, void *ctx) {
 }
 
 const struct track_node *track_next_sensor(const struct track_node *cur,
-		const struct switch_state *sw, int *distance_out) {
+        const struct switch_state *sw, int *distance_out) {
 	int distance = 0;
 	const struct track_node *next = track_go_forwards(cur, sw, break_on_sensor, &distance);
 	*distance_out = distance;

@@ -26,5 +26,5 @@ void trains_set_speed(int train, int speed);
 void trains_reverse(int train);
 void trains_switch(int switch_numuber, enum sw_direction d);
 
-void start_trains(void);
+void trains_start(void);
 

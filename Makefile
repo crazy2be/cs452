@@ -233,8 +233,7 @@ test: $(TEST_BIN)
 
 format:
 	astyle -R --style=java --keep-one-line-statements --suffix=none \
-		--indent=tab \
-		'kernel/*.c' 'kernel/*.h' 'user/*.c' 'user/*.h' 'test/*.c'
+		--indent=tab 'src/*.c' 'src/*.h'
 
 .PHONY: clean qemu-run qemu-debug default install format
 

@@ -30,6 +30,9 @@ struct internal_train_state {
 	//     When we hit the next sensor, this allows us to know how far off our estimates were
 	const struct track_node *next_sensor;
 	int mm_to_next_sensor; // can be negative, if we've passed the sensor
+
+	// it's sometimes convenient to be able to go back from a state to a train_id
+	int train_id;
 };
 
 // catch-all struct to avoid static memory allocation for a user space task
@@ -58,7 +61,7 @@ struct trainsrv_state {
 int train_velocity_from_state(struct internal_train_state *train_state);
 int train_velocity(struct trainsrv_state *state, int train);
 struct position get_estimated_train_position(struct trainsrv_state *state,
-		struct internal_train_state *train_state);
+        struct internal_train_state *train_state);
 
 struct internal_train_state* get_train_state(struct trainsrv_state *state, int train_id);
 
