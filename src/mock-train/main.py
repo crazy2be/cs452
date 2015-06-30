@@ -3,9 +3,6 @@
 import os
 import random
 import math
-import telnetlib
-import socket
-import errno
 
 import pygame
 import vec2d
@@ -157,84 +154,10 @@ class Track():
 		for pc in self.pieces:
 			pc.draw(surf)
 
-import socket, select
-class MyTelnet():
-	def __init__(self, host, port=23, timeout=socket._GLOBAL_DEFAULT_TIMEOUT):
-		self.sock = socket.create_connection((host, port), timeout)
-		self.wbuf = ''
-		self.rbuf = ''
-	def fileno(self): return self.sock.fileno()
-	def read(self): buf = self.rbuf; self.rbuf = ''; return buf
-	def write(self, buf): self.wbuf += buf
-	def service(self):
-		if len(self.wbuf) > 0 and select.select([], [self], [], 0) == ([], [self], []):
-			sent = self.sock.send(self.wbuf)
-			self.wbuf = self.wbuf[sent:]
-		elif select.select([self], [], [], 0) == ([self], [], []):
-			self.rbuf += self.sock.recv(50)
-class MyTelnetWrapper():
-	def __init__(self, host, port=23, timeout=socket._GLOBAL_DEFAULT_TIMEOUT):
-		self.tn = telnetlib.Telnet(host, port, timeout)
-	def read(self): return self.tn.read_eager()
-	def write(self, buf): return self.tn.write(buf) # TODO: Non-blocking
-	def service(self): pass
-class FakeTelnet():
-	def __init__(self): self.fakeB = True
-	def read(self):
-		if self.fakeB:
-			self.fakeB = False
-			return '\x00'
-		else: return ''
-	def write(self, buf): pass
-	def service(self): pass
-class CmdParser():
-	def __init__(self, tn, train):
-		self.tn = tn
-		self.train = train
-		self.s = ''
-		while True:
-			self.s += self.tn.read()
-			if len(self.s) > 0:
-				assert(self.s[0] == '\x00')
-				self.s = self.s[1:]
-				break
-
-	def parse_cmd(self):
-		self.s += self.tn.read()
-		self.s = self._parse_cmd(self.s)
-
-	def _parse_cmd(self, s):
-		if len(s) < 1: return s
-		print "Got command %s"% s.encode('hex')
-		f = ord(s[0])
-		if 0 <= f <= 14:
-			if len(s) < 2: return s
-			print "Setting speed of %d to %d" % (ord(s[1]), f)
-			self.train.set_speed(f)
-			return s[2:]
-		elif f == 15:
-			if len(s) < 2: return s
-			print "Toggling reverse of %d" % ord(s[1])
-			self.train.toggle_reverse()
-			self.tn.write('\x00'*5 + '\x10' + '\x00'*4)
-			return s[2:]
-		elif f == 0x20:
-			print "Disabling solenoid"
-			return s[1:]
-		elif 0x21 <= f <= 0x22:
-			if len(s) < 2: return s
-			print "Switch command not supported %d %d" % (f, ord(s[1]))
-			return s[2:]
-		elif f == 0x85:
-			print "Got sensor poll"
-			return s[1:]
-		raise Exception("Unknown command %s" % s.encode('hex'))
-
-
 class Game(object):
-	def __init__(self, surface, tn):
+	def __init__(self, surface, conn):
 		self.surface = surface
-		self.tn = tn
+		self.conn = conn
 		self.clock = pygame.time.Clock()
 		self.train = Train()
 
@@ -244,13 +167,15 @@ class Game(object):
 
 		rot = 45
 		track = Track()
-		cmd = CmdParser(self.tn, self.train)
 		while True:
 			for event in pygame.event.get():
 				if event.type == pygame.QUIT:
 					return
-			self.tn.service()
-			cmd.parse_cmd()
+			(typ, a1, a2) = self.conn.next_cmd()
+			if typ is None: pass
+			elif typ == 'set_speed': self.train.set_speed(a2)
+			elif typ == 'toggle_reverse': self.train.toggle_reverse()
+			else: print "Ignoring command %s" % typ
 			self.surface.fill((255, 255, 255))
 			#track.update()
 			self.train.update(track)
@@ -265,6 +190,7 @@ class Game(object):
 	def play_game(self):
 		self.start_screen()
 
+import serial_interface
 def main():
 	pygame.init()
 
@@ -272,20 +198,14 @@ def main():
 	pygame.mouse.set_visible(False)
 	pygame.display.set_caption("Trains")
 
-	tn = FakeTelnet()
-	try:
-		tn = MyTelnetWrapper("localhost", 1230)
-	except socket.error, v:
-		if v[0] == errno.ECONNREFUSED:
-			# TODO: We probably don't want to catch this normally, just when
-			# working on the train simulator.
-			print "Warning: Telnet connection refused!"
-
-	game = Game(surface, tn)
-
+	conn = serial_interface.connect()
+	game = Game(surface, conn)
 	game.play_game()
 
 	pygame.quit()
+
+main()
+sys.exit(0)
 
 from itertools import izip
 import numpy as np
@@ -344,8 +264,8 @@ for node in tracka:
 #weight(g.add_edge(g.vertex(3), g.vertex(0)), 20)
 
 
-#pos = graph_tool.draw.fruchterman_reingold_layout(g, weight=eprop_double)
-pos = graph_tool.draw.sfdp_layout(g, eweight=e_weight, pos=previous_pos)
+pos = graph_tool.draw.fruchterman_reingold_layout(g, weight=e_weight, pos=previous_pos)
+#pos = graph_tool.draw.sfdp_layout(g, eweight=e_weight, pos=previous_pos)
 print pos
 print graph_tool.topology.is_planar(g)
 new_pos, _ = graph_tool.draw.interactive_window(g, pos=pos, vertex_text=n_title,
