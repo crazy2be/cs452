@@ -265,6 +265,7 @@ static void train_server_run(struct switch_state switches, bool actually_delay) 
 		case SWITCH_UPDATE:
 			reply(tid, NULL, 0);
 			handle_switch_update(req.u.switch_update, switches, states_for_train);
+			switches = req.u.switch_update;
 			break;
 		case WAKEUP:
 			reply(tid, NULL, 0);
