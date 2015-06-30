@@ -13,8 +13,7 @@ void sensor_set(struct sensor_state *s, int num, int tripped) {
 	const int offset = 7 - num % 8;
 	const int bit = 0x1 << offset;
 
-	ASSERT(word_num <= sizeof(s->packed) / sizeof(s->packed[0]));
-
+	ASSERTF(word_num < ARRAY_LENGTH(s->packed), "%d %d", word_num, ARRAY_LENGTH(s->packed));
 	unsigned mask = s->packed[word_num];
 	mask = tripped ? (mask | bit) : (mask & ~bit);
 	s->packed[word_num] = mask;
@@ -25,8 +24,7 @@ int sensor_get(const struct sensor_state *s, int num) {
 	const int offset = 7 - num % 8;
 	const int bit = 0x1 << offset;
 
-	ASSERT(word_num <= sizeof(s->packed) / sizeof(s->packed[0]));
-
+	ASSERTF(word_num < ARRAY_LENGTH(s->packed), "%d %d", word_num, ARRAY_LENGTH(s->packed));
 	return s->packed[word_num] & bit;
 }
 
