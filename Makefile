@@ -123,6 +123,25 @@ UNITY_SOURCE = $(BUILD_DIR)/unity.c
 UNITY_OBJ = $(UNITY_SOURCE:.c=.o)
 UNITY_DEPEND = $(UNITY_SOURCE:.c=.d)
 
+# whenever we change these flags, we want to rebuild
+FLAGS = $(ENV) $(TYPE)
+# we write the last flags we had to the file, and make that file a dependency
+# of everything else. whenever we write to the file, it will cause everything else
+# to need to be rebuilt
+FLAGFILE = $(BUILD_DIR)/flags
+$(shell mkdir -p $(DIRS))
+
+ifeq ($(wildcard $(FLAGFILE)), )
+# create the file if it doesn't exist (which will cause a rebuild)
+$(file >$(FLAGFILE), $(FLAGS))
+else
+ifneq ($(strip $(shell cat $(FLAGFILE))), $(strip $(FLAGS))) # check if the file doesn't match
+# if the contents of the file doesn't match our current flags, write to the
+# file, which will cause a rebuild
+$(file > $(FLAGFILE), $(FLAGS))
+endif
+endif
+
 $(KERNEL_BIN) $(TEST_BIN): %.bin : %.elf
 	arm-none-eabi-objcopy -O binary $< $@
 
@@ -151,11 +170,8 @@ $(GENERATED_ASSEMBLY): $(BUILD_DIR)/%.s : $(SRC_DIR)/%.c
 	$(CC) $(CFLAGS) $(ARCH_CFLAGS) -S -MD -MT $@ -o $@ $<
 
 # assemble the generated assembly
-$(C_OBJECTS): $(BUILD_DIR)/%.o : $(BUILD_DIR)/%.s
+$(OBJECTS): $(BUILD_DIR)/%.o : $(BUILD_DIR)/%.s
 	$(AS) $(ASFLAGS) -o $@ $<
-
-# generate build directories before starting build
-$(C_OBJECTS) $(GENERATED_ASSEMBLY) $(UNITY_SOURCE): | $(DIRS)
 
 $(GENERATED_ASSEMBLY): $(GENERATED_SOURCES)
 
@@ -163,11 +179,8 @@ $(GENERATED_SOURCES): $(KERNEL_SRC_DIR)/syscall.py
 	mkdir -p $(GEN_SRC_DIR)
 	python $< $(GEN_SRC_DIR)
 
-$(DIRS):
-	@mkdir -p $@
-
-# regenerate everything after the makefile changes
-$(ASM_OBJECTS) $(GENERATED_ASSEMBLY): $(MAKEFILE_NAME)
+# regenerate everything after the makefile or flags change
+$(GENERATED_ASSEMBLY) $(ASM_OBJECTS) $(UNITY_SOURCE): $(MAKEFILE_NAME) $(FLAGFILE)
 
 # this generates a "unity compile" for the main kernel/user program
 # this is admittedly pretty gross, but helps the compiler optimize things better
