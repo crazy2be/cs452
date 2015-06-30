@@ -46,8 +46,6 @@ static int distance_between_nodes(const struct track_node *src,
 	const struct track_node *current = src;
 
 	for (;;) {
-		/* printf("Currently at node %s" EOL, n->name); */
-
 		// we hit a sensor, which is past this point - this point can't possibly be a dead end
 		// if this happens, we throw up our hands and fail
 		if (current->type == NODE_EXIT) {
@@ -92,15 +90,12 @@ static void delay_task(void) {
 	int delay_amount = -1, tid = -1;
 	receive(&tid, &delay_amount, sizeof(delay_amount));
 	reply(tid, NULL, 0);
-	//printf("Delaying for %d %d"EOL, delay_amount, tid);
 	delay(delay_amount);
-	//printf("Delayed for %d %d"EOL, delay_amount, tid);
 	struct calibrate_req req = (struct calibrate_req) { .type = DELAY_PASSED };
 	send(tid, &req, sizeof(req), NULL, 0);
 }
 static void enque_delay(int amount) {
 	int tid = create(PRIORITY_MAX, delay_task); // TODO: What priority?
-	//printf("Created delay task with tid %d"EOL, tid);
 	printf("Delaying for %d"EOL, amount);
 	send(tid, &amount, sizeof(amount), NULL, 0);
 }
@@ -144,9 +139,6 @@ void start_calibrate(void) {
 		} else if (req.type == UPDATE_SENSOR) {
 			int changed = handle_sensor_update(&req.u.sensors, &old_sensors);
 			if (changed == -1) continue;
-			///char buf[4];
-			//sensor_repr(changed, buf);
-			//printf("Sensor %s was hit" EOL, buf);
 
 			const struct track_node *current = track_node_from_sensor(changed);
 			if (bk.last_node != NULL) {
