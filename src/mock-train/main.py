@@ -205,6 +205,7 @@ import numpy.random
 from graph_tool import Graph
 import graph_tool.draw
 import track
+from gi.repository import Gtk, Gdk, GdkPixbuf
 
 import serial_interface
 def main():
@@ -252,10 +253,24 @@ def main():
 			e_weight[e] = edge.dist
 			e_title[e] = "%.2f" % (edge.dist)
 
-	pos = graph_tool.draw.fruchterman_reingold_layout(g, weight=e_weight, pos=previous_pos)
-	#pos = graph_tool.draw.sfdp_layout(g, eweight=e_weight, pos=previous_pos)
-	new_pos, _ = graph_tool.draw.interactive_window(g, pos=pos, vertex_text=n_title,
-									   edge_text=e_title, vertex_fill_color=n_color)
+	#pos = graph_tool.draw.fruchterman_reingold_layout(g, weight=e_weight, pos=previous_pos)
+	pos = graph_tool.draw.sfdp_layout(g, eweight=e_weight, pos=previous_pos)
+	#new_pos, _ = graph_tool.draw.interactive_window(g, pos=pos, vertex_text=n_title,
+	#								   edge_text=e_title, vertex_fill_color=n_color,
+	#								   cr=surface)
+	win = graph_tool.draw.GraphWindow(g, pos, (400, 400), update_layout=True, edge_text=e_title, vertex_fill_color=n_color, vertex_text=n_title)
+	win.show_all()
+	def destroy_callback(*args, **kwargs):
+		win.destroy()
+		Gtk.main_quit()
+	def my_draw(da, cr):
+		print "Draw called with ", da, cr
+		cr.rectangle(7, 7, 7, 7)
+		cr.set_source_rgb(102. / 256, 102. / 256, 102. / 256)
+		cr.fill()
+	win.connect("delete_event", destroy_callback)
+	win.graph.connect("draw", my_draw)
+	Gtk.main()
 	#pickle.dump(new_pos, open('previous_pos.pickle', 'w'))
 	game = Game(surface, conn, g, pos, n_title)
 	game.play_game()
