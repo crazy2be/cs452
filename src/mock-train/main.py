@@ -209,11 +209,11 @@ from gi.repository import Gtk, Gdk, GdkPixbuf
 
 import serial_interface
 def main():
-	pygame.init()
+	#pygame.init()
 
-	surface = pygame.display.set_mode([800, 600])
-	pygame.mouse.set_visible(False)
-	pygame.display.set_caption("Trains")
+	#surface = pygame.display.set_mode([800, 600])
+	#pygame.mouse.set_visible(False)
+	#pygame.display.set_caption("Trains")
 
 	conn = serial_interface.connect()
 
@@ -240,7 +240,7 @@ def main():
 		v = g.vertex(node.i)
 		n_title[v] = node.name
 		e = g.add_edge(g.vertex(node.i), g.vertex(node.reverse.i))
-		e_weight[e] = 0.0
+		e_weight[e] = 1.
 		if node.typ == track.NODE_SENSOR: n_color[v] = "blue"
 		elif node.typ == track.NODE_BRANCH: n_color[v] = "orange"
 		elif node.typ == track.NODE_MERGE: n_color[v] = "yellow"
@@ -250,7 +250,7 @@ def main():
 		for edge in node.edge:
 			if edge.src is None: continue
 			e = g.add_edge(g.vertex(edge.src.i), g.vertex(edge.dest.i))
-			e_weight[e] = edge.dist
+			e_weight[e] = 1./edge.dist
 			e_title[e] = "%.2f" % (edge.dist)
 
 	#pos = graph_tool.draw.fruchterman_reingold_layout(g, weight=e_weight, pos=previous_pos)
@@ -258,24 +258,40 @@ def main():
 	#new_pos, _ = graph_tool.draw.interactive_window(g, pos=pos, vertex_text=n_title,
 	#								   edge_text=e_title, vertex_fill_color=n_color,
 	#								   cr=surface)
-	win = graph_tool.draw.GraphWindow(g, pos, (400, 400), update_layout=True, edge_text=e_title, vertex_fill_color=n_color, vertex_text=n_title)
+	win = graph_tool.draw.GraphWindow(g, pos, (640, 480), edge_text=e_title, vertex_fill_color=n_color, vertex_text=n_title)
 	win.show_all()
 	def destroy_callback(*args, **kwargs):
 		win.destroy()
 		Gtk.main_quit()
+	count_of_draw_calls = [0]
+	K = 10.
+	layout_step = [K]
 	def my_draw(da, cr):
+		count_of_draw_calls[0] += 1
 		print "Draw called with ", da, cr
 		cr.rectangle(7, 7, 7, 7)
 		cr.set_source_rgb(102. / 256, 102. / 256, 102. / 256)
+		cr.show_text("HElllo Wold number %d" % count_of_draw_calls[0])
 		cr.fill()
+		#pos_temp = ungroup_vector_property(pos, [0, 1])
+		graph_tool.draw.sfdp_layout(g, eweight=e_weight, pos=pos, max_iter=5,
+							  K=K, init_step=layout_step[0])
+		layout_step[0] *= 0.9
+		if da.vertex_matrix is not None:
+			da.vertex_matrix.update()
+		da.regenerate_surface(lazy=False)
+		da.queue_draw()
+		#ps = ungroup_vector_property(pos, [0, 1])
+		#delta = np.sqrt((pos_temp[0].fa - ps[0].fa) ** 2 +
+		#				(pos_temp[1].fa - ps[1].fa) ** 2).mean()
 	win.connect("delete_event", destroy_callback)
 	win.graph.connect("draw", my_draw)
 	Gtk.main()
 	#pickle.dump(new_pos, open('previous_pos.pickle', 'w'))
-	game = Game(surface, conn, g, pos, n_title)
-	game.play_game()
+	#game = Game(surface, conn, g, pos, n_title)
+	#game.play_game()
 
-	pygame.quit()
+	#pygame.quit()
 
 main()
-sys.exit(0)
+#sys.exit(0)
