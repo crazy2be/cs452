@@ -1,8 +1,8 @@
 #pragma once
 
 #include "switch_state.h"
-#include "calibrate/track_node.h"
 #include "sensorsrv.h"
+#include "trainsrv/track_node.h"
 #include "trainsrv/position.h"
 
 enum track_id { TRACK_A, TRACK_B };

@@ -1,13 +1,12 @@
 #include "calibrate.h"
-#include "../signal.h"
-#include "../sys.h"
-#include "../switch_state.h"
-#include "../sensorsrv.h"
-#include "../track.h"
-#include "track_node.h"
-#include "track_data_new.h"
-#include "../trainsrv/track_control.h"
-#include "../track.h"
+#include "signal.h"
+#include "sys.h"
+#include "switch_state.h"
+#include "sensorsrv.h"
+#include "track.h"
+#include "trainsrv/track_node.h"
+#include "trainsrv/track_data_new.h"
+#include "trainsrv/track_control.h"
 #include <util.h>
 
 struct calibrate_req {

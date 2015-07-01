@@ -4,7 +4,6 @@
 #include "../track.h"
 #include "../displaysrv.h"
 #include "../sys.h"
-#include "../calibrate/calibrate.h"
 
 static inline int* train_velocity_entry(struct internal_train_state *train_state) {
 	int cur_speed = train_state->current_speed_setting;

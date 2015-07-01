@@ -1,7 +1,7 @@
 #include "sensorsrv.h"
 #include "displaysrv.h"
 #include "sys.h"
-#include "calibrate/calibrate.h"
+#include "calibrate.h"
 #include <assert.h>
 #include <io.h>
 #include <kernel.h>

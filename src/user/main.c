@@ -7,7 +7,7 @@
 #include "displaysrv.h"
 #include "sensorsrv.h"
 #include "trainsrv.h"
-#include "calibrate/calibrate.h"
+#include "calibrate.h"
 #include "track.h"
 
 struct init_reply {
