@@ -14,7 +14,7 @@ BENCHMARK_FLAGS = -DBENCHMARK_CACHE -DBENCHMARK_SEND_FIRST -DBENCHMARK_MSG_SIZE=
 # idea? Not sure. It means behaviour should always be reproducable, but it
 # could also cause confusion. Feel free to change it if you have a better idea.
 STACK_SEED = 0x$(shell git rev-parse HEAD | head -c 8)
-CFLAGS  = -g -fPIC -Wall -Werror -Iinclude -I$(SRC_DIR)/lib -std=c99 -O2 \
+CFLAGS  = -g -fPIC -Wall -Werror -I$(SRC_DIR)/lib -std=c99 -O2 \
 	$(BENCHMARK_FLAGS) \
 	-fno-builtin-puts -fno-builtin-fputs -fno-builtin-fputc -fno-builtin-putc \
 	-fverbose-asm -DSTACK_SEED=$(STACK_SEED)
