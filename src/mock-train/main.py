@@ -155,9 +155,12 @@ class Track():
 			pc.draw(surf)
 
 class Game(object):
-	def __init__(self, surface, conn):
+	def __init__(self, surface, conn, g, pos, n_title):
 		self.surface = surface
 		self.conn = conn
+		self.g = g
+		self.pos = pos
+		self.n_title = n_title
 		self.clock = pygame.time.Clock()
 		self.train = Train()
 
@@ -179,6 +182,11 @@ class Game(object):
 			self.surface.fill((255, 255, 255))
 			#track.update()
 			self.train.update(track)
+			for v in self.g.vertices():
+				p = self.pos[v]
+				p = (int(p[0]*50), int(p[1]*50))
+				pygame.draw.circle(self.surface, (100, 100, 100), p, 10)
+				self.surface.blit(font.render(self.n_title[v], 1, (10, 10, 10)), p)
 			track.draw(self.surface)
 			self.train.draw(self.surface)
 			textpos = text.get_rect()
@@ -190,6 +198,14 @@ class Game(object):
 	def play_game(self):
 		self.start_screen()
 
+from itertools import izip
+import numpy as np
+from numpy.random import randint
+import numpy.random
+from graph_tool import Graph
+import graph_tool.draw
+import track
+
 import serial_interface
 def main():
 	pygame.init()
@@ -199,76 +215,52 @@ def main():
 	pygame.display.set_caption("Trains")
 
 	conn = serial_interface.connect()
-	game = Game(surface, conn)
+
+	t = track.init_tracka()
+	g = Graph()
+	g.add_vertex(len(t))
+	for (vi, node) in enumerate(t):
+		node.i = vi
+
+	n_title = g.new_vertex_property("string")
+	n_color = g.new_vertex_property("string")
+	e_title = g.new_edge_property("string")
+	e_weight = g.new_edge_property("double")
+	import pickle
+	if os.path.isfile('previous_pos.pickle') and len(open('previous_pos.pickle').read()) > 0:
+		previous_pos = g.own_property(pickle.load(open('previous_pos.pickle')))
+	else:
+		print "Generating random layout."
+		previous_pos = g.new_vertex_property("vector<double>")
+		for node in t:
+			previous_pos[g.vertex(node.i)] = (np.random.random(), np.random.random())
+
+	for node in t:
+		v = g.vertex(node.i)
+		n_title[v] = node.name
+		e = g.add_edge(g.vertex(node.i), g.vertex(node.reverse.i))
+		e_weight[e] = 0.0
+		if node.typ == track.NODE_SENSOR: n_color[v] = "blue"
+		elif node.typ == track.NODE_BRANCH: n_color[v] = "orange"
+		elif node.typ == track.NODE_MERGE: n_color[v] = "yellow"
+		elif node.typ == track.NODE_ENTER: n_color[v] = "green"
+		elif node.typ == track.NODE_EXIT: n_color[v] = "red"
+		else: n_color[v] = "white"
+		for edge in node.edge:
+			if edge.src is None: continue
+			e = g.add_edge(g.vertex(edge.src.i), g.vertex(edge.dest.i))
+			e_weight[e] = edge.dist
+			e_title[e] = "%.2f" % (edge.dist)
+
+	pos = graph_tool.draw.fruchterman_reingold_layout(g, weight=e_weight, pos=previous_pos)
+	#pos = graph_tool.draw.sfdp_layout(g, eweight=e_weight, pos=previous_pos)
+	new_pos, _ = graph_tool.draw.interactive_window(g, pos=pos, vertex_text=n_title,
+									   edge_text=e_title, vertex_fill_color=n_color)
+	#pickle.dump(new_pos, open('previous_pos.pickle', 'w'))
+	game = Game(surface, conn, g, pos, n_title)
 	game.play_game()
 
 	pygame.quit()
 
 main()
 sys.exit(0)
-
-from itertools import izip
-import numpy as np
-from numpy.random import randint
-import numpy.random
-from graph_tool import Graph
-import graph_tool.draw
-import track
-
-tracka = track.init_tracka()
-g = Graph()
-g.add_vertex(len(tracka))
-for (vi, node) in enumerate(tracka):
-	node.i = vi
-
-n_title = g.new_vertex_property("string")
-n_color = g.new_vertex_property("string")
-e_title = g.new_edge_property("string")
-e_weight = g.new_edge_property("double")
-import pickle
-if os.path.isfile('previous_pos.pickle') and len(open('previous_pos.pickle').read()) > 0:
-	previous_pos = g.own_property(pickle.load(open('previous_pos.pickle')))
-else:
-	print "Generating random layout."
-	previous_pos = g.new_vertex_property("vector<double>")
-	for node in tracka:
-		previous_pos[g.vertex(node.i)] = (np.random.random(), np.random.random())
-
-for node in tracka:
-	v = g.vertex(node.i)
-	n_title[v] = node.name
-	e = g.add_edge(g.vertex(node.i), g.vertex(node.reverse.i))
-	e_weight[e] = 0.0
-	if node.typ == track.NODE_SENSOR: n_color[v] = "blue"
-	elif node.typ == track.NODE_BRANCH: n_color[v] = "orange"
-	elif node.typ == track.NODE_MERGE: n_color[v] = "yellow"
-	elif node.typ == track.NODE_ENTER: n_color[v] = "green"
-	elif node.typ == track.NODE_EXIT: n_color[v] = "red"
-	else: n_color[v] = "white"
-	for edge in node.edge:
-		if edge.src is None: continue
-		e = g.add_edge(g.vertex(edge.src.i), g.vertex(edge.dest.i))
-		e_weight[e] = edge.dist
-		e_title[e] = "%.2f" % (edge.dist)
-
-
-#g.add_vertex(4)
-#eprop_double = g.new_edge_property("double")
-#def weight(e, n):
-   #eprop_double[e] = n
-   #eprop_title[e] = "{0:.2f}".format(n)
-
-#weight(g.add_edge(g.vertex(0), g.vertex(1)), 10)
-#weight(g.add_edge(g.vertex(1), g.vertex(2)), 20)
-#weight(g.add_edge(g.vertex(2), g.vertex(3)), 10)
-#weight(g.add_edge(g.vertex(3), g.vertex(0)), 20)
-
-
-pos = graph_tool.draw.fruchterman_reingold_layout(g, weight=e_weight, pos=previous_pos)
-#pos = graph_tool.draw.sfdp_layout(g, eweight=e_weight, pos=previous_pos)
-print pos
-print graph_tool.topology.is_planar(g)
-new_pos, _ = graph_tool.draw.interactive_window(g, pos=pos, vertex_text=n_title,
-								   edge_text=e_title, vertex_fill_color=n_color)
-print "Done"
-pickle.dump(new_pos, open('previous_pos.pickle', 'w'))
