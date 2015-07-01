@@ -254,7 +254,8 @@ def main():
 			e_title[e] = "%.2f" % (edge.dist)
 
 	#pos = graph_tool.draw.fruchterman_reingold_layout(g, weight=e_weight, pos=previous_pos)
-	pos = graph_tool.draw.sfdp_layout(g, eweight=e_weight, pos=previous_pos)
+	#pos = graph_tool.draw.sfdp_layout(g, eweight=e_weight, pos=previous_pos)
+	pos = previous_pos
 	#new_pos, _ = graph_tool.draw.interactive_window(g, pos=pos, vertex_text=n_title,
 	#								   edge_text=e_title, vertex_fill_color=n_color,
 	#								   cr=surface)
@@ -264,7 +265,7 @@ def main():
 		win.destroy()
 		Gtk.main_quit()
 	count_of_draw_calls = [0]
-	K = 10.
+	K = .1
 	layout_step = [K]
 	def my_draw(da, cr):
 		count_of_draw_calls[0] += 1
@@ -274,8 +275,9 @@ def main():
 		cr.show_text("HElllo Wold number %d" % count_of_draw_calls[0])
 		cr.fill()
 		#pos_temp = ungroup_vector_property(pos, [0, 1])
-		graph_tool.draw.sfdp_layout(g, eweight=e_weight, pos=pos, max_iter=5,
-							  K=K, init_step=layout_step[0])
+		#graph_tool.draw.sfdp_layout(g, eweight=e_weight, pos=pos, max_iter=5,
+									#K=K, init_step=layout_step[0])
+		graph_tool.draw.fruchterman_reingold_layout(g, weight=e_weight, pos=pos)
 		layout_step[0] *= 0.9
 		if da.vertex_matrix is not None:
 			da.vertex_matrix.update()
