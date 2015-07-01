@@ -133,12 +133,13 @@ $(shell mkdir -p $(DIRS))
 
 ifeq ($(wildcard $(FLAGFILE)), )
 # create the file if it doesn't exist (which will cause a rebuild)
-$(file >$(FLAGFILE), $(FLAGS))
+# don't use the file command, since it apparently doesn't work in the student environment
+$(shell echo $(FLAGS) > $(FLAGFILE))
 else
 ifneq ($(strip $(shell cat $(FLAGFILE))), $(strip $(FLAGS))) # check if the file doesn't match
 # if the contents of the file doesn't match our current flags, write to the
 # file, which will cause a rebuild
-$(file > $(FLAGFILE), $(FLAGS))
+$(shell echo $(FLAGS) > $(FLAGFILE))
 endif
 endif
 
