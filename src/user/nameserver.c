@@ -44,7 +44,7 @@ int try_whois(const char *name) {
 	ASSERT(strlen(name) <= MAX_KEYLEN);
 	strcpy(req.name, name);
 
-	int tid = -1;
+	int tid = -5;
 	// could optimize to only send the used part of the req
 	send(NAMESERVER_TID, &req, sizeof(req), &tid, sizeof(tid));
 	return tid;

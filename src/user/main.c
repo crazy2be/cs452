@@ -59,11 +59,14 @@ void test_init(void) {
 
 	//ASSERTOK(try_create(PRIORITY_MAX, fuck_the_police));
 
+#if CALIBRATE
+	calibratesrv();
+#else
 	displaysrv();
 	commandsrv();
-	//calibratesrv();
-	sensorsrv();
 	trains_start();
+#endif
+	sensorsrv();
 
 	/* printf("Hello world" EOL); */
 	/* char buf[] = {0xE2, 0x94, 0x90}; */

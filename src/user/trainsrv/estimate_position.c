@@ -5,6 +5,7 @@
 #include "../track.h"
 #include "../displaysrv.h"
 #include "../nameserver.h"
+#include "../calibrate/calibrate.h"
 
 static inline int* train_velocity_entry(struct internal_train_state *train_state) {
 	int cur_speed = train_state->current_speed_setting;
@@ -363,19 +364,7 @@ void update_switch(struct trainsrv_state *state, int sw, enum sw_direction dir) 
 
 void trainsrv_state_init(struct trainsrv_state *state) {
 	memset(state, 0, sizeof(*state));
-	for (int i = 1; i <= 18; i++) {
-		tc_switch_switch(i, CURVED);
-		switch_set(&state->switches, i, CURVED);
-		// Avoid flooding rbuf. We probably shouldn't need this, since rbuf
-		// should have plenty of space, but it seems to work...
-		delay(1);
-	}
-	tc_switch_switch(153, CURVED);
-	switch_set(&state->switches, 153, CURVED);
-	tc_switch_switch(156, CURVED);
-	switch_set(&state->switches, 156, CURVED);
-	tc_deactivate_switch();
+	state->switches = tc_init_switches();
 	state->displaysrv_tid = whois(DISPLAYSRV_NAME);
 	displaysrv_update_switch(state->displaysrv_tid, &state->switches);
-	//calibrate_try_send_switches(whois(CALIBRATESRV_NAME), &state->switches);
 }
