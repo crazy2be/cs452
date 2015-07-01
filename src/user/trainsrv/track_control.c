@@ -1,8 +1,8 @@
 #include "track_control.h"
 #include <assert.h>
-#include <io_server.h>
+#include <io.h>
 #include "trainsrv_internal.h"
-#include "../clockserver.h" // delay()
+#include "../sys.h" // delay()
 
 struct switch_state tc_init_switches(void) {
 	struct switch_state switches = {};

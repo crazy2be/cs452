@@ -1,6 +1,6 @@
 #include "calibrate.h"
 #include "../signal.h"
-#include "../nameserver.h"
+#include "../sys.h"
 #include "../switch_state.h"
 #include "../sensorsrv.h"
 #include "../track.h"
@@ -85,7 +85,6 @@ static int handle_sensor_update(struct sensor_state *sensors, struct sensor_stat
 	return sensor_changed;
 }
 
-#include "../clockserver.h"
 static void delay_task(void) {
 	int delay_amount = -1, tid = -1;
 	receive(&tid, &delay_amount, sizeof(delay_amount));

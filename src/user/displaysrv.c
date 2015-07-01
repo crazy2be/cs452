@@ -1,14 +1,14 @@
 #include "displaysrv.h"
 #include "signal.h"
-#include "nameserver.h"
+#include "sys.h"
 #include "util.h"
-#include "clockserver.h"
 #include "switch_state.h"
 #include "trainsrv.h"
 #include "track.h"
 
 #include <assert.h>
 #include <kernel.h>
+#include <io.h>
 
 #define TRACK_DISPLAY_WIDTH 58
 #define TRACK_DISPLAY_HEIGHT 25

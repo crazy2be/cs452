@@ -2,7 +2,7 @@
 
 #include <hashtable.h>
 #include <util.h>
-#include "request_type.h"
+#include "../request_type.h"
 
 #include <kernel.h>
 

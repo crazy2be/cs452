@@ -1,7 +1,6 @@
 #include "../trainsrv.h"
 
-#include "../clockserver.h"
-#include "../nameserver.h"
+#include "../sys.h"
 #include "../displaysrv.h"
 #include "../calibrate/calibrate.h"
 #include "../track.h"

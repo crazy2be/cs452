@@ -1,7 +1,7 @@
 #pragma once
 
 #include <kernel.h>
-#include <io_server.h>
+#include <io.h>
 
 #define STRINGIFY2(STR) #STR
 #define STRINGIFY1(STR) STRINGIFY2(STR)

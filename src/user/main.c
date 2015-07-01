@@ -1,17 +1,13 @@
 #include <kernel.h>
 #include <assert.h>
-#include <io_server.h>
-#include "clockserver.h"
-#include "rps.h"
+#include "sys.h"
 #include "signal.h"
 #include <util.h>
-#include "servers.h"
 #include "commandsrv.h"
 #include "displaysrv.h"
 #include "sensorsrv.h"
 #include "trainsrv.h"
 #include "calibrate/calibrate.h"
-#include "../kernel/drivers/timer.h"
 #include "track.h"
 
 struct init_reply {

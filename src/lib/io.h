@@ -45,9 +45,3 @@ int fbuflen(const int channel);
 #define kgets(buf, len) fgets(buf, len, COM2_DEBUG)
 #define kgetc() fgetc(COM2_DEBUG)
 #define kprintf(...) fprintf(COM2_DEBUG, __VA_ARGS__)
-
-// do all of the initialization needed to start an IO server with the given parameters
-// (because we need to pass data in, we need to do some message passing in addition
-// to just creating the task)
-void ioserver(const int priority, const int channel);
-void ioserver_stop(const int channel);

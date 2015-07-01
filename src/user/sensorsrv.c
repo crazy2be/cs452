@@ -1,10 +1,9 @@
 #include "sensorsrv.h"
 #include "displaysrv.h"
-#include "nameserver.h"
-#include "clockserver.h"
+#include "sys.h"
 #include "calibrate/calibrate.h"
 #include <assert.h>
-#include <io_server.h>
+#include <io.h>
 #include <kernel.h>
 #include <util.h>
 

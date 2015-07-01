@@ -1,10 +1,9 @@
 #include "estimate_position.h"
 #include "track_control.h"
 #include "train_alert_srv.h"
-#include "../clockserver.h"
 #include "../track.h"
 #include "../displaysrv.h"
-#include "../nameserver.h"
+#include "../sys.h"
 #include "../calibrate/calibrate.h"
 
 static inline int* train_velocity_entry(struct internal_train_state *train_state) {

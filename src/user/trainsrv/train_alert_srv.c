@@ -1,7 +1,6 @@
 #include "train_alert_srv.h"
 #include "trainsrv_internal.h"
-#include "../clockserver.h"
-#include "../nameserver.h"
+#include "../sys.h"
 #include "../track.h"
 
 // Other tasks can message this service, and request to be woken up
