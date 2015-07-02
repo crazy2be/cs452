@@ -265,7 +265,7 @@ def main():
 		win.destroy()
 		Gtk.main_quit()
 	count_of_draw_calls = [0]
-	K = .1
+	K = 100.
 	layout_step = [K]
 	def my_draw(da, cr):
 		count_of_draw_calls[0] += 1
@@ -275,9 +275,10 @@ def main():
 		cr.show_text("HElllo Wold number %d" % count_of_draw_calls[0])
 		cr.fill()
 		#pos_temp = ungroup_vector_property(pos, [0, 1])
-		#graph_tool.draw.sfdp_layout(g, eweight=e_weight, pos=pos, max_iter=5,
-									#K=K, init_step=layout_step[0])
-		graph_tool.draw.fruchterman_reingold_layout(g, weight=e_weight, pos=pos)
+		graph_tool.draw.sfdp_layout(g, eweight=e_weight, pos=pos, max_iter=5,
+									K=K, init_step=layout_step[0])
+		#graph_tool.draw.fruchterman_reingold_layout(g, weight=e_weight, pos=pos)
+		#graph_tool.draw.arf_layout(g, weight=e_weight, dt=layout_step[0], max_iter=5, pos=pos)
 		layout_step[0] *= 0.9
 		if da.vertex_matrix is not None:
 			da.vertex_matrix.update()
