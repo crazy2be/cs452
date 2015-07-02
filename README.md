@@ -66,6 +66,7 @@ Useful links:
 
 ### VersatilePB hardware emulated by QEMU
 
+ - [Hello World Tutorial](https://balau82.wordpress.com/2010/02/28/hello-world-for-bare-metal-arm-using-qemu/)
  - [SOC manual](http://infocenter.arm.com/help/topic/com.arm.doc.dui0224i/DUI0224I_realview_platform_baseboard_for_arm926ej_s_ug.pdf)
  - [Timer manual](http://infocenter.arm.com/help/topic/com.arm.doc.ddi0271d/DDI0271.pdf)
  - [Interrupt controller manual](http://infocenter.arm.com/help/topic/com.arm.doc.ddi0181e/DDI0181.pdf) (Same as the TS7200 hardware)
