@@ -7,15 +7,9 @@
 void tc_switch_switches_bulk(const struct switch_state switches) {
 	for (int i = 1; i <= 18; i++) {
 		tc_switch_switch(i, switch_get(&switches, i));
-		// Avoid flooding rbuf. We probably shouldn't need this, since rbuf
-		// should have plenty of space, but it seems to work...
-		delay(1);
 	}
 	for (int i = 145; i <= 156; i++) {
 		tc_switch_switch(i, switch_get(&switches, i));
-		// Avoid flooding rbuf. We probably shouldn't need this, since rbuf
-		// should have plenty of space, but it seems to work...
-		delay(1);
 	}
 	tc_deactivate_switch();
 }

@@ -59,7 +59,8 @@ static void handle_query_active(struct trainsrv_state *state, int *trains) {
 }
 
 static void handle_switch(struct trainsrv_state *state, int sw, enum sw_direction dir) {
-	start_switch(sw, dir);
+	tc_switch_switch(sw, dir);
+	tc_deactivate_switch();
 	update_switch(state, sw, dir);
 }
 
