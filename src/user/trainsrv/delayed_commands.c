@@ -1,7 +1,7 @@
 #include "delayed_commands.h"
 
 #include "track_control.h"
-#include "../clockserver.h"
+#include "../sys.h"
 
 struct reverse_info {
 	int train;

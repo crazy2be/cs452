@@ -1,6 +1,8 @@
 #include "io_server.h"
 
-#include "../user/nameserver.h"
+#include "nameserver.h"
+// only for UART access for BWIO
+// including stuff from within the kernel is a bit nasty
 #include "../kernel/drivers/uart.h"
 #include "../kernel/kassert.h"
 #include <io_rbuf.h>

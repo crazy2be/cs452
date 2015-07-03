@@ -2,10 +2,9 @@
 #include "../user/trainsrv/estimate_position.h"
 #include "../user/trainsrv/train_alert_srv.h"
 #include "../user/trainsrv/trainsrv_request.h"
-#include "../user/nameserver.h"
+#include "../user/sys.h"
 #include "../user/displaysrv.h"
 #include "../user/signal.h"
-#include "../user/servers.h"
 #include <assert.h>
 
 static void test_next_sensor(void) {

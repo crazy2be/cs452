@@ -2,6 +2,7 @@
 
 #include "../switch_state.h"
 
+struct switch_state tc_init_switches(void);
 void tc_set_speed(int train, int speed);
 void tc_toggle_reverse(int train);
 void tc_stop(int train);

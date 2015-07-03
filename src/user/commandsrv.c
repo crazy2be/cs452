@@ -1,9 +1,8 @@
 #include "commandsrv.h"
-#include <io_server.h>
+#include <io.h>
 #include <assert.h>
 #include <util.h>
-#include "servers.h"
-#include "nameserver.h"
+#include "sys.h"
 #include "displaysrv.h"
 #include "trainsrv.h"
 #include "trainsrv/train_alert_srv.h"

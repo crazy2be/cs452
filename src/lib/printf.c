@@ -1,5 +1,5 @@
+#include <io.h>
 #include <util.h>
-#include <io_server.h>
 #include "vargs.h"
 
 // printf buffers internally to a buffer allocated on the stack, and flushes this

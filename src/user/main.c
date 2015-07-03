@@ -1,17 +1,13 @@
 #include <kernel.h>
 #include <assert.h>
-#include <io_server.h>
-#include "clockserver.h"
-#include "rps.h"
+#include "sys.h"
 #include "signal.h"
 #include <util.h>
-#include "servers.h"
 #include "commandsrv.h"
 #include "displaysrv.h"
 #include "sensorsrv.h"
 #include "trainsrv.h"
-#include "calibrate/calibrate.h"
-#include "../kernel/drivers/timer.h"
+#include "calibrate.h"
 #include "track.h"
 
 struct init_reply {
@@ -59,11 +55,14 @@ void test_init(void) {
 
 	//ASSERTOK(try_create(PRIORITY_MAX, fuck_the_police));
 
+#if CALIBRATE
+	calibratesrv();
+#else
 	displaysrv();
 	commandsrv();
-	//calibratesrv();
-	sensorsrv();
 	trains_start();
+#endif
+	sensorsrv();
 
 	/* printf("Hello world" EOL); */
 	/* char buf[] = {0xE2, 0x94, 0x90}; */
