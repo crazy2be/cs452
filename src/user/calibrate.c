@@ -180,11 +180,11 @@ void start_calibrate(void) {
 struct acc_bookkeeping {
 	int test_case_index;
 	int trial_index;
-	enum { WARMING_UP, ACCELERATING, STABLE_HI, DECELERATING, STABLE_LO, DONE } state;
+	enum { WARMING_UP, ACCELERATING, STABLE_HI, DECELERATING, STABLE_LO, STOPPING, DONE } state;
 	struct sensor_state old_sensors;
-	int trial_start;
-	int trial_distance;
-	int sensor_run_end;
+	int trial_start_time;
+	int trial_start_sensor;
+	int trial_end_sensor; // not used for stopping trials
 };
 
 struct speed_pair {
@@ -193,7 +193,7 @@ struct speed_pair {
 
 #define MAX_TRIALS 15
 
-static struct speed_pair acc_test_cases[] = { {2, 14} };
+static struct speed_pair acc_test_cases[] = { {0, 14} };
 
 
 struct traversal_context {
@@ -219,31 +219,26 @@ static int distance_between_sensors(int src, int dst, struct switch_state *switc
 	return context.dist;
 }
 
-static int detect_run_start(int changed, struct switch_state *switches, int *dist) {
-	int dest;
+static int detect_run_start(int changed) {
 	switch (changed) {
 #if TRACKA
-	case 55: // d8 -> a4
-		dest = 3;
-		break;
-	case 31: // b16 -> d10
-		dest = 57;
-		break;
+	/* case 51: // d4 -> b6 */
+	/* 	return 22; */
+	case 16: // b1 -> d14
+		return 61;
 #else
 	case 31: // b16 -> d10
-		dest = 57;
-		break;
+		return 57;
 	case 52: // d5 -> a4
-		dest = 3;
+		return 3;
 		break;
 #endif
 	default: return -1; // no run
 	}
-	*dist = distance_between_sensors(changed, dest, switches);
-	return dest;
 }
 
-static void print_data_line(struct acc_bookkeeping *bk, int now) {
+static void print_data_line(struct acc_bookkeeping *bk, int sensor, int now, struct switch_state *switches) {
+	int distance = distance_between_sensors(bk->trial_start_sensor, sensor, switches);
 	struct speed_pair test_case = acc_test_cases[bk->test_case_index];
 	int v0, v1;
 	if (bk->state == ACCELERATING) {
@@ -253,21 +248,26 @@ static void print_data_line(struct acc_bookkeeping *bk, int now) {
 		v0 = test_case.hi;
 		v1 = test_case.lo;
 	}
-	printf("%d, %d, %d, %d" EOL, v0, v1, now - bk->trial_start, bk->trial_distance);
+	printf("%d, %d, %d, %d" EOL, v0, v1, now - bk->trial_start_time, distance);
 }
 
 static void begin_next_trial(struct acc_bookkeeping *bk) {
-	ASSERT(bk->state == ACCELERATING || bk->state == DECELERATING);
+	ASSERT(bk->state == ACCELERATING || bk->state == DECELERATING || bk->state == STOPPING);
 	if (++bk->trial_index >= 2 * MAX_TRIALS) {
 		bk->trial_index = 0;
 		if (++bk->test_case_index >= sizeof(acc_test_cases) / sizeof(acc_test_cases[0])) {
 			bk->state = DONE;
 		} else {
+			tc_set_speed(CALIB_TRAIN_NUMBER, acc_test_cases[bk->test_case_index].hi);
 			bk->state = WARMING_UP;
 			enqueue_delay(10 * 100); // 10 seconds
 		}
 	} else {
-		bk->state = (bk->state == ACCELERATING) ? STABLE_HI : STABLE_LO;
+		if (bk->state == STOPPING) {
+			tc_set_speed(CALIB_TRAIN_NUMBER, acc_test_cases[bk->test_case_index].hi);
+		}
+		// accelerating & stopping -> stable_hi, decelerating -> stable_lo
+		bk->state = (bk->state != DECELERATING) ? STABLE_HI : STABLE_LO;
 	}
 }
 
@@ -281,13 +281,14 @@ void run_acc_calibration(void) {
 	// set up switches so that we make a loop around the outer track (for track A)
 	struct switch_state switches;
 	memzero(&switches);
-	switch_set(&switches, 11, CURVED);
+	switch_set(&switches, 15, CURVED);
+	switch_set(&switches, 9, CURVED);
 	tc_switch_switches_bulk(switches);
 
 	struct acc_bookkeeping bk;
 	memzero(&bk);
 
-	tc_set_speed(CALIB_TRAIN_NUMBER, acc_test_cases[bk.test_case_index].lo);
+	tc_set_speed(CALIB_TRAIN_NUMBER, acc_test_cases[bk.test_case_index].hi);
 	enqueue_delay(10*100); // 10 seconds
 	printf("speed_0, speed_1, distance, time" EOL);
 
@@ -298,32 +299,47 @@ void run_acc_calibration(void) {
 		reply(tid, NULL, 0);
 		if (bk.state == WARMING_UP) {
 			if (req.type == DELAY_PASSED) {
-				bk.state = STABLE_LO;
+				bk.state = STABLE_HI;
 			}
 			// drop others
 		} else if (req.type == UPDATE_SENSOR) {
 			int changed = handle_sensor_update(&req.u.sensors, &bk.old_sensors);
+			if (changed == -1) continue;
+			char buf[4];
+			sensor_repr(changed, buf);
+			printf("Passed sensor %s"EOL, buf);
+
 			switch (bk.state) {
 			case ACCELERATING:
 			case DECELERATING:
-				if (changed == bk.sensor_run_end) {
-					print_data_line(&bk, req.u.sensors.ticks);
-					begin_next_trial(&bk);
-				}
+				// end trial after specially chosen sensor
+				if (changed != bk.trial_end_sensor) break;
+			case STOPPING:
+				// end trial after first sensor we hit while stopping
+				print_data_line(&bk, changed, req.u.sensors.ticks, &switches);
+				begin_next_trial(&bk);
+				printf("Set state = %d" EOL, bk.state);
 				break;
 			case STABLE_LO:
 			case STABLE_HI: {
-				int next_run_end = detect_run_start(changed, &switches, &bk.trial_distance);
+				int next_run_end = detect_run_start(changed);
 				if (next_run_end > 0) {
-					bk.sensor_run_end = next_run_end;
-					bk.trial_start = req.u.sensors.ticks;
+					bk.trial_start_sensor = changed;
+					bk.trial_end_sensor = next_run_end;
+					bk.trial_start_time = req.u.sensors.ticks;
 
 					struct speed_pair test_case = acc_test_cases[bk.test_case_index];
 					int speed = (bk.state == STABLE_LO) ? test_case.hi : test_case.lo;
-					printf("Passed sensor %d, going to %d, setting speed to %d" EOL, changed, next_run_end, speed);
 					tc_set_speed(CALIB_TRAIN_NUMBER, speed);
 
-					bk.state = (bk.state == STABLE_LO) ? ACCELERATING : DECELERATING;
+					if (bk.state == STABLE_LO) {
+						bk.state = ACCELERATING;
+					} else if (speed == 0) {
+						bk.state = STOPPING;
+					} else {
+						bk.state = DECELERATING;
+					}
+					printf("Set state = %d, speed = %d" EOL, bk.state, speed);
 				}
 				break;
 			}
