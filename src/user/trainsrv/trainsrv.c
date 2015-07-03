@@ -34,7 +34,7 @@ static void handle_reverse(struct trainsrv_state *state, int train_id) {
 }
 
 static int handle_query_arrival(struct trainsrv_state *state, int train, int dist) {
-	return (1000 * dist) / train_velocity(state, train);
+	return train_eta(state, train, dist);
 }
 
 static struct train_state handle_query_spatials(struct trainsrv_state *state, int train) {
