@@ -315,7 +315,7 @@ static void update_sensor_display(int sensor, int blank) {
 
 static void update_sensor(struct sensor_state *sensors, struct sensor_state *old_sensors, struct sensor_reads *reads, unsigned delay_time) {
 	// update displayed sensor delay time
-	printf("\e[s\e[%d;%dH%04d\e[u", CLOCK_Y_OFFSET, CLOCK_X_OFFSET + 12, delay_time);
+	printf("\e[s\e[%d;%dH%03d\e[u", CLOCK_Y_OFFSET, CLOCK_X_OFFSET + 17, delay_time);
 	for (int i = 0; i < SENSOR_COUNT; i += 2) {
 		int s1 = sensor_get(sensors, i);
 		int s2 = sensor_get(sensors, i + 1);
@@ -432,7 +432,13 @@ static void update_time(unsigned millis) {
 	seconds %= 60;
 	minutes %= 60;
 
-	printf("\e[s\e[%d;%dH%02d:%02d:%d\e[u", CLOCK_Y_OFFSET, CLOCK_X_OFFSET, minutes, seconds, tenths);
+	int idle = idle_permille();
+	int idle_whole = idle / 10;
+	int idle_decimal = idle % 10;
+
+	printf("\e[s\e[%d;%dH%02d:%02d:%d " VLINE " %02d.%d%% " VLINE "\e[u",
+			CLOCK_Y_OFFSET, CLOCK_X_OFFSET - 1, minutes, seconds, tenths,
+			idle_whole, idle_decimal);
 }
 
 static void update_train_states(int active_trains, struct display_train_state *active_train_states,
