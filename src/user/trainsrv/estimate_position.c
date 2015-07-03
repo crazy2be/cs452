@@ -31,7 +31,13 @@ int train_eta(struct trainsrv_state *state, int train_id, int distance) {
 int get_estimated_distance_travelled(struct internal_train_state *train_state, int now) {
 	const int delta_t = now - train_state->last_known_time;
 	const int velocity = train_velocity_from_state(train_state);
-	return delta_t * velocity / 1000;
+
+	const int distance = delta_t * velocity / 1000;
+
+	const int overshoot_tolerance = 50;
+	const int maximum_acceptable_distance = train_state->mm_to_next_sensor + overshoot_tolerance;
+
+	return MIN(distance, maximum_acceptable_distance);
 }
 
 // travel down the track for that many mm, and see which node we end at
@@ -75,8 +81,18 @@ struct position get_estimated_train_position(struct trainsrv_state *state,
 	// direction of the switch even though we've passed the switch already
 	if (position.displacement >= last_edge->dist) {
 		position.displacement -= last_edge->dist;
-		track_go_forwards(last_edge->dest, &state->switches, break_after_distance, &position);
+		const struct track_node *node = track_go_forwards(last_edge->dest, &state->switches, break_after_distance, &position);
+		ASSERT(node != NULL);
+
+		// normalize positions that run off the end of the track
+		if (position.displacement >= position.edge->dist) {
+			ASSERT(node->type == NODE_EXIT);
+			position.displacement = position.edge->dist - 1;
+		}
 	}
+
+
+	ASSERTF(position_is_wellformed(&position), "(%s, %d) is malformed", position.edge->src->name, position.displacement);
 
 	return position;
 }
@@ -321,6 +337,9 @@ static void update_train_position_from_sensor(const struct trainsrv_state *state
 	train_state->last_known_position.edge = &sensor_node->edge[0];
 	train_state->last_known_position.displacement = 0;
 	train_state->last_known_time = ticks;
+
+	ASSERTF(position_is_wellformed(&train_state->last_known_position), "(%s, %d) is malformed",
+			train_state->last_known_position.edge->src->name, train_state->last_known_position.displacement);
 
 	// tell the train_alert server about this
 	train_alert_update_train(train_state->train_id, train_state->last_known_position);
