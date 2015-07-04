@@ -27,27 +27,3 @@ void start_reverse(int train, int speed) {
 	};
 	send(tid, &info, sizeof(info), NULL, 0);
 }
-
-struct switch_info {
-	int sw;
-	enum sw_direction d;
-};
-static void switch_task(void) {
-	int tid;
-	struct switch_info info;
-	// our parent immediately sends us some bootstrap info
-	receive(&tid, &info, sizeof(info));
-	reply(tid, NULL, 0);
-
-	tc_switch_switch(info.sw, info.d);
-	delay(100);
-	tc_deactivate_switch();
-}
-void start_switch(int sw, enum sw_direction d) {
-	int tid = create(HIGHER(PRIORITY_MIN, 2), switch_task);
-	struct switch_info info = (struct switch_info) {
-		.sw = sw,
-		 .d = d,
-	};
-	send(tid, &info, sizeof(info), NULL, 0);
-}

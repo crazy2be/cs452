@@ -137,7 +137,9 @@ int boot(void (*init_task)(void), int init_task_priority, int debug) {
 
 		task_check_stack_canary(current_task);
 
+		unsigned old_user_time = current_task->user_time_useconds;
 		current_task->user_time_useconds += ts_after - ts_before;
+		KASSERT(current_task->user_time_useconds >= old_user_time);
 
 		// after returning from that task, save it's place in the task's
 		// task descriptor
@@ -161,6 +163,7 @@ int boot(void (*init_task)(void), int init_task_priority, int debug) {
 		case SYSCALL_SHOULD_IDLE: should_idle_handler(current_task); break;
 		case SYSCALL_IRQ:         irq_handler(current_task);         break;
 		case SYSCALL_HALT:        running = 0;                       break;
+		case SYSCALL_IDLE_PERMILLE: idle_permille_handler(current_task, ts_start); break;
 		default:
 			KASSERT(0 && "UNKNOWN SYSCALL NUMBER");
 			break;

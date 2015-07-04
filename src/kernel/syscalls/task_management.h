@@ -8,3 +8,4 @@ void exit_handler(struct task_descriptor *current_task);
 void tid_handler(struct task_descriptor *current_task);
 void parent_tid_handler(struct task_descriptor *current_task);
 void rand_handler(struct task_descriptor *current_task);
+void idle_permille_handler(struct task_descriptor *current_task, unsigned ts_start);
