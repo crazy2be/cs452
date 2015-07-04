@@ -1,6 +1,7 @@
 #pragma once
 
 #include "track_node.h"
+#include <assert.h>
 
 // Position encodes a direction, since the nodes/edges in the track graph
 // have a direction encoded implicitly.
@@ -16,3 +17,4 @@ struct position {
 
 int position_is_uninitialized(const struct position *p);
 void position_reverse(struct position *p);
+int position_is_wellformed(struct position *p);

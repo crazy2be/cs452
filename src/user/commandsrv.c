@@ -6,6 +6,7 @@
 #include "displaysrv.h"
 #include "trainsrv.h"
 #include "trainsrv/train_alert_srv.h"
+#include "trainsrv/track_control.h" // TODO: remove this
 #include "track.h"
 
 #define COMMANDSRV_PRIORITY HIGHER(PRIORITY_MIN, 5)
@@ -77,8 +78,8 @@ static void consume_whitespace(char *cmd, int *ip) {
 	*ip = i;
 };
 
-enum command_type { TR, SW, RV, QUIT, STOP, INVALID };
-char *command_listing[] = { "tr", "sw", "rv", "q", "stp" };
+enum command_type { TR, SW, RV, QUIT, STOP, BSW, INVALID };
+char *command_listing[] = { "tr", "sw", "rv", "q", "stp", "bsw" };
 
 static enum command_type get_command_type(char *cmd, int *ip) {
 	int i = *ip;
@@ -236,7 +237,7 @@ static void process_command(char *cmd, int displaysrv) {
 		}
 		if (cmd[i] != '\0') break;
 		/* printf("Parsed command SW %d %d" EOL, sw, pos); */
-		if (!((1 <= sw && sw <= 18) || (146 <= sw && sw <= 156))) {
+		if (!((1 <= sw && sw <= 18) || (145 <= sw && sw <= 156))) {
 			displaysrv_console_feedback(displaysrv, "Invalid switch");
 		} else {
 			handle_sw(displaysrv, sw, pos);
@@ -311,6 +312,27 @@ static void process_command(char *cmd, int displaysrv) {
 		return;
 	}
 	break;
+	case BSW: {
+		enum sw_direction pos;
+		consume_whitespace(cmd, &i);
+		switch (cmd[i++]) {
+		case 'C':
+		case 'c':
+			pos = CURVED;
+			break;
+		case 'S':
+		case 's':
+			pos = STRAIGHT;
+			break;
+		default:
+			goto unknown;
+		}
+		if (cmd[i] != '\0') break;
+		struct switch_state switches;
+		memset(&switches, pos == CURVED ? 0xff : 0x00, sizeof(switches));
+		tc_switch_switches_bulk(switches);
+		return;
+	}
 	default:
 		break;
 	}

@@ -34,7 +34,7 @@ static void handle_reverse(struct trainsrv_state *state, int train_id) {
 }
 
 static int handle_query_arrival(struct trainsrv_state *state, int train, int dist) {
-	return (1000 * dist) / train_velocity(state, train);
+	return train_eta(state, train, dist);
 }
 
 static struct train_state handle_query_spatials(struct trainsrv_state *state, int train) {
@@ -59,7 +59,8 @@ static void handle_query_active(struct trainsrv_state *state, int *trains) {
 }
 
 static void handle_switch(struct trainsrv_state *state, int sw, enum sw_direction dir) {
-	start_switch(sw, dir);
+	tc_switch_switch(sw, dir);
+	tc_deactivate_switch();
 	update_switch(state, sw, dir);
 }
 

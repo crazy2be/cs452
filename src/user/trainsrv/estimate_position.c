@@ -8,6 +8,8 @@
 static inline int* train_velocity_entry(struct internal_train_state *train_state) {
 	int cur_speed = train_state->current_speed_setting;
 	int i = cur_speed*2 + (train_state->previous_speed_setting >= cur_speed) - 1;
+	ASSERT(i >= 0);
+	ASSERT(i < sizeof(train_state->est_velocities) / sizeof(train_state->est_velocities[0]));
 	return &train_state->est_velocities[i];
 }
 
@@ -15,16 +17,27 @@ int train_velocity_from_state(struct internal_train_state *train_state) {
 	return *train_velocity_entry(train_state);
 }
 
-int train_velocity(struct trainsrv_state *state, int train) {
-	struct internal_train_state *train_state = get_train_state(state, train);
+int train_eta(struct trainsrv_state *state, int train_id, int distance) {
+	struct internal_train_state *train_state = get_train_state(state, train_id);
 	ASSERT(train_state != NULL);
-	return train_velocity_from_state(train_state);
+	int velocity = train_velocity_from_state(train_state);
+	if (velocity > 0) {
+		return distance / velocity;
+	} else {
+		return -1;
+	}
 }
 
 int get_estimated_distance_travelled(struct internal_train_state *train_state, int now) {
 	const int delta_t = now - train_state->last_known_time;
 	const int velocity = train_velocity_from_state(train_state);
-	return delta_t * velocity / 1000;
+
+	const int distance = delta_t * velocity / 1000;
+
+	const int overshoot_tolerance = 50;
+	const int maximum_acceptable_distance = train_state->mm_to_next_sensor + overshoot_tolerance;
+
+	return MIN(distance, maximum_acceptable_distance);
 }
 
 // travel down the track for that many mm, and see which node we end at
@@ -68,8 +81,18 @@ struct position get_estimated_train_position(struct trainsrv_state *state,
 	// direction of the switch even though we've passed the switch already
 	if (position.displacement >= last_edge->dist) {
 		position.displacement -= last_edge->dist;
-		track_go_forwards(last_edge->dest, &state->switches, break_after_distance, &position);
+		const struct track_node *node = track_go_forwards(last_edge->dest, &state->switches, break_after_distance, &position);
+		ASSERT(node != NULL);
+
+		// normalize positions that run off the end of the track
+		if (position.displacement >= position.edge->dist) {
+			ASSERT(node->type == NODE_EXIT);
+			position.displacement = position.edge->dist - 1;
+		}
 	}
+
+
+	ASSERTF(position_is_wellformed(&position), "(%s, %d) is malformed", position.edge->src->name, position.displacement);
 
 	return position;
 }
@@ -102,7 +125,7 @@ static void initialize_train_velocity_table(struct internal_train_state *train_s
 		is_accelerated_coef = -315;
 		break;
 	default:
-		memset(train_state->est_velocities, 1, sizeof(*train_state->est_velocities));
+		memset(train_state->est_velocities, 0, sizeof(*train_state->est_velocities));
 		return;
 	}
 
@@ -110,17 +133,14 @@ static void initialize_train_velocity_table(struct internal_train_state *train_s
 	for (int i = 0; i < NUM_SPEED_SETTINGS; i++) {
 		int speed = (i + 1) / 2;
 		int is_accelerated = (i + 1) % 2;
-		train_state->est_velocities[i] = offset + speed * speed_coef + is_accelerated * is_accelerated_coef;
+		int velocity;
+		if (speed < 8) {
+			velocity = 0;
+		} else {
+			velocity = offset + speed * speed_coef + is_accelerated * is_accelerated_coef;
+		}
+		train_state->est_velocities[i] = velocity;
 	}
-	// Useful speeds for debugging!
-	train_state->est_velocities[0] = 1; // Avoid div/0
-	train_state->est_velocities[1] = 10;
-	train_state->est_velocities[2] = 20;
-	train_state->est_velocities[3] = 30;
-	train_state->est_velocities[4] = 40;
-	train_state->est_velocities[5] = 50;
-	train_state->est_velocities[6] = 60;
-	train_state->est_velocities[7] = 70;
 }
 
 static struct internal_train_state* allocate_train_state(struct trainsrv_state *state, int train_id) {
@@ -317,6 +337,9 @@ static void update_train_position_from_sensor(const struct trainsrv_state *state
 	train_state->last_known_position.edge = &sensor_node->edge[0];
 	train_state->last_known_position.displacement = 0;
 	train_state->last_known_time = ticks;
+
+	ASSERTF(position_is_wellformed(&train_state->last_known_position), "(%s, %d) is malformed",
+			train_state->last_known_position.edge->src->name, train_state->last_known_position.displacement);
 
 	// tell the train_alert server about this
 	train_alert_update_train(train_state->train_id, train_state->last_known_position);

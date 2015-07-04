@@ -25,7 +25,7 @@ struct bookkeeping {
 	bool waiting_for_warmup;
 };
 
-#define CALIB_TRAIN_NUMBER 62
+#define CALIB_TRAIN_NUMBER 63
 static int s_train_speeds[] = {0, 8, 9, 10, 11, 12, 13, 14, 13, 12, 11, 10, 9, 8};
 
 // Walk along the graph presented by the track, and calculate the distance
@@ -74,7 +74,7 @@ static int distance_between_nodes(const struct track_node *src,
 
 static int handle_sensor_update(struct sensor_state *sensors, struct sensor_state *old_sensors) {
 	int sensor_changed = -1;
-	for (int i = 0; i <= SENSOR_COUNT; i++) {
+	for (int i = 0; i < SENSOR_COUNT; i++) {
 		int s = sensor_get(sensors, i);
 		if (!s || s == sensor_get(old_sensors, i)) continue;
 		if (sensor_changed >= 0)
@@ -92,7 +92,7 @@ static void delay_task(void) {
 	struct calibrate_req req = (struct calibrate_req) { .type = DELAY_PASSED };
 	send(tid, &req, sizeof(req), NULL, 0);
 }
-static void enque_delay(int amount) {
+static void enqueue_delay(int amount) {
 	int tid = create(PRIORITY_MAX, delay_task); // TODO: What priority?
 	printf("Delaying for %d"EOL, amount);
 	send(tid, &amount, sizeof(amount), NULL, 0);
@@ -103,7 +103,7 @@ static bool next_speed(struct bookkeeping *bk) {
 	printf("Changing from speed %d to speed %d..."EOL,
 		   s_train_speeds[bk->train_speed_idx - 1], s_train_speeds[bk->train_speed_idx]);
 	tc_set_speed(CALIB_TRAIN_NUMBER, s_train_speeds[bk->train_speed_idx]);
-	enque_delay(10*100); // 10 seconds
+	enqueue_delay(10*100); // 10 seconds
 	bk->waiting_for_warmup = true;
 	return true;
 }
@@ -121,7 +121,18 @@ void start_calibrate(void) {
 	printf("Starting up..."EOL);
 	struct bookkeeping bk = {};
 	struct sensor_state old_sensors = {};
-	struct switch_state switches = tc_init_switches();
+	struct switch_state switches;
+	/* memset(&switches, 0xff, sizeof(switches)); */
+	/* switch_set(&switches, 10, STRAIGHT); */
+	/* switch_set(&switches, 13, STRAIGHT); */
+	/* switch_set(&switches, 16, STRAIGHT); */
+	/* switch_set(&switches, 17, STRAIGHT); */
+	/* tc_switch_switches_bulk(switches); */
+	// set up switches so that we make a loop around the outer track (for track A)
+	memzero(&switches);
+	switch_set(&switches, 11, CURVED);
+	tc_switch_switches_bulk(switches);
+
 	next_speed(&bk);
 	for (;;) {
 		struct calibrate_req req = {};
@@ -130,7 +141,7 @@ void start_calibrate(void) {
 		reply(tid, NULL, 0);
 		if (bk.waiting_for_warmup) {
 			if (req.type == DELAY_PASSED) {
-				enque_delay(60*100); // 60 seconds
+				enqueue_delay(60*100); // 60 seconds
 				bk.waiting_for_warmup = false;
 				printf("Warmup done!"EOL);
 			} // Drop others
@@ -161,8 +172,190 @@ void start_calibrate(void) {
 	tc_set_speed(CALIB_TRAIN_NUMBER, 0);
 }
 
+// *** Acceleration calibaration ***
+// for acceleration calibration (on track B)
+// runs from D8 -> C14, B16 -> E11
+// for right now, lets just do D8 -> C14
+
+struct acc_bookkeeping {
+	int test_case_index;
+	int trial_index;
+	enum { WARMING_UP, ACCELERATING, STABLE_HI, DECELERATING, STABLE_LO, STOPPING, DONE } state;
+	struct sensor_state old_sensors;
+	int trial_start_time;
+	int trial_start_sensor;
+	int trial_end_sensor; // not used for stopping trials
+};
+
+struct speed_pair {
+	int lo, hi;
+};
+
+#define MAX_TRIALS 15
+
+static struct speed_pair acc_test_cases[] = { {0, 14} };
+
+
+struct traversal_context {
+	int dst;
+	int dist;
+};
+
+bool traversal_cb(const struct track_edge *e, void *ctx_) {
+
+	struct traversal_context *ctx = (struct traversal_context*) ctx_;
+	if (e->src->num == ctx->dst) {
+		return 1;
+	} else {
+		ctx->dist += e->dist;
+		return 0;
+	}
+}
+
+static int distance_between_sensors(int src, int dst, struct switch_state *switches) {
+	struct traversal_context context = {dst, 0};
+	const struct track_node *destn = track_go_forwards(track_node_from_sensor(src), switches, traversal_cb, &context);
+	ASSERT(destn && destn->num == dst);
+	return context.dist;
+}
+
+static int detect_run_start(int changed) {
+	switch (changed) {
+#if TRACKA
+	/* case 51: // d4 -> b6 */
+	/* 	return 22; */
+	case 16: // b1 -> d14
+		return 61;
+#else
+	case 31: // b16 -> d10
+		return 57;
+	case 52: // d5 -> a4
+		return 3;
+		break;
+#endif
+	default: return -1; // no run
+	}
+}
+
+static void print_data_line(struct acc_bookkeeping *bk, int sensor, int now, struct switch_state *switches) {
+	int distance = distance_between_sensors(bk->trial_start_sensor, sensor, switches);
+	struct speed_pair test_case = acc_test_cases[bk->test_case_index];
+	int v0, v1;
+	if (bk->state == ACCELERATING) {
+		v0 = test_case.lo;
+		v1 = test_case.hi;
+	} else {
+		v0 = test_case.hi;
+		v1 = test_case.lo;
+	}
+	printf("%d, %d, %d, %d" EOL, v0, v1, now - bk->trial_start_time, distance);
+}
+
+static void begin_next_trial(struct acc_bookkeeping *bk) {
+	ASSERT(bk->state == ACCELERATING || bk->state == DECELERATING || bk->state == STOPPING);
+	if (++bk->trial_index >= 2 * MAX_TRIALS) {
+		bk->trial_index = 0;
+		if (++bk->test_case_index >= sizeof(acc_test_cases) / sizeof(acc_test_cases[0])) {
+			bk->state = DONE;
+		} else {
+			tc_set_speed(CALIB_TRAIN_NUMBER, acc_test_cases[bk->test_case_index].hi);
+			bk->state = WARMING_UP;
+			enqueue_delay(10 * 100); // 10 seconds
+		}
+	} else {
+		if (bk->state == STOPPING) {
+			tc_set_speed(CALIB_TRAIN_NUMBER, acc_test_cases[bk->test_case_index].hi);
+		}
+		// accelerating & stopping -> stable_hi, decelerating -> stable_lo
+		bk->state = (bk->state != DECELERATING) ? STABLE_HI : STABLE_LO;
+	}
+}
+
+void run_acc_calibration(void) {
+	register_as(CALIBRATESRV_NAME);
+	signal_recv();
+
+	// we don't collect any velocity data here, just acceleration interval data
+	// we can construct the whole picture by running both types of calibration
+	// and combining the results during the data processing
+	// set up switches so that we make a loop around the outer track (for track A)
+	struct switch_state switches;
+	memzero(&switches);
+	switch_set(&switches, 15, CURVED);
+	switch_set(&switches, 9, CURVED);
+	tc_switch_switches_bulk(switches);
+
+	struct acc_bookkeeping bk;
+	memzero(&bk);
+
+	tc_set_speed(CALIB_TRAIN_NUMBER, acc_test_cases[bk.test_case_index].hi);
+	enqueue_delay(10*100); // 10 seconds
+	printf("speed_0, speed_1, distance, time" EOL);
+
+	while (bk.state != DONE) {
+		int tid;
+		struct calibrate_req req = {};
+		receive(&tid, &req, sizeof(req));
+		reply(tid, NULL, 0);
+		if (bk.state == WARMING_UP) {
+			if (req.type == DELAY_PASSED) {
+				bk.state = STABLE_HI;
+			}
+			// drop others
+		} else if (req.type == UPDATE_SENSOR) {
+			int changed = handle_sensor_update(&req.u.sensors, &bk.old_sensors);
+			if (changed == -1) continue;
+			char buf[4];
+			sensor_repr(changed, buf);
+			printf("Passed sensor %s"EOL, buf);
+
+			switch (bk.state) {
+			case ACCELERATING:
+			case DECELERATING:
+				// end trial after specially chosen sensor
+				if (changed != bk.trial_end_sensor) break;
+			case STOPPING:
+				// end trial after first sensor we hit while stopping
+				print_data_line(&bk, changed, req.u.sensors.ticks, &switches);
+				begin_next_trial(&bk);
+				printf("Set state = %d" EOL, bk.state);
+				break;
+			case STABLE_LO:
+			case STABLE_HI: {
+				int next_run_end = detect_run_start(changed);
+				if (next_run_end > 0) {
+					bk.trial_start_sensor = changed;
+					bk.trial_end_sensor = next_run_end;
+					bk.trial_start_time = req.u.sensors.ticks;
+
+					struct speed_pair test_case = acc_test_cases[bk.test_case_index];
+					int speed = (bk.state == STABLE_LO) ? test_case.hi : test_case.lo;
+					tc_set_speed(CALIB_TRAIN_NUMBER, speed);
+
+					if (bk.state == STABLE_LO) {
+						bk.state = ACCELERATING;
+					} else if (speed == 0) {
+						bk.state = STOPPING;
+					} else {
+						bk.state = DECELERATING;
+					}
+					printf("Set state = %d, speed = %d" EOL, bk.state, speed);
+				}
+				break;
+			}
+			default:
+				break;
+			}
+
+			bk.old_sensors = req.u.sensors;
+		}
+	}
+}
+
+
 void calibratesrv(void) {
-	int tid = create(HIGHER(PRIORITY_MIN, 1), start_calibrate);
+	/* int tid = create(HIGHER(PRIORITY_MIN, 1), start_calibrate); */
+	int tid = create(HIGHER(PRIORITY_MIN, 1), run_acc_calibration);
 	signal_send(tid);
 }
 void calibrate_send_sensors(int calibratesrv, struct sensor_state *st) {

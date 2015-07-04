@@ -103,5 +103,7 @@ int try_await(unsigned eid, char *buf, unsigned buflen);
 unsigned rand(void);
 
 int should_idle(void); // Just for the idle task.
+int idle_permille(void); // debug info about how much we're idling
 
 void halt(void) __attribute__((noreturn)); // stop the kernel immediately, does not return
+

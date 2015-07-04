@@ -1,6 +1,8 @@
 #include "task_management.h"
 
 #include "../tasks.h"
+#include "../drivers/timer.h"
+#include "../kassert.h"
 
 // Implementation of syscalls
 //
@@ -57,5 +59,25 @@ void tid_handler(struct task_descriptor *current_task) {
 
 void parent_tid_handler(struct task_descriptor *current_task) {
 	syscall_set_return(current_task->context, current_task->parent_tid);
+	task_schedule(current_task);
+}
+
+void idle_permille_handler(struct task_descriptor *current_task, unsigned ts_start) {
+	const struct task_descriptor *idle_td = task_from_tid(0);
+	KASSERT(idle_td != NULL);
+	unsigned idle = idle_td->user_time_useconds;
+	unsigned total = debug_timer_useconds() - ts_start;
+
+	static unsigned last_idle = 0, last_total = 0;
+	KASSERT(total >= last_total);
+	KASSERT(idle >= last_idle);
+	last_total = total;
+	last_idle = idle;
+
+	unsigned permille = idle / (total / 1000);
+	KASSERT(permille <= 1000);
+	(void) permille;
+
+	syscall_set_return(current_task->context, permille);
 	task_schedule(current_task);
 }

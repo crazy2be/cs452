@@ -203,8 +203,7 @@ static void initial_draw(void) {
 	vbox(1, SCREEN_WIDTH - 2, 0);
 
 	// reset the cursor to where the track is, then print out the right menu
-	printf("\e[%d;%dH", 2, 1);
-	vbox(1, SCREEN_WIDTH - 2 - TRACK_DISPLAY_WIDTH + 1, RIGHT_BAR_X_OFFSET);
+	printf("\e[%d;%dH" VLINE "          " VLINE "          " VLINE EOL, 2, RIGHT_BAR_X_OFFSET + 1);
 	printf("\e[%dC", RIGHT_BAR_X_OFFSET);
 	hline(SCREEN_WIDTH - TRACK_DISPLAY_WIDTH + 1, LTEE, RTEE);
 	puts(EOL);
@@ -255,6 +254,7 @@ struct displaysrv_req {
 		} sw;
 		struct {
 			struct sensor_state state;
+			unsigned avg_delay;
 		} sensor;
 		struct {
 			char input;
@@ -313,7 +313,9 @@ static void update_sensor_display(int sensor, int blank) {
 	       coords.x + TRACK_X_OFFSET, buf);
 }
 
-static void update_sensor(struct sensor_state *sensors, struct sensor_state *old_sensors, struct sensor_reads *reads) {
+static void update_sensor(struct sensor_state *sensors, struct sensor_state *old_sensors, struct sensor_reads *reads, unsigned delay_time) {
+	// update displayed sensor delay time
+	printf("\e[s\e[%d;%dH%03d\e[u", CLOCK_Y_OFFSET, CLOCK_X_OFFSET + 17, delay_time);
 	for (int i = 0; i < SENSOR_COUNT; i += 2) {
 		int s1 = sensor_get(sensors, i);
 		int s2 = sensor_get(sensors, i + 1);
@@ -430,7 +432,13 @@ static void update_time(unsigned millis) {
 	seconds %= 60;
 	minutes %= 60;
 
-	printf("\e[s\e[%d;%dH%02d:%02d:%d\e[u", CLOCK_Y_OFFSET, CLOCK_X_OFFSET, minutes, seconds, tenths);
+	int idle = idle_permille();
+	int idle_whole = idle / 10;
+	int idle_decimal = idle % 10;
+
+	printf("\e[s\e[%d;%dH%02d:%02d:%d " VLINE " %02d.%d%% " VLINE "\e[u",
+			CLOCK_Y_OFFSET, CLOCK_X_OFFSET - 1, minutes, seconds, tenths,
+			idle_whole, idle_decimal);
 }
 
 static void update_train_states(int active_trains, struct display_train_state *active_train_states,
@@ -537,7 +545,7 @@ void displaysrv_start(void) {
 			update_switch(&req.data.sw.state, &old_switches);
 			break;
 		case UPDATE_SENSOR:
-			update_sensor(&req.data.sensor.state, &old_sensors, &sensor_reads);
+			update_sensor(&req.data.sensor.state, &old_sensors, &sensor_reads, req.data.sensor.avg_delay);
 			break;
 		case UPDATE_TIME:
 			update_time(req.data.time.millis);
@@ -601,9 +609,10 @@ void displaysrv_console_feedback(int displaysrv, char *fb) {
 	displaysrv_send(displaysrv, CONSOLE_FEEDBACK, &req);
 }
 
-void displaysrv_update_sensor(int displaysrv, struct sensor_state *state) {
+void displaysrv_update_sensor(int displaysrv, struct sensor_state *state, unsigned avg_delay) {
 	struct displaysrv_req req;
 	req.data.sensor.state = *state;
+	req.data.sensor.avg_delay = avg_delay;
 	displaysrv_send(displaysrv, UPDATE_SENSOR, &req);
 }
 

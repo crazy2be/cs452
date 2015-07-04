@@ -1,7 +1,8 @@
 import sys
 from os import path
 syscalls = ["try_create", "pass", "exitk", "tid", "parent_tid",
-			"try_send", "try_receive", "try_reply", "try_await", "rand", "should_idle", "halt"]
+			"try_send", "try_receive", "try_reply", "try_await", "rand", "should_idle",
+			"halt", "idle_permille"]
 
 gen_dir = sys.argv[1]
 

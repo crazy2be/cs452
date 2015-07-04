@@ -4,30 +4,32 @@
 #include "trainsrv_internal.h"
 #include "../sys.h" // delay()
 
-static void setup_sw(struct switch_state *switches, int n, enum sw_direction d) {
-	tc_switch_switch(n, d);
-	switch_set(switches, n, d);
+void tc_switch_switches_bulk(const struct switch_state switches) {
+	for (int i = 1; i <= 18; i++) {
+		tc_switch_switch(i, switch_get(&switches, i));
+	}
+	for (int i = 145; i <= 156; i++) {
+		tc_switch_switch(i, switch_get(&switches, i));
+	}
+	tc_deactivate_switch();
 }
 struct switch_state tc_init_switches(void) {
 	struct switch_state switches = {};
 	for (int i = 1; i <= 18; i++) {
-		setup_sw(&switches, i, CURVED);
-		// Avoid flooding rbuf. We probably shouldn't need this, since rbuf
-		// should have plenty of space, but it seems to work...
-		delay(1);
+		switch_set(&switches, i, CURVED);
 	}
-	setup_sw(&switches, 152, CURVED);
-	setup_sw(&switches, 156, CURVED);
+	switch_set(&switches, 153, CURVED);
+	switch_set(&switches, 156, CURVED);
 
 	// "Big loop" configuration
-	setup_sw(&switches, 6, STRAIGHT);
-	setup_sw(&switches, 7, STRAIGHT);
-	setup_sw(&switches, 8, STRAIGHT);
-	setup_sw(&switches, 9, STRAIGHT);
-	setup_sw(&switches, 14, STRAIGHT);
-	setup_sw(&switches, 15, STRAIGHT);
+	switch_set(&switches, 6, STRAIGHT);
+	switch_set(&switches, 7, STRAIGHT);
+	switch_set(&switches, 8, STRAIGHT);
+	switch_set(&switches, 9, STRAIGHT);
+	switch_set(&switches, 14, STRAIGHT);
+	switch_set(&switches, 15, STRAIGHT);
 
-	tc_deactivate_switch();
+	tc_switch_switches_bulk(switches);
 	return switches;
 }
 
@@ -63,7 +65,7 @@ void tc_stop(int train) {
 }
 
 void tc_switch_switch(int sw, enum sw_direction d) {
-	ASSERT((1 <= sw && sw <= 18) || (145 <= sw && sw <= 148) || (150 <= sw && sw <= 156));
+	ASSERT((1 <= sw && sw <= 18) || (145 <= sw && sw <= 156));
 #ifdef QEMU
 	fputs("Changing switch position" EOL, COM1);
 #else

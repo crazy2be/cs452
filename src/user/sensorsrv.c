@@ -7,6 +7,8 @@
 #include <kernel.h>
 #include <util.h>
 
+#include "../kernel/drivers/timer.h"
+
 void sensor_set(struct sensor_state *s, int num, int tripped) {
 	const int word_num = num / 8;
 	const int offset = 7 - num % 8;
@@ -36,7 +38,7 @@ void sensor_repr(int n, char *buf) {
 
 void sensor_each_new(struct sensor_state *old, struct sensor_state *new,
                      sensor_new_handler cb, void *ctx) {
-	for (int i = 0; i <= SENSOR_COUNT; i++) {
+	for (int i = 0; i < SENSOR_COUNT; i++) {
 		int s = sensor_get(new, i);
 		if (s && s != sensor_get(old, i)) {
 			cb(i, ctx);
@@ -64,7 +66,7 @@ void start_sensorsrv(void) {
 	/* fputc(COM1, 0x61); */
 	/* fputc(COM1, 0x60); */
 
-	/* int displaysrv = whois(DISPLAYSRV_NAME); */
+	int displaysrv = whois(DISPLAYSRV_NAME);
 	struct sensor_state sensors;
 #if CALIBRATE
 	int calibratesrv = whois(CALIBRATESRV_NAME);
@@ -92,14 +94,16 @@ void start_sensorsrv(void) {
 	trains_send_sensors(sensors);
 #endif
 	for (;;) {
+		unsigned start_time = debug_timer_useconds();
 		tc_send_sensor_poll();
-		/* printf("%d bytes in the buffer before" EOL, fbuflen(COM1)); */
 		fgets((char*) &sensors, 10, COM1);
 		sensors.ticks = time();
 
+		unsigned end_time = debug_timer_useconds();
+		unsigned delay_time = (end_time - start_time) / 1000;
+
 		// notify the tasks which need to know about sensor updates
-		/* printf("%d bytes in the buffer after" EOL, fbuflen(COM1)); */
-		/* displaysrv_update_sensor(displaysrv, &sensors); */
+		displaysrv_update_sensor(displaysrv, &sensors, delay_time);
 #if CALIBRATE
 		calibrate_send_sensors(calibratesrv, &sensors);
 #else
