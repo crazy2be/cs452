@@ -75,29 +75,18 @@ struct alert_request_state {
 
 #define MAX_ACTIVE_REQUESTS 30
 
-
-static void wakeup_call_task(void) {
-	int tid;
-	struct alertsrv_request req;
-	req.type = WAKEUP;
-	receive(&tid, &req.u.wakeup, sizeof(req.u.wakeup));
-	reply(tid, NULL, 0);
-
-	if (req.u.wakeup.actually_delay) {
-		req.u.wakeup.ticks = delay(req.u.wakeup.ticks);
-	}
-
-	// wake up server again
-	send(tid, &req, sizeof(req), NULL, 0);
-}
-
 static void request_wakeup_call(struct alert_request_state *state, int time, bool actually_delay) {
+
 	ASSERT(state->state == WAITING);
 	state->state = FINAL_APPROACH;
-	// 1 higher priority than the rest of the server
-	int tid = create(HIGHER(PRIORITY_MIN, 4), wakeup_call_task);
-	struct wakeup_call_data data = { state, state->nonce, time, actually_delay };
-	send(tid, &data, sizeof(data), NULL, 0);
+
+	struct alertsrv_request req;
+	req.type = WAKEUP;
+	req.u.wakeup.state = state;
+	req.u.wakeup.nonce = state->nonce;
+	req.u.wakeup.actually_delay = actually_delay;
+
+	delay_async(time, &req, sizeof(req), offsetof(struct alertsrv_request, u.wakeup.ticks));
 }
 
 struct final_approach_ctx {
