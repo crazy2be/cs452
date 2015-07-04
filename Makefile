@@ -10,10 +10,7 @@ LIB_SRC_DIR=$(SRC_DIR)/lib
 
 BENCHMARK_FLAGS = -DBENCHMARK_CACHE -DBENCHMARK_SEND_FIRST -DBENCHMARK_MSG_SIZE=64
 
-# Use the current git revision as the stack randomization seed. Is this a good
-# idea? Not sure. It means behaviour should always be reproducable, but it
-# could also cause confusion. Feel free to change it if you have a better idea.
-STACK_SEED = 0x$(shell git rev-parse HEAD | head -c 8)
+STACK_SEED = $(shell date +%N)
 CFLAGS  = -g -fPIC -Wall -Werror -I$(SRC_DIR)/lib -std=c99 -O2 \
 	$(BENCHMARK_FLAGS) \
 	-fno-builtin-puts -fno-builtin-fputs -fno-builtin-fputc -fno-builtin-putc \
@@ -224,10 +221,10 @@ sync-clean:
 	ssh uw "rm -rf cs452-kernel"
 
 sync:
-	rsync -avzd --exclude /build --exclude /.git --exclude /writeup . uw:cs452-kernel/
+	rsync -avzd --exclude /build --exclude vid --exclude vid2 --exclude vid3 --exclude /.git --exclude /writeup . uw:cs452-kernel/
 
 rt: sync
-	ssh uw "bash -c 'cd cs452-kernel && make -j4 ENV=arm920t install'"
+	ssh uw "bash -c 'cd cs452-kernel && make -j4 ENV=arm920t TYPE=t install'"
 
 rc: sync
 	ssh uw "bash -c 'cd cs452-kernel && make -j4 ENV=arm920t TYPE=c install'"
