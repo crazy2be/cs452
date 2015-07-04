@@ -30,10 +30,9 @@ KERNEL_BIN = $(BUILD_DIR)/kernel.bin
 TEST_ELF = $(BUILD_DIR)/test_kernel.elf
 TEST_BIN = $(BUILD_DIR)/test_kernel.bin
 
-ifeq ($(TYPE),)
-TYPE = t
-else
-TYPE = c
+CFLAGS += -DTRACKA
+
+ifeq ($(TYPE),c)
 CFLAGS += -DCALIBRATE
 endif
 
