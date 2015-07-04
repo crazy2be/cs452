@@ -1,14 +1,36 @@
 #include "clockserver.h"
 #include "nameserver.h"
 #include "../request_type.h"
-#include "../min_heap.h"
 
 #include <kernel.h>
 #include <assert.h>
 
+#define ASYNC_MSG_BUFSZ 80
+struct queued_async_request {
+	int tid;
+	unsigned buf_len;
+	unsigned buf_tick_offset;
+	unsigned char buf[ASYNC_MSG_BUFSZ];
+};
+
+#define MIN_HEAP_VALUE struct queued_async_request
+#define MIN_HEAP_PREFIX async_req
+#include "../min_heap.h"
+
+#undef MIN_HEAP_VALUE
+#undef MIN_HEAP_PREFIX
+#define MIN_HEAP_VALUE int
+#define MIN_HEAP_PREFIX sync_req
+#include "../min_heap.h"
+
 struct clockserver_request {
 	enum request_type type;
 	int ticks;
+
+	// only used for async requests
+	unsigned buf_len;
+	unsigned buf_tick_offset;
+	unsigned char buf[ASYNC_MSG_BUFSZ];
 };
 
 static void clocknotifier(void) {
@@ -23,10 +45,22 @@ static void clocknotifier(void) {
 	}
 }
 
+static void courier(void) {
+	struct queued_async_request qreq;
+	int tid;
+	receive(&tid, &qreq, sizeof(qreq));
+	reply(tid, NULL, 0);
+	send(qreq.tid, qreq.buf, qreq.buf_len, NULL, 0);
+}
+
 void clockserver(void) {
-	struct min_heap delayed;
-	min_heap_init(&delayed);
 	register_as("clockserver");
+
+	struct sync_req_min_heap sync_delayed;
+	sync_req_min_heap_init(&sync_delayed);
+
+	struct async_req_min_heap async_delayed;
+	async_req_min_heap_init(&async_delayed);
 
 	int num_ticks = 0;
 	create(PRIORITY_MAX, &clocknotifier);
@@ -46,18 +80,34 @@ void clockserver(void) {
 			}
 			//ASSERT(num_ticks + 1 == req.ticks);
 			num_ticks = req.ticks;
-			while (!min_heap_empty(&delayed) && min_heap_top_key(&delayed) <= num_ticks) {
-				int awoken_tid = min_heap_pop(&delayed);
+			while (!sync_req_min_heap_empty(&sync_delayed) && sync_req_min_heap_top_key(&sync_delayed) <= num_ticks) {
+				int awoken_tid = sync_req_min_heap_pop(&sync_delayed);
 				reply(awoken_tid, &num_ticks, sizeof(num_ticks));
+			}
+			while (!async_req_min_heap_empty(&async_delayed) && async_req_min_heap_top_key(&async_delayed) <= num_ticks) {
+				struct queued_async_request qreq = async_req_min_heap_pop(&async_delayed);
+				int courier_tid = create(LOWER(PRIORITY_MAX, 1), courier);
+				int *tick_p = (int*)(qreq.buf + qreq.buf_tick_offset);
+				*tick_p = num_ticks;
+				send(courier_tid, &qreq, sizeof(qreq), NULL, 0);
 			}
 			break;
 		case DELAY:
-			//printf("Clockserver got delay %d"EOL, req.ticks);
-			min_heap_push(&delayed, num_ticks + req.ticks, tid);
+			sync_req_min_heap_push(&sync_delayed, num_ticks + req.ticks, tid);
 			break;
 		case DELAY_UNTIL:
-			min_heap_push(&delayed, req.ticks, tid);
+			sync_req_min_heap_push(&sync_delayed, req.ticks, tid);
 			break;
+		case DELAY_ASYNC: {
+			struct queued_async_request qreq;
+			qreq.tid = tid;
+			qreq.buf_len = req.buf_len;
+			qreq.buf_tick_offset = req.buf_tick_offset;
+			memcpy(qreq.buf, req.buf, req.buf_len);
+			async_req_min_heap_push(&async_delayed, num_ticks + req.ticks, qreq);
+			reply(tid, NULL, 0);
+			break;
+		}
 		case TIME:
 			resp = num_ticks;
 			reply(tid, &resp, sizeof(resp));
@@ -98,4 +148,17 @@ int delay_until(int ticks) {
 		.type = DELAY_UNTIL,
 		 .ticks = ticks,
 	});
+}
+
+void delay_async(int ticks, void *msg, unsigned msg_len, unsigned msg_tick_offset) {
+	struct clockserver_request req;
+	ASSERT(msg_len <= sizeof(req.buf));
+
+	req.type = DELAY_ASYNC;
+	req.ticks = ticks;
+	req.buf_len = msg_len;
+	req.buf_tick_offset = msg_tick_offset;
+	memcpy(req.buf, msg, msg_len);
+
+	send(clockserver_tid(), &req, sizeof(req), NULL, 0);
 }

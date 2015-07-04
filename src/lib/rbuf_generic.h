@@ -7,6 +7,8 @@
  * should be used instead.
  */
 
+#include <util.h>
+
 #ifndef RBUF_SIZE
 #error No buffer size was provided to ring buffer
 #endif
@@ -16,12 +18,6 @@
 #ifndef RBUF_PREFIX
 #error No prefix was provided to ring buffer
 #endif
-
-/* we require a second level of indirection here in order to have the
- * parameters expanded before concatenating - see
- * https://stackoverflow.com/questions/1489932/c-preprocessor-and-concatenation */
-#define PASTER2(x, y) x##_##y
-#define PASTER(x, y) PASTER2(x, y)
 
 #define RBUF_T struct PASTER(RBUF_PREFIX, rbuf)
 #define RBUF_INIT PASTER(RBUF_PREFIX, rbuf_init)

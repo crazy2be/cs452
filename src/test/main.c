@@ -8,6 +8,7 @@
 
 #include "min_heap.h"
 #include "track_test.h"
+#include "clockserver_test.h"
 
 #include "../user/sys.h"
 #include "../user/signal.h"
@@ -331,6 +332,7 @@ int main(int argc, char *argv[]) {
 	boot(io_suite, PRIORITY_MIN, 0);
 	boot(destroy_init, HIGHER(PRIORITY_MIN, 1), 0);
 	boot(test_train_alert_srv, HIGHER(PRIORITY_MIN, 1), 0);
+	boot(test_clockserver, HIGHER(PRIORITY_MIN, 1), 0);
 	// TODO: get this test working
 	/* boot(int_test_train_alert_srv, HIGHER(PRIORITY_MIN, 1), 0); */
 }
