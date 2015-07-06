@@ -14,18 +14,18 @@ void tc_switch_switches_bulk(const struct switch_state switches) {
 	tc_deactivate_switch();
 }
 static void setup_big_loop(struct switch_state *switches) {
-	switch_set(&switches, 6, STRAIGHT);
-	switch_set(&switches, 7, STRAIGHT);
-	switch_set(&switches, 8, STRAIGHT);
-	switch_set(&switches, 9, STRAIGHT);
-	switch_set(&switches, 14, STRAIGHT);
-	switch_set(&switches, 15, STRAIGHT);
+	switch_set(switches, 6, STRAIGHT);
+	switch_set(switches, 7, STRAIGHT);
+	switch_set(switches, 8, STRAIGHT);
+	switch_set(switches, 9, STRAIGHT);
+	switch_set(switches, 14, STRAIGHT);
+	switch_set(switches, 15, STRAIGHT);
 }
 static void setup_medium_loop(struct switch_state *switches) {
-	switch_set(&switches, 10, STRAIGHT);
-	switch_set(&switches, 13, STRAIGHT);
-	switch_set(&switches, 16, STRAIGHT);
-	switch_set(&switches, 17, STRAIGHT);
+	switch_set(switches, 10, STRAIGHT);
+	switch_set(switches, 13, STRAIGHT);
+	switch_set(switches, 16, STRAIGHT);
+	switch_set(switches, 17, STRAIGHT);
 }
 struct switch_state tc_init_switches(void) {
 	struct switch_state switches = {};
@@ -34,7 +34,8 @@ struct switch_state tc_init_switches(void) {
 	}
 	switch_set(&switches, 153, CURVED);
 	switch_set(&switches, 156, CURVED);
-	setup_small_loop(&switches);
+	(void) setup_big_loop;
+	setup_medium_loop(&switches);
 
 	tc_switch_switches_bulk(switches);
 	return switches;

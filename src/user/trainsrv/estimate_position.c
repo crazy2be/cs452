@@ -40,25 +40,6 @@ int get_estimated_distance_travelled(struct internal_train_state *train_state, i
 	return MIN(distance, maximum_acceptable_distance);
 }
 
-// travel down the track for that many mm, and see which node we end at
-static bool break_after_distance(const struct track_edge *e, void *ctx) {
-	struct position *pos = (struct position*)ctx;
-
-	pos->edge = e;
-
-	// Here, displacement is really the total distance travelled by the train in
-	// the time interval since we last knew it's position
-	// Note that this violates the usual invariant of displacement < edge->dist
-	// We move to the next edge so long as our displacement is greater than the
-	// length of the edge we're currently on.
-	if (pos->displacement >= e->dist) {
-		pos->displacement -= e->dist;
-		return 0;
-	} else {
-		return 1;
-	}
-}
-
 struct position get_estimated_train_position(struct trainsrv_state *state,
         struct internal_train_state *train_state) {
 
@@ -71,28 +52,7 @@ struct position get_estimated_train_position(struct trainsrv_state *state,
 
 	// find how much time has passed since the recorded position on the internal
 	// train state, and how far we expect to have moved since then
-	const struct track_edge *last_edge = train_state->last_known_position.edge;
-
-	position.displacement += get_estimated_distance_travelled(train_state, time());
-
-	// we special case the first edge like this since track_go_forwards takes a node, but we
-	// start part of the way down an *edge*
-	// If we didn't do this, if the starting node was a branch, we could be affected by the
-	// direction of the switch even though we've passed the switch already
-	if (position.displacement >= last_edge->dist) {
-		position.displacement -= last_edge->dist;
-		const struct track_node *node = track_go_forwards(last_edge->dest, &state->switches, break_after_distance, &position);
-		ASSERT(node != NULL);
-
-		// normalize positions that run off the end of the track
-		if (position.displacement >= position.edge->dist) {
-			ASSERT(node->type == NODE_EXIT);
-			position.displacement = position.edge->dist - 1;
-		}
-	}
-
-
-	ASSERTF(position_is_wellformed(&position), "(%s, %d) is malformed", position.edge->src->name, position.displacement);
+	position_travel_forwards(&position, get_estimated_distance_travelled(train_state, time()), &state->switches);
 
 	return position;
 }
@@ -247,52 +207,20 @@ static void log_position_estimation_error(const struct trainsrv_state *state,
 	}
 }
 
-struct specific_node_context {
-	const struct track_node *node;
-	int distance;
-};
-
-static bool break_at_specific_node(const struct track_edge *e, void *context_) {
-	struct specific_node_context *context = (struct specific_node_context*) context_;
-	if (e->src == context->node) {
-		return 1;
-	} else {
-		context->distance += e->dist;
-		return 0;
-	}
-}
-
-
 #define SILENT_ERROR -1
 #define TELEPORT_ERROR -2
 int calculate_actual_velocity(struct internal_train_state *train_state,
                               const struct track_node *sensor_node, const struct switch_state *switches, int ticks) {
 
 	ASSERT(sensor_node != NULL);
-
 	if (position_is_uninitialized(&train_state->last_known_position)) return SILENT_ERROR;
 
+	struct position sensor_position = { &sensor_node->edge[0], 0 };
+	const int actual_distance = position_distance_apart(&train_state->last_known_position, &sensor_position, switches);
+	if (actual_distance < 0) return TELEPORT_ERROR;
+
 	const int delta_t = ticks - train_state->last_known_time;
-
 	if (delta_t == 0) return SILENT_ERROR;
-
-	// calculate how far the train went since we last saw it
-	// this should require no change for TC2's robustness against errors, since we want to
-	// do sensor attribution before this function is even called
-	struct specific_node_context context = { sensor_node, - train_state->last_known_position.displacement };
-	const struct track_node *ending_node = track_go_forwards(train_state->last_known_position.edge->src,
-	                                       switches, break_at_specific_node, &context);
-	if (ending_node != sensor_node) {
-		// if there is no path from the last position to this node, either because
-		// we entered a cycle, or hit an exit node
-		return TELEPORT_ERROR;
-	}
-
-	ASSERT(ending_node != NULL);
-
-	const int actual_distance = context.distance;
-	ASSERT(actual_distance >= 0);
-
 	return (actual_distance * 1000) / delta_t;
 }
 
