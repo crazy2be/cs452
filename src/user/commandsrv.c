@@ -6,6 +6,7 @@
 #include "displaysrv.h"
 #include "trainsrv.h"
 #include "trainsrv/train_alert_srv.h"
+#include "trainsrv/position.h"
 #include "trainsrv/track_control.h" // TODO: remove this
 #include "track.h"
 
@@ -188,8 +189,31 @@ static void stop_task(void) {
 }
 
 static void handle_stop(int displaysrv, int train, struct position pos) {
+	struct train_state state;
+	trains_query_spatials(train, &state);
+	struct switch_state switches = trains_get_switches();
+
+	// find distance from current train position
+	const int current_distance = position_distance_apart(&state.position, &pos, &switches);
+	if (current_distance < 0) {
+		displaysrv_console_feedback(displaysrv, "No path to target location");
+		return;
+	}
+
+	// decrease by stopping distance
+	// TODO: this is a stub just for testing
+	int distance = current_distance - 900;
+
+	position_travel_forwards(&state.position, distance, &switches);
+
+	char buf[80];
+	snprintf(buf, sizeof(buf), "%d mm to %s + %d, stopping at %s + %d" EOL,
+			current_distance, pos.edge->src->name,
+			pos.displacement, state.position.edge->src->name, state.position.displacement);
+	displaysrv_console_feedback(displaysrv, buf);
+
 	int tid = create(COMMANDSRV_PRIORITY, stop_task);
-	struct stop_task_params params = { train, pos };
+	struct stop_task_params params = { train, state.position };
 	send(tid, &params, sizeof(params), NULL, 0);
 }
 
@@ -302,9 +326,9 @@ static void process_command(char *cmd, int displaysrv) {
 		} else if (!(1 <= train && train <= 80)) {
 			displaysrv_console_feedback(displaysrv, "Invalid train number");
 		} else {
-			char buf[80];
-			snprintf(buf, sizeof(buf), "Got STP %d %s:%d + %d", train, node->name, edge_choice, displacement);
-			displaysrv_console_feedback(displaysrv, buf);
+			/* char buf[80]; */
+			/* snprintf(buf, sizeof(buf), "Got STP %d %s:%d + %d", train, node->name, edge_choice, displacement); */
+			/* displaysrv_console_feedback(displaysrv, buf); */
 			handle_stop(displaysrv, train, (struct position) {
 				&node->edge[edge_choice], displacement
 			});

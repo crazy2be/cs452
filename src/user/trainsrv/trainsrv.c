@@ -116,6 +116,9 @@ static void trains_server(void) {
 			/* displaysrv_update_switch(displaysrv, &switches); */
 			reply(tid, NULL, 0);
 			break;
+		case SWITCH_GET:
+			reply(tid, &state.switches, sizeof(state.switches));
+			break;
 		default:
 			WTF("UNKNOWN TRAINS REQ %d"EOL, req.type);
 			break;
@@ -195,4 +198,12 @@ void trains_switch(int switch_number, enum sw_direction d) {
 		 .switch_number = switch_number,
 		  .direction = d,
 	}));
+}
+
+struct switch_state trains_get_switches(void) {
+	struct switch_state switches;
+	TSEND2(((struct trains_request) {
+		.type = SWITCH_GET,
+	}), &switches);
+	return switches;
 }
