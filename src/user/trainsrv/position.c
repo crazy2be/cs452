@@ -74,9 +74,9 @@ static bool break_at_specific_node(const struct track_edge *e, void *context_) {
 int position_distance_apart(const struct position *start, const struct position *end,
 		const struct switch_state *switches) {
 
-	struct specific_node_context context = { end->edge->src, end->displacement - start->displacement };
+	struct specific_node_context context = { end->edge->src, end->displacement + start->displacement };
 
-	const struct track_node *ending_node = track_go_forwards(start->edge->src, switches, break_at_specific_node, &context);
+	const struct track_node *ending_node = track_go_forwards(start->edge->dest, switches, break_at_specific_node, &context);
 	if (ending_node != end->edge->src) {
 		// if there is no path from the last position to this node, either because
 		// we entered a cycle, or hit an exit node
