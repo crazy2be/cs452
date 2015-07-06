@@ -33,6 +33,14 @@
 #else
 #define UART0_BASE	0x808c0000
 #define UART1_BASE	0x808d0000
+// COM3 / UART1 is somewhere, we just have no idea how to hook it up. Take a
+// look at http://wiki.embeddedarm.com/wiki/TS-ENC720, which is the same
+// internal board we have. It looks like it may be attached to the DIO header
+// (although which pins is anybody's guess). There is something which looks
+// like a schematic of this, but I can't make sense of, at
+// https://www.embeddedarm.com/documentation/ts-enc720-782-schematic.pdf
+//
+// http://wiki.embeddedarm.com/wiki/TS-7200
 #endif
 
 // All the below registers for UART1
