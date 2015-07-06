@@ -6,6 +6,7 @@
 #include "displaysrv.h"
 #include "trainsrv.h"
 #include "trainsrv/train_alert_srv.h"
+#include "trainsrv/position.h"
 #include "trainsrv/track_control.h" // TODO: remove this
 #include "track.h"
 
@@ -188,6 +189,23 @@ static void stop_task(void) {
 }
 
 static void handle_stop(int displaysrv, int train, struct position pos) {
+	struct train_state state;
+	trains_query_spatials(train, &state);
+	struct switch_state switches = trains_get_switches();
+
+	// find distance from current train position
+	int distance = position_distance_apart(&state.position, &pos, &switches);
+	if (distance < 0) {
+		displaysrv_console_feedback(displaysrv, "No path to target location");
+		return;
+	}
+
+	// decrease by stopping distance
+	// TODO: this is a stub just for testing
+	distance -= 900;
+
+	position_travel_forwards(&pos, distance, &switches);
+
 	int tid = create(COMMANDSRV_PRIORITY, stop_task);
 	struct stop_task_params params = { train, pos };
 	send(tid, &params, sizeof(params), NULL, 0);
