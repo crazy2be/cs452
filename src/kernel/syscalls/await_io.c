@@ -18,8 +18,14 @@ struct uart_state {
 struct uart_state states[2];
 
 void io_irq_init(void) {
-	states[COM1].cts = CTS_READY;
-	states[COM2].cts = CTS_READY;
+	if (uart_cts(COM1)) {
+		states[COM1].cts = CTS_READY;
+	} else {
+		uart_enable_irq(COM1, MSIEN_MASK);
+		states[COM1].cts = CTS_WAITING_TO_ASSERT;
+	}
+
+	states[COM2].cts = CTS_READY; // this is not strictly necessary, since it should never be checked
 }
 
 #ifdef QEMU
