@@ -25,3 +25,6 @@ void position_travel_forwards(struct position *position, int distance, const str
 // return -1 if there is no path from start -> end
 int position_distance_apart(const struct position *start, const struct position *end,
 		const struct switch_state *switches);
+
+struct position position_calculate_stopping_position(const struct position *current,
+		const struct position *target, int stopping_distance, const struct switch_state *switches);

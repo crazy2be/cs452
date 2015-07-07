@@ -63,6 +63,56 @@ static void test_actual_velocity(void) {
 	ASSERT(-2 == calculate_actual_velocity(&ts, d12, &switches, 100));
 }
 
+static struct position random_position(void) {
+	for (;;) {
+		const struct track_node *start = &track[rand() % TRACK_MAX];
+		if (start->type == NODE_NONE || start->type == NODE_EXIT) continue;
+		struct position position;
+		position.edge = &start->edge[(start->type == NODE_BRANCH) ? rand() % 2 : 0];
+		if (position.edge->dist == 0) continue; // these can't be represented as legal positions
+		position.displacement = abs(rand()) % position.edge->dist;
+		ASSERTF(position_is_wellformed(&position), "test position (%s, %d) is malformed", position.edge->src->name, position.displacement);
+		return position;
+	}
+}
+
+static void test_travel_forwards() {
+	// test for specific cases
+	{
+		struct position position = { &track[61].edge[DIR_STRAIGHT], 211 };
+		struct switch_state switches = { 0x1762a05c };
+		position_travel_forwards(&position, 1779840282, &switches);
+	}
+	// do fuzz test
+	for (int round = 0; round < 5; round++) {
+		struct position position = random_position();
+
+		int distance = abs(rand());
+		ASSERT(distance >= 0);
+		struct switch_state switches;
+		switches.packed = rand();
+
+		/* printf("Test case is position {node=%s, edge=%d, displacement=%d}, distance=%d, switches=%x" EOL, */
+		/* 		start->name, edge_count, position.displacement, distance, switches.packed); */
+
+		// make sure no assertions are tripped
+		position_travel_forwards(&position, distance, &switches);
+	}
+}
+
+static void test_calculate_stopping_position(void) {
+	// do fuzz test
+	for (int round = 0; round < 5; round++) {
+		struct position start = random_position();
+		struct position target = random_position();
+		int stopping_distance = abs(rand()) % 2000;
+		struct switch_state switches;
+		switches.packed = rand();
+
+		position_calculate_stopping_position(&start, &target, stopping_distance, &switches);
+	}
+}
+
 struct train_alert_client_params {
 	int train_id;
 	struct position position;
@@ -240,4 +290,6 @@ void track_tests(void) {
 	init_tracka(track);
 	test_next_sensor();
 	test_actual_velocity();
+	test_travel_forwards();
+	test_calculate_stopping_position();
 }

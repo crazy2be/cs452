@@ -39,3 +39,7 @@ static inline int usermode(void) {
 	__asm__ ("mrs %0, cpsr" : "=r"(cpsr));
 	return (cpsr & 0x1f) == 0x10;
 }
+
+static inline int abs(int a) {
+	return (a < 0) ? -a : a;
+}

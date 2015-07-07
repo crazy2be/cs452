@@ -193,27 +193,14 @@ static void handle_stop(int displaysrv, int train, struct position pos) {
 	trains_query_spatials(train, &state);
 	struct switch_state switches = trains_get_switches();
 
-	// find distance from current train position
-	const int current_distance = position_distance_apart(&state.position, &pos, &switches);
-	if (current_distance < 0) {
+	struct position stopping_point = position_calculate_stopping_position(&state.position, &pos, 900, &switches);
+	if (position_is_uninitialized(&stopping_point)) {
 		displaysrv_console_feedback(displaysrv, "No path to target location");
 		return;
 	}
 
-	// decrease by stopping distance
-	// TODO: this is a stub just for testing
-	int distance = current_distance - 900;
-
-	position_travel_forwards(&state.position, distance, &switches);
-
-	char buf[80];
-	snprintf(buf, sizeof(buf), "%d mm to %s + %d, stopping at %s + %d" EOL,
-			current_distance, pos.edge->src->name,
-			pos.displacement, state.position.edge->src->name, state.position.displacement);
-	displaysrv_console_feedback(displaysrv, buf);
-
 	int tid = create(COMMANDSRV_PRIORITY, stop_task);
-	struct stop_task_params params = { train, state.position };
+	struct stop_task_params params = { train, stopping_point };
 	send(tid, &params, sizeof(params), NULL, 0);
 }
 
