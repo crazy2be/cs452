@@ -20,8 +20,7 @@
 #define IO_TX_NTFY 2
 #define IO_RX_NTFY 3
 #define IO_STOP 4
-#define IO_DUMP 5
-#define IO_RXBUFLEN 6
+#define IO_RXNB 5
 
 #define MAX_STR_LEN 256
 
@@ -146,6 +145,7 @@ static void io_server_run() {
 
 		int msg_len = receive(&tid, &req, sizeof(req));
 		ASSERT(msg_len >= 1);
+		ASSERT(bytes_rx == rx_buf.l);
 
 		switch (req.type) {
 		case IO_TX:
@@ -222,12 +222,8 @@ static void io_server_run() {
 			if (char_rbuf_empty(&tx_buf)) goto cleanup;
 			// we now need to wait for all characters of output to be flushed
 			break;
-		case IO_DUMP:
-			reply(tid, &rx_buf.l, sizeof(rx_buf.l));
-			char_rbuf_init(&rx_buf);
-			break;
-		case IO_RXBUFLEN:
-			reply(tid, &rx_buf.l, sizeof(rx_buf.l));
+		case IO_RXNB:
+			bytes_rx -= receive_data(tid, &rx_buf, MIN(rx_buf.l, req.u.len));
 			break;
 		default:
 			ASSERT(0 && "Unknown request made to IO server");
@@ -347,26 +343,22 @@ void fgets(char *buf, int len, const int channel) {
 	unsigned msg_len = sizeof(req) - sizeof(req.u.buf) + sizeof(req.u.len);
 	send(io_server_tid(channel), &req, msg_len, buf, len);
 }
+
+int fgetsnb(char *buf, int len, const int channel) {
+	ASSERT(channel == COM1 || channel == COM2);
+	ASSERT(usermode());
+	struct io_request req = (struct io_request) {
+		.type = IO_RXNB, .u.len = len
+	};
+	unsigned msg_len = sizeof(req) - sizeof(req.u.buf) + sizeof(req.u.len);
+	// return reply len
+	return send(io_server_tid(channel), &req, msg_len, buf, len);
+}
+
 int fgetc(int channel) {
 	char c = -1;
 	fgets(&c, 1, channel);
 	return c;
-}
-int fbuflen(const int channel) {
-	struct io_request req;
-	req.type = IO_RXBUFLEN;
-	unsigned msg_len = sizeof(req) - sizeof(req.u.buf) + sizeof(req.u.len);
-	int resp;
-	send(io_server_tid(channel), &req, msg_len, &resp, sizeof(resp));
-	return resp;
-}
-int fdump(const int channel) {
-	struct io_request req;
-	req.type = IO_DUMP;
-	unsigned msg_len = sizeof(req) - sizeof(req.u.buf) + sizeof(req.u.len);
-	int resp;
-	send(io_server_tid(channel), &req, msg_len, &resp, sizeof(resp));
-	return resp;
 }
 // blocks until all output in the buffers is flushed, and the server is shutting down
 void ioserver_stop(const int channel) {

@@ -19,19 +19,12 @@ void fputc(const char c, const int channel);
 // we'll want to change this for COM2, so that it will return as soon as ENTER
 // is hit
 void fgets(char *buf, int len, const int channel);
+// non-blocking fgets - only return the input currently in the buffer
+int fgetsnb(char *buf, int len, const int channel);
 int fgetc(const int channel);
 
 int fprintf(int channel, const char *format, ...);
 int snprintf(char *buf, unsigned size, const char *fmt, ...);
-
-// Drop whatever is in the input buffer
-// This is useful for discarding garbage input produced by the train controller
-// at the start of the run
-// A more general solution might be to do a non-blocking gets which only returns stuff
-// already in the buffer, and then the client could just discard that.
-// However, we don't need this right now, so I don't want to build it.
-int fdump(const int channel);
-int fbuflen(const int channel);
 
 // shorthand for all the above
 #define puts(str) fputs(str, COM2)
