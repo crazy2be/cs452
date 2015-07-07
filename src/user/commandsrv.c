@@ -127,10 +127,11 @@ static int get_integer(char *cmd, int *ip, int *out) {
 
 static const struct track_node* get_node(char *cmd, int *ip) {
 	int i = *ip;
-	char buf[6]; // buffer for name of node: max name length + null term
+	const int max_node_len = 5;
+	char buf[max_node_len + 1]; // buffer for name of node: max name length + null term
 
 	int j;
-	for (j = 0; j < 3; j++) {
+	for (j = 0; j < max_node_len; j++) {
 		if (is_whitespace(cmd[i])) {
 			break;
 		} else if (is_alphanum(cmd[i])) {
