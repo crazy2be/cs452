@@ -145,6 +145,7 @@ static void io_server_run() {
 
 		int msg_len = receive(&tid, &req, sizeof(req));
 		ASSERT(msg_len >= 1);
+		// TODO: we should just delurk this variable entirely
 		ASSERT(bytes_rx == rx_buf.l);
 
 		switch (req.type) {
