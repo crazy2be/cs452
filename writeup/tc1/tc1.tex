@@ -79,13 +79,13 @@ We chose the following priorities for the tasks, in decreasing order:
 \item Display server
 \end{enumerate}
 
-The prorities chosen for the clock server, IO servers, and name servers have been
+The priorities chosen for the clock server, IO servers, and name servers have been
 discussed in previous documentation.
 All of these tasks are exclusively servers, and therefore need to run at higher
 priority than their clients, or else a high priority client could be blocked waiting
 for the server to get execution time.
 
-The remaining priorities are rougly chosen to prioritize a response to inbound events from
+The remaining priorities are roughly chosen to prioritize a response to inbound events from
 the outside world.
 However, these choices were made fairly naively, and haven't been subject to tuning.
 At the moment, our idle time is relatively large, so all tasks get a chance to execute
@@ -131,7 +131,7 @@ the data is not valid.
 We incorporate the calculated velocity from each interval of track by computing
 a new estimate of the velocity from the old estimate $v_e$, and the measured
 velocity $v_a$.
-We use the heurestic $v_e' = (1 - \alpha) v_e + \alpha v_a$, for $\alpha = 0.1$.
+We use the heuristic $v_e' = (1 - \alpha) v_e + \alpha v_a$, for $\alpha = 0.1$.
 
 We also record how far off our previous estimate was, by computing where
 we thought the train was at the moment that it tripped the sensor.
@@ -140,16 +140,16 @@ how well-calibrated the train is.
 
 Based on the estimated velocity, last sensor tripped, and time the last sensor
 was tripped, we can estimate the current position of the train.
-We also have the notion of "reanchoring" the trains - updating the last
+We also have the notion of "re-anchoring" the trains - updating the last
 known position to the currently estimated position.
-Whenever we change the speed of a train, we reanchor that train.
-When the orientation of a turnout is changed, we reanchor all trains.
+Whenever we change the speed of a train, we re-anchor that train.
+When the orientation of a turnout is changed, we re-anchor all trains.
 This simplifies the computation that needs to be done to project the position
 of the train, since it allows us to assume that the speed of the train and
 orientation of the turnouts hasn't changed during the period we want to predict
 the motion of the train.
 By making these assumptions, as well as the assumption that the trains accelerate
-instantaenously, we can calculate the distance traveled since the last position
+instantaneously, we can calculate the distance traveled since the last position
 a train was anchored at as simply the velocity of that train multiplied by
 the elapsed time.
 
@@ -167,7 +167,7 @@ The interface for the train alert server is
 The call blocks until the given train is estimated to have passed that position
 on the track.
 The function returns with the time at which the train passed that position
-(time is measured in ticks since the startup of the clockserver).
+(time is measured in ticks since the startup of the clock server).
 
 The train server pushes notifications to the train alert server when
 it detects that a train has hit a sensor.
@@ -208,7 +208,7 @@ One of the significant tasks in this deliverable was to calibrate the trains.
 Above, we discuss the techniques used to calibrate the train's velocity,
 including doing online calibration. In this section, we describe the various
 techniques we attempted in order to calibrate the train
-acceleration/deacceleration curve and stopping distance. This turns out to be
+acceleration/deceleration curve and stopping distance. This turns out to be
 considerably more complex in general than measuring velocity, because getting
 an accurate picture requires a significantly higher resolution than the sensors
 normally provide, and there is no way to use sensors to measure the position of
@@ -220,7 +220,7 @@ at a sensor and measure displacement from the sensor" technique for quite a
 while, under the justification that:
 \begin{enumerate}
 \item It is not a good way to get an estimate for the train position during
-	the middle of the acceleration/deacceleration, and
+	the middle of the acceleration/deceleration, and
 \item There is no way to automate the data collection, so a distance (and
 confidence interval) must be measured manually for each train at each possible
 speed for a complete model. This takes hours, and is prey to human error.
@@ -228,7 +228,7 @@ speed for a complete model. This takes hours, and is prey to human error.
 Even with complete measurements, and assuming the humans doing the measurements
 are perfect (we try), it is still difficult to refine the model with other
 data that we have. For example, if we know that the train has not finished
-accelerating, and hence is between two speeeds, what stopping distance do we
+accelerating, and hence is between two speeds, what stopping distance do we
 assume? If we know a particular section of track causes the trains to slow
 down 10\%, how do we refine our estimate of stopping distance for that section
 of track? The brute force model seemed like it could be subject to
@@ -238,8 +238,8 @@ combinatorial explosion in this case.
 After discussing the shortcomings of the manual measurement approach, we decided
 to adopt a different technique. Rather than measure the distance to stop
 completely, we decided to just measure the time taken to travel a certain
-distance while deaccelerating, and then extrapolate the actual stopping distance
-based on our knowledge of the underlying deacceleration model in the train
+distance while decelerating, and then extrapolate the actual stopping distance
+based on our knowledge of the underlying deceleration model in the train
 (i.e. the ``zero-acceleration model''). We spent a couple days on this, deriving the various
 forms on the model, gathering measurements, testing our assumptions, and
 refining bugs in the model (i.e. accounting for the delay between knowing that
@@ -247,12 +247,12 @@ a sensor tripped, and responding to the tripped sensor). However, we couldn't
 get any better than about 30cm of accuracy with this model, and we started to
 suspect that our model might not be accurate enough to be used in this way. As
 part of an investigation on this front, we tried to come up with some techniques
-for measuring what the actual deacceleration curve looked like.
+for measuring what the actual deceleration curve looked like.
 
 \subsection{Curve Validation}
 After our extrapolation wasn't working, we wanted to come up with a way to
-validate the underlying model we were assuming for the deacceration of the
-train. We considered various techinques, but ultimately ended up using a
+validate the underlying model we were assuming for the deceleration of the
+train. We considered various techniques, but ultimately ended up using a
 camera, suspended above the track, with a easily distinguishable color marked
 on the train for easy computerized tracking. We then captured data of the train
 starting, stopping, starting, stopping, several times over, and extracted
@@ -268,15 +268,15 @@ polynomial.
 \includegraphics[width=\linewidth]{deaccel.png}
 \caption{A fifth-order polynomial fit to experimentally derived data. Although
 the fifth-order polynomial fits reasonably well, one can see the data is
-definately not quartic nor cubic.}
+definitely neither quartic nor cubic.}
 \end{figure}
 
 \begin{figure}[ht!]
 \includegraphics[width=\linewidth]{deaccel2.png}
-\caption{The same polynomial that was fit to the previous set of deacceration
-data seems to generalize fairly easily to other decceration curves from the
+\caption{The same polynomial that was fit to the previous set of deceleration
+data seems to generalize fairly easily to other deceleration curves from the
 same speed, although some error is clearly present. The exact degree of error
-is difficult to acertain, as there is still a fair bit of noise in the data
+is difficult to ascertain, as there is still a fair bit of noise in the data
 despite smoothing.}
 \end{figure}
 
@@ -284,14 +284,14 @@ The apparatus used to enable this has been dubbed "the
 train selfie stick".
 
 The curve validation did allow us to get a better idea of how the train
-deaccelerates, and will most likely prove useful as we need a better idea
-of the trains position during deacceleration for tc2. It also gave us lots
+decelerates, and will most likely prove useful as we need a better idea
+of the trains position during deceleration for TC2. It also gave us lots
 of tools for analysing our calibration and assumptions about the motion of
 the train, which I'm sure will prove their worth with time as well. However,
-for measuing stopping distance, we weren't able to get closer than around 7cm
+for measuring stopping distance, we weren't able to get closer than around 7cm
 with this model, most likely due to noise in the data. We have some ideas
 for how to address this, but we were not able to complete them in time for
-the tc1 demo.
+the TC1 demo.
 
 \subsection{Bisecting for the stopping distance}
 A simpler technique for measuring the stopping distance turned out to be to
