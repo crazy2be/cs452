@@ -79,11 +79,19 @@ We chose the following priorities for the tasks, in decreasing order:
 \item Display server
 \end{enumerate}
 
-These are chosen to attempt to prioritize a response to inbound events from
+The prorities chosen for the clock server, IO servers, and name servers have been
+discussed in previous documentation.
+All of these tasks are exclusively servers, and therefore need to run at higher
+priority than their clients, or else a high priority client could be blocked waiting
+for the server to get execution time.
+
+The remaining priorities are rougly chosen to prioritize a response to inbound events from
 the outside world.
-However, these choices were made fairly naively.
-Since we haven't had any problems which seem to originate from the chosen
-priorities, we have spent little time trying to pick optimal priorities.
+However, these choices were made fairly naively, and haven't been subject to tuning.
+At the moment, our idle time is relatively large, so all tasks get a chance to execute
+relatively after a relatively low delay after the event that they are responding to.
+We may need to tune the relative priorities in the future,
+particularly as we introduce computationally expensive operations, such as path finding.
 
 \subsection{Train Server}
 To help manage the position of the trains, we changed the structure of the
@@ -331,5 +339,5 @@ that the train will have finished accelerating after the timeout period.
 The source code is hosted on git, at \url{git.uwaterloo.ca/pgraboud/cs452-kernel}.
 The version we wish to submit is the \texttt{tc1} tag, specifically
 the commit:
-\input{|"git rev-parse tc1 | ./../verbatim"}
+\input{|"git rev-parse HEAD | ./../verbatim"}
 \end{document}
