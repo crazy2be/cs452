@@ -291,7 +291,6 @@ Based on this knowledge, we can shrink the size of the feasible range by
 one half.
 We can then repeat this process until the interval is suitably small.
 
-% TODO: change this if we actually fix the problem
 One problem that we have with this technique is that it assumes that results
 are repeatable.
 The train's stopping distance has a small amount of variance.
@@ -302,17 +301,24 @@ the train, on average, doesn't do this.
 This causes the real stopping distance to be pruned out of the search range, so
 the algorithm will never find the right result.
 
-In particular, a flow in the way that velocity is estimated aggravates this problem.
-We pause in the middle of the run, but the code that estimates the velocity
-of the train assumes that we are operating at a constant speed.
-When the train is accelerating, it is moving at a small fraction of the top speed,
-but the sensor data is interpreted to mean that the train's top speed is
+In particular, a flow in the way that velocity is estimated aggravated this problem.
+We paused in the middle of the run, but the code that estimated the velocity
+of the train assumed that we operated at a constant speed.
+When the train accelerates, it moves at a small fraction of the top speed,
+but the sensor data was interpreted to mean that the train's top speed is
 very slow.
-This introduces large errors in the velocity estimate for the train, which
-causes the position estimated to be incorrect, which causes the problems described
+This introduced large errors in the velocity estimate for the train, which
+caused the position estimated to be incorrect, which caused the problems described
 above.
-This can cause substantial error to be introduced into the final result, on
+This could cause substantial error to be introduced into the final result, on
 the scale of 10-20cm.
+We fixed this problem by ignoring new velocity data soon after changing
+the speed of the train.
+An intelligent way to do this would be to know how long the train
+takes to accelerate, but we don't know this precisely.
+We instead make an intentionally high estimate of 4 seconds, to ensure
+that the train will have finished accelerating after the timeout period.
+
 
 \section{Source Code}
 The source code is hosted on git, at \url{git.uwaterloo.ca/pgraboud/cs452-kernel}.

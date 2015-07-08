@@ -23,6 +23,7 @@ struct train_state {
 int trains_query_active(int *trains_out);
 void trains_query_spatials(int train, struct train_state *state_out);
 int trains_query_arrival_time(int train, int distance);
+int trains_query_error(int train_id);
 void trains_send_sensors(struct sensor_state state);
 void trains_set_speed(int train, int speed);
 void trains_reverse(int train);

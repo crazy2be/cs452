@@ -243,6 +243,7 @@ enum displaysrv_req_type { UPDATE_SWITCH, UPDATE_SENSOR, UPDATE_TIME, CONSOLE_IN
 struct display_train_state {
 	int train_id;
 	struct train_state state;
+	int error;
 };
 
 struct displaysrv_req {
@@ -462,14 +463,11 @@ static void update_train_states(int active_trains, struct display_train_state *a
 			const char *pos_name = active_train_states[i].state.position.edge->src->name;
 			const int velocity = active_train_states[i].state.velocity;
 			const int stopping_distance = trains_get_stopping_distance(train_id);
+			const int error = active_train_states[i].error;
 
-			int distance_to_next = -1;
-			const struct track_node *next_node = active_train_states[i].state.position.edge->src;
-			next_node = track_next_sensor(active_train_states[i].state.position.edge->src, switches, &distance_to_next);
-
-			printf("\e[%d;%dHTrain %d, %d mm past %s, vel %d, %d to %s, %d to stop",
+			printf("\e[%d;%dHTrain %d, %d mm past %s, vel %d, %d to stop, %d error",
 			       term_col, term_row, train_id, displacement, pos_name, velocity,
-			       distance_to_next - displacement, next_node->name, stopping_distance);
+			       stopping_distance, error);
 
 		}
 	}
@@ -511,6 +509,7 @@ static void clock_update_task(void) {
 			const int train_id = active_trains_ids[i];
 			active_train_states[i].train_id = train_id;
 			trains_query_spatials(train_id, &active_train_states[i].state);
+			active_train_states[i].error = trains_query_error(train_id);
 		}
 
 		displaysrv_update_time(displaysrv, ticks * 10, active_trains, active_train_states);
