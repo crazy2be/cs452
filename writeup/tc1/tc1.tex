@@ -4,13 +4,16 @@
 
 \lstset{basicstyle=\footnotesize\ttfamily,breaklines=true}
 
+\usepackage{tikz}
+\usetikzlibrary{arrows}
+
 \begin{document}
 \title{Trains Control 1}
 \author{Justin McGirr (\#20413625), Peter Raboud (\#20437716)}
 \maketitle
 
 \section{Instructions}
-\input{"README.tex"}
+\input{"../k4/README.tex"}
 
 \section{Design Decisions}
 % trainsrv
@@ -27,7 +30,44 @@
 % bisection to find the stopping distance
 
 % talk about nested functions?
-% talk new compiler?
+% talk about new compiler?
+
+\subsection{Overview}
+
+\begin{tikzpicture}[->,>=stealth',shorten >=1pt,auto,node distance=4cm,
+  thick,main node/.style={circle,fill=blue!20,draw,font=\sffamily\Large\bfseries}]
+
+  \node[main node] (d) [align=center]{Display \\ server};
+  \node[main node] (dn) [align=center, below of=d]{Display \\ notifier};
+  \node[main node] (c) [align=center, right of=d] {Command \\ server};
+  \node[main node] (t) [align=center, above of=c] {Train \\ server};
+  \node[main node] (ta) [align=center, right of=t] {Train alert \\ server};
+  \node[main node] (s) [align=center, left of=t] {Sensor \\ server};
+  \node[main node] (e) [align=center, right of=c] {Conductor \\ tasks};
+
+  \path[every node/.style={font=\sffamily\small}]
+    (dn) edge node {} (d)
+         edge node {} (t)
+    (t) edge [bend left] node {} (ta)
+        edge node {} (d)
+    (ta) edge [bend left] node {} (t)
+    (c) edge node {} (t)
+        edge node {} (d)
+        edge node {} (e)
+    (e) edge node {} (ta)
+    (s) edge node {} (t)
+        edge node {} (d)
+    ;
+    % (2) edge node [right] {0.4} (1)
+    %     edge node {0.3} (4)
+    %     edge [loop left] node {0.4} (2)
+    %     edge [bend right] node[left] {0.1} (3)
+    % (3) edge node [right] {0.8} (2)
+    %     edge [bend right] node[right] {0.2} (4)
+    % (4) edge node [left] {0.2} (3)
+    %     edge [loop right] node {0.6} (4)
+    %     edge [bend right] node[right] {0.2} (1);
+\end{tikzpicture}
 
 \subsection{Train Server}
 To help manage the position of the trains, we changed the structure of the
@@ -94,6 +134,12 @@ An operation that turns out to be useful when writing high-level train control
 routines is to wait until the train is at a particular position.
 We therefore created a train alert server to allow tasks to wait until a train
 has arrived at a particular position.
+The interface for the train alert server is
+\texttt{int train\_alert\_at(int train\_id, struct position position)}.
+The call blocks until the given train is estimated to have passed that position
+on the track.
+The function returns with the time at which the train passed that position
+(time is measured in ticks since the startup of the clockserver).
 
 The train server pushes notifications to the train alert server when
 it detects that a train has hit a sensor.
