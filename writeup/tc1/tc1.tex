@@ -190,6 +190,48 @@ the nonce is incremented by one, and a new timeout is begun.
 If the nonce doesn't match the nonce that the timeout has, then something
 must have changed during the timeout, so the timeout is simply ignored.
 
+\subsection{Bisecting for the stopping distance}
+We wanted to find some way of automating collection of the stopping distance,
+because collecting stopping distances with a tape measure, and hardcoding
+them into a table is time consuming.
+We originally wanted to derive the stopping distance from the acceleration curve,
+but we had problems finding the acceleration curve, as described above.
+
+A simpler technique turned out to be to start with a range of possible
+values for the stopping distance, and then tighten this range by bisecting
+the range iteratively.
+At each step, we assume the stopping distance is the midpoint of
+the range, and attempt to stop exactly on top of a sensor.
+If the sensor is tripped, then we know that the actual stopping distance
+is less than the estimate.
+Otherwise, the actual stopping distance is greater.
+Based on this knowledge, we can shrink the size of the feasible range by
+one half.
+We can then repeat this process until the interval is suitably small.
+
+% TODO: change this if we actually fix the problem
+One problem that we have with this technique is that it assumes that results
+are repeatable.
+The train's stopping distance has a small amount of variance.
+Also, the actual position of the train on the track when we tell it to stopping
+is estimated.
+This error causes the train to overshoot or undershoot the target sensor when
+the train, on average, doesn't do this.
+This causes the real stopping distance to be pruned out of the search range, so
+the algorithm will never find the right result.
+
+In particular, a flow in the way that velocity is estimated aggravates this problem.
+We pause in the middle of the run, but the code that estimates the velocity
+of the train assumes that we are operating at a constant speed.
+When the train is accelerating, it is moving at a small fraction of the top speed,
+but the sensor data is interpreted to mean that the train's top speed is
+very slow.
+This introduces large errors in the velocity estimate for the train, which
+causes the position estimated to be incorrect, which causes the problems described
+above.
+This can cause substantial error to be introduced into the final result, on
+the scale of 10-20cm.
+
 \section{Source Code}
 The source code is hosted on git, at \url{git.uwaterloo.ca/pgraboud/cs452-kernel}.
 The version we wish to submit is the \texttt{tc1} tag, specifically
