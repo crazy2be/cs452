@@ -42,6 +42,8 @@
   \node[main node] (c) [align=center, right of=d] {Command \\ server};
   \node[main node] (t) [align=center, above of=c] {Train \\ server};
   \node[main node] (ta) [align=center, right of=t] {Train alert \\ server};
+  \node[main node] (r) [align=center, above of=t] {Reverse \\ task};
+  \node[main node] (tan) [align=center, right of=ta] {Train alert \\ notifier};
   \node[main node] (s) [align=center, left of=t] {Sensor \\ server};
   \node[main node] (e) [align=center, right of=c] {Conductor \\ tasks};
 
@@ -50,7 +52,10 @@
          edge node {} (t)
     (t) edge [bend left] node {} (ta)
         edge node {} (d)
+        edge node {} (r)
     (ta) edge [bend left] node {} (t)
+         edge [bend left] node {} (tan)
+    (tan) edge [bend left] node {} (ta)
     (c) edge node {} (t)
         edge node {} (d)
         edge node {} (e)
@@ -58,16 +63,37 @@
     (s) edge node {} (t)
         edge node {} (d)
     ;
-    % (2) edge node [right] {0.4} (1)
-    %     edge node {0.3} (4)
-    %     edge [loop left] node {0.4} (2)
-    %     edge [bend right] node[left] {0.1} (3)
-    % (3) edge node [right] {0.8} (2)
-    %     edge [bend right] node[right] {0.2} (4)
-    % (4) edge node [left] {0.2} (3)
-    %     edge [loop right] node {0.6} (4)
-    %     edge [bend right] node[right] {0.2} (1);
 \end{tikzpicture}
+
+The cyclical dependency between the train alert server and train alert notifier
+isn't a problem, since the server sends only once to set pass in parameters, and
+the notifier is guaranteed to be receiving at that time.
+
+The cyclical dependency between the train server and train alert server will
+eventually be a problem, but we currently don't generate data rapidly enough for
+this to cause problems.
+
+We chose the following priorities for the tasks, in decreasing order:
+
+\begin{enumerate}
+\item Clock server notifier
+\item Clock server
+\item IO server notifier
+\item IO server
+\item Nameserver
+\item Sensor server
+\item Command server \& conductor tasks
+\item Train alert notifier
+\item Train alert server
+\item Train server \& reverse tasks \& display notifier
+\item Display server
+\end{enumerate}
+
+These are chosen to attempt to prioritize a response to inbound events from
+the outside world.
+However, these choices were made fairly naively.
+Since we haven't had any problems which seem to originate from the chosen
+priorities, we have spent little time trying to pick optimal priorities.
 
 \subsection{Train Server}
 To help manage the position of the trains, we changed the structure of the
