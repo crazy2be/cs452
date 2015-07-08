@@ -79,8 +79,8 @@ static void consume_whitespace(char *cmd, int *ip) {
 	*ip = i;
 };
 
-enum command_type { TR, SW, RV, QUIT, STOP, BSW, INVALID };
-char *command_listing[] = { "tr", "sw", "rv", "q", "stp", "bsw" };
+enum command_type { TR, SW, RV, QUIT, STOP, BSW, BISECT, INVALID };
+char *command_listing[] = { "tr", "sw", "rv", "q", "stp", "bsw", "bisect" };
 
 static enum command_type get_command_type(char *cmd, int *ip) {
 	int i = *ip;
@@ -205,6 +205,91 @@ static void handle_stop(int displaysrv, int train, struct position pos) {
 	send(tid, &params, sizeof(params), NULL, 0);
 }
 
+struct bisect_params { int displaysrv; int train; };
+
+static void bisect_task(void) {
+	struct bisect_params params;
+	int tid;
+	receive(&tid, &params, sizeof(params));
+	reply(tid, NULL, 0);
+
+#ifdef TRACKA
+	struct position target = { &track[61].edge[DIR_STRAIGHT], 0 }; // d14
+#else
+	struct position target = { &track[21].edge[DIR_STRAIGHT], 0 }; // b6
+#endif
+
+	// overall approach: start with a range of guesses for the stopping distance
+	// try to stop exactly on a sensor. if the sensor trips, we guessed too long,
+	// otherwise too short. we bisect to refine our guess.
+	// this takes O(log_2(n)), with a big fucking constant factor.
+	//
+	// Note: this will just break if somebody switches the turnouts or changes
+	// the train speed while this is in progress.
+	// TODO: this seems to come up a fair bit - we may want to have a lock on
+	// controlling a particular train for TC2
+
+	struct train_state ts;
+	trains_query_spatials(params.train, &ts);
+	struct switch_state switches = trains_get_switches();
+
+	// initial guesses for the train stopping distance
+	int lo = 0;
+	int hi = 1500;
+	int guess;
+
+	char buf[80];
+
+	const int target_sensor = target.edge->src->num;;
+	char target_repr[4];
+	sensor_repr(target_sensor, target_repr);
+
+	for (int i = 0; i < 9; i++) {
+		guess = (lo + hi) / 2;
+		struct position stopping_point = position_calculate_stopping_position(&ts.position, &target, guess, &switches);
+
+		train_alert_at(params.train, stopping_point);
+		trains_set_speed(params.train, 0);
+
+		// conservative guess to ensure the train is fully stopped
+		delay(500);
+		int current_sensor = trains_get_last_known_sensor(params.train);
+		struct position current_position = { &track_node_from_sensor(current_sensor)->edge[DIR_STRAIGHT], 0};
+		char current_repr[4];
+		sensor_repr(current_sensor, current_repr);
+
+		if (position_distance_apart(&current_position, &target, &switches) < position_distance_apart(&target, &current_position, &switches)) {
+			// undershot - stopping distance is less than we think it is
+			hi = guess;
+			snprintf(buf, sizeof(buf), "Undershot, target_sensor = %s, current_sensor = %s, lo = %d, hi = %d", target_repr, current_repr, lo, hi);
+			displaysrv_console_feedback(params.displaysrv, buf);
+		} else {
+			// overshot - stopping distance is more than we think it is
+			lo = guess;
+			snprintf(buf, sizeof(buf), "Overshot, target_sensor = %s, current_sensor = %s, lo = %d, hi = %d", target_repr, current_repr, lo, hi);
+			displaysrv_console_feedback(params.displaysrv, buf);
+		}
+
+		trains_set_speed(params.train, ts.speed_setting);
+
+		trains_query_spatials(params.train, &ts);
+	}
+
+
+	guess = (lo + hi) / 2;
+	trains_set_stopping_distance(params.train, guess);
+
+	snprintf(buf, sizeof(buf), "Bisected stopping distance to find stopping distance of %d mm", guess);
+	displaysrv_console_feedback(params.displaysrv, buf);
+
+}
+
+static void handle_bisect(int displaysrv, int train) {
+	int tid = create(COMMANDSRV_PRIORITY, bisect_task);
+	struct bisect_params params = { displaysrv, train };
+	send(tid, &params, sizeof(params), NULL, 0);
+}
+
 static void process_command(char *cmd, int displaysrv) {
 	int i = 0;
 	enum command_type type = get_command_type(cmd, &i);
@@ -323,7 +408,6 @@ static void process_command(char *cmd, int displaysrv) {
 		}
 		return;
 	}
-	break;
 	case BSW: {
 		enum sw_direction pos;
 		consume_whitespace(cmd, &i);
@@ -343,6 +427,18 @@ static void process_command(char *cmd, int displaysrv) {
 		struct switch_state switches;
 		memset(&switches, pos == CURVED ? 0xff : 0x00, sizeof(switches));
 		tc_switch_switches_bulk(switches);
+		return;
+	}
+	case BISECT: {
+		int train;
+		if (get_integer(cmd, &i, &train)) {
+			break;
+		}
+		if (!(1 <= train && train <= 80)) {
+			displaysrv_console_feedback(displaysrv, "Invalid train number");
+		} else {
+			handle_bisect(displaysrv, train);
+		}
 		return;
 	}
 	default:

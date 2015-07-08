@@ -5,16 +5,16 @@
 #include "../displaysrv.h"
 #include "../sys.h"
 
-static inline int* train_velocity_entry(struct internal_train_state *train_state) {
+int train_speed_index(struct internal_train_state *train_state) {
 	int cur_speed = train_state->current_speed_setting;
 	int i = cur_speed*2 + (train_state->previous_speed_setting >= cur_speed) - 1;
 	ASSERT(i >= 0);
 	ASSERT(i < sizeof(train_state->est_velocities) / sizeof(train_state->est_velocities[0]));
-	return &train_state->est_velocities[i];
+	return i;
 }
 
 int train_velocity_from_state(struct internal_train_state *train_state) {
-	return *train_velocity_entry(train_state);
+	return train_state->est_velocities[train_speed_index(train_state)];
 }
 
 int train_eta(struct trainsrv_state *state, int train_id, int distance) {
@@ -85,9 +85,11 @@ static void initialize_train_velocity_table(struct internal_train_state *train_s
 		is_accelerated_coef = -315;
 		break;
 	default:
-		memset(train_state->est_velocities, 0, sizeof(*train_state->est_velocities));
+		memset(train_state->est_velocities, 0, sizeof(train_state->est_velocities));
 		return;
 	}
+
+	memset(train_state->est_stopping_distances, 0, sizeof(train_state->est_stopping_distances));
 
 	// calculate wild ass guess of the train velocity table
 	for (int i = 0; i < NUM_SPEED_SETTINGS; i++) {
@@ -244,7 +246,7 @@ static void update_train_velocity_estimate(const struct trainsrv_state *state, s
 	/* snprintf(buf, sizeof(buf), "Updated velocity estimate is %d", actual_velocity); */
 	/* displaysrv_console_feedback(state->displaysrv_tid, buf); */
 
-	int *velocity_entry = train_velocity_entry(train_state);
+	int *velocity_entry = &train_state->est_velocities[train_speed_index(train_state)];
 	*velocity_entry = ((divisor - alpha) * *velocity_entry + alpha * actual_velocity) / divisor;
 }
 
@@ -265,6 +267,7 @@ static void update_train_position_from_sensor(const struct trainsrv_state *state
 	train_state->last_known_position.edge = &sensor_node->edge[0];
 	train_state->last_known_position.displacement = 0;
 	train_state->last_known_time = ticks;
+	train_state->last_sensor_hit = sensor;
 
 	ASSERTF(position_is_wellformed(&train_state->last_known_position), "(%s, %d) is malformed",
 			train_state->last_known_position.edge->src->name, train_state->last_known_position.displacement);

@@ -14,7 +14,7 @@
 \maketitle
 
 \section{Instructions}
-\input{"../k4/README.tex"}
+\input{"README.tex"}
 
 \section{Design Decisions}
 % trainsrv
@@ -22,8 +22,6 @@
 % - basic sensor attribution
 % - traversal of track, helper methods
 % train alert srv
-
-
 \subsection{Overview}
 
 \begin{tikzpicture}[->,>=stealth',shorten >=1pt,auto,node distance=4cm,
@@ -34,6 +32,8 @@
   \node[main node] (c) [align=center, right of=d] {Command \\ server};
   \node[main node] (t) [align=center, above of=c] {Train \\ server};
   \node[main node] (ta) [align=center, right of=t] {Train alert \\ server};
+  \node[main node] (r) [align=center, above of=t] {Reverse \\ task};
+  \node[main node] (tan) [align=center, right of=ta] {Train alert \\ notifier};
   \node[main node] (s) [align=center, left of=t] {Sensor \\ server};
   \node[main node] (e) [align=center, right of=c] {Conductor \\ tasks};
 
@@ -42,7 +42,10 @@
          edge node {} (t)
     (t) edge [bend left] node {} (ta)
         edge node {} (d)
+        edge node {} (r)
     (ta) edge [bend left] node {} (t)
+         edge [bend left] node {} (tan)
+    (tan) edge [bend left] node {} (ta)
     (c) edge node {} (t)
         edge node {} (d)
         edge node {} (e)
@@ -50,16 +53,37 @@
     (s) edge node {} (t)
         edge node {} (d)
     ;
-    % (2) edge node [right] {0.4} (1)
-    %     edge node {0.3} (4)
-    %     edge [loop left] node {0.4} (2)
-    %     edge [bend right] node[left] {0.1} (3)
-    % (3) edge node [right] {0.8} (2)
-    %     edge [bend right] node[right] {0.2} (4)
-    % (4) edge node [left] {0.2} (3)
-    %     edge [loop right] node {0.6} (4)
-    %     edge [bend right] node[right] {0.2} (1);
 \end{tikzpicture}
+
+The cyclical dependency between the train alert server and train alert notifier
+isn't a problem, since the server sends only once to set pass in parameters, and
+the notifier is guaranteed to be receiving at that time.
+
+The cyclical dependency between the train server and train alert server will
+eventually be a problem, but we currently don't generate data rapidly enough for
+this to cause problems.
+
+We chose the following priorities for the tasks, in decreasing order:
+
+\begin{enumerate}
+\item Clock server notifier
+\item Clock server
+\item IO server notifier
+\item IO server
+\item Nameserver
+\item Sensor server
+\item Command server \& conductor tasks
+\item Train alert notifier
+\item Train alert server
+\item Train server \& reverse tasks \& display notifier
+\item Display server
+\end{enumerate}
+
+These are chosen to attempt to prioritize a response to inbound events from
+the outside world.
+However, these choices were made fairly naively.
+Since we haven't had any problems which seem to originate from the chosen
+priorities, we have spent little time trying to pick optimal priorities.
 
 \subsection{Train Server}
 To help manage the position of the trains, we changed the structure of the
@@ -242,10 +266,51 @@ despite smoothing.}
 The apparatus used to enable this has been dubbed "the
 train selfie stick".
 
+\subsection{Bisecting for the stopping distance}
+We wanted to find some way of automating collection of the stopping distance,
+because collecting stopping distances with a tape measure, and hardcoding
+them into a table is time consuming.
+We originally wanted to derive the stopping distance from the acceleration curve,
+but we had problems finding the acceleration curve, as described above.
+
+A simpler technique turned out to be to start with a range of possible
+values for the stopping distance, and then tighten this range by bisecting
+the range iteratively.
+At each step, we assume the stopping distance is the midpoint of
+the range, and attempt to stop exactly on top of a sensor.
+If the sensor is tripped, then we know that the actual stopping distance
+is less than the estimate.
+Otherwise, the actual stopping distance is greater.
+Based on this knowledge, we can shrink the size of the feasible range by
+one half.
+We can then repeat this process until the interval is suitably small.
+
+% TODO: change this if we actually fix the problem
+One problem that we have with this technique is that it assumes that results
+are repeatable.
+The train's stopping distance has a small amount of variance.
+Also, the actual position of the train on the track when we tell it to stopping
+is estimated.
+This error causes the train to overshoot or undershoot the target sensor when
+the train, on average, doesn't do this.
+This causes the real stopping distance to be pruned out of the search range, so
+the algorithm will never find the right result.
+
+In particular, a flow in the way that velocity is estimated aggravates this problem.
+We pause in the middle of the run, but the code that estimates the velocity
+of the train assumes that we are operating at a constant speed.
+When the train is accelerating, it is moving at a small fraction of the top speed,
+but the sensor data is interpreted to mean that the train's top speed is
+very slow.
+This introduces large errors in the velocity estimate for the train, which
+causes the position estimated to be incorrect, which causes the problems described
+above.
+This can cause substantial error to be introduced into the final result, on
+the scale of 10-20cm.
 
 \section{Source Code}
 The source code is hosted on git, at \url{git.uwaterloo.ca/pgraboud/cs452-kernel}.
 The version we wish to submit is the \texttt{tc1} tag, specifically
 the commit:
-\input{|"git rev-parse HEAD | ./../verbatim"}
+\input{|"git rev-parse tc1 | ./../verbatim"}
 \end{document}

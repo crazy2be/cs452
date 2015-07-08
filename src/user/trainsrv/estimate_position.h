@@ -13,11 +13,13 @@ struct internal_train_state {
 	struct position last_known_position;
 	int last_known_time;
 
-	//  2. Our best guess for its velocity at each of the 27 speed settings
-	//     (the speed setting behaves differently depending on if you accelerate or
-	//     decelerate into that speed. You can only accelerate to speed 14, since
-	//     its the highest. Therefore, 27 = 2 * 14 - 1.)
+	//  2. Our best guess for its velocity at each of the 28 speed settings
+	//     (The speed setting behaves differently depending on if you accelerate or
+	//     decelerate into that speed.
+	//     You can only decelerate to speed 0, and accelerate to speed 14
+	//     Therefore, 28 = 1 + 2 * 14 - 1.)
 	int est_velocities[NUM_SPEED_SETTINGS];
+	int est_stopping_distances[NUM_SPEED_SETTINGS];
 
 	//  3. Its current speed setting
 	int current_speed_setting;
@@ -33,6 +35,9 @@ struct internal_train_state {
 
 	// it's sometimes convenient to be able to go back from a state to a train_id
 	int train_id;
+
+	// this, unlike last_known_position, is not affected by reanchoring
+	int last_sensor_hit;
 };
 
 // catch-all struct to avoid static memory allocation for a user space task
@@ -58,6 +63,7 @@ struct trainsrv_state {
 	int sensors_are_known;
 };
 
+int train_speed_index(struct internal_train_state *train_state);
 int train_velocity_from_state(struct internal_train_state *train_state);
 int train_velocity(struct trainsrv_state *state, int train);
 struct position get_estimated_train_position(struct trainsrv_state *state,
