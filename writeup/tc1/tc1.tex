@@ -90,8 +90,14 @@ the outside world.
 However, these choices were made fairly naively, and haven't been subject to tuning.
 At the moment, our idle time is relatively large, so all tasks get a chance to execute
 relatively after a relatively low delay after the event that they are responding to.
-We may need to tune the relative priorities in the future,
-particularly as we introduce computationally expensive operations, such as path finding.
+Additionally, our response requirements in this deliverable are fairly lax-
+a delay of 50ms would be unlikely to be noticed at this stage.
+
+In later deliverables, and for the project, we may need to tune the relative
+priorities, as our deadlines will be much tighter, and we will have much less
+idle time. In particular, as we introduce computationally expensive operations,
+such as path finding, priorities will begin to make a significant difference in
+the performance of the train program.
 
 \subsection{Train Server}
 To help manage the position of the trains, we changed the structure of the
