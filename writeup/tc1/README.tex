@@ -1,15 +1,21 @@
 \subsection{Installation}\label{installation}
 
-Simply run \texttt{make ENV=ts7200 install}. This will place the
-compiled kernel in \texttt{/u/cs452/tftp/ARM/\$(USER)/k.elf} (where
+On the student cs environment, simply run
+\texttt{make ENV=ts7200 KIND=t install}. This will place the compiled
+kernel in \texttt{/u/cs452/tftp/ARM/\$(USER)/t.elf} (where
 \texttt{\$(USER)} is whatever your username is on the computer which you
 are compiling it). You can then load this kernel from redboot using
-\texttt{load -b 0x00218000 -h 10.15.167.5 "ARM/\$(USER)/k.elf"}.
+\texttt{load -b 0x00218000 -h 10.15.167.5 "ARM/\$(USER)/t.elf"}.
+
+Note that this depends on a toolchain installed in my home directory,
+\texttt{/u1/jmcgirr/arm-toolchain}. This is curretly world-readable, so
+it should work regardless of who is trying to run the Makefile, but
+please do let us know if you encounter any issues!
 
 \subsection{Emulator}\label{emulator}
 
 You can run the OS on an emulated arm CPU via
-\texttt{make ENV=qemu qemu-run}. In order for this to complete
+\texttt{make ENV=qemu KIND=t qemu-run}. In order for this to complete
 successfully, you will need:
 
 \begin{itemize}
@@ -23,15 +29,15 @@ successfully, you will need:
 \subsection{Tests}\label{tests}
 
 The provided kernel has some basic tests, which you can run with
-\texttt{make ENV=qemu test}. (this depends on the emulator, above).
+\texttt{make qemu-test}. (this depends on the emulator, above).
 
 \subsection{Debugging}\label{debugging}
 
 If something goes wrong and you want to investigate deeper, you can run
-\texttt{make ENV=qemu qemu-start} in one terminal (this starts qemu in a
-suspended state), and then \texttt{make ENV=qemu qemu-debug} in another.
-You can then set breakpoints, step, inspect memory, etc- anything you
-can normally do with gdb.
+\texttt{make qemu-start} in one terminal (this starts qemu in a
+suspended state), and then \texttt{make qemu-debug} in another. You can
+then set breakpoints, step, inspect memory, etc- anything you can
+normally do with gdb.
 
 \subsection{Special Instructions}\label{special-instructions}
 
@@ -47,68 +53,31 @@ misinterpreted.
 \itemsep1pt\parskip0pt\parsep0pt
 \item
   \texttt{tr \textless{}train number\textgreater{} \textless{}speed\textgreater{}}
-  sets the speed of a train
+  sets the speed of a train.
 \item
   \texttt{sw \textless{}switch number\textgreater{} (c\textbar{}s)} sets
-  a the position of a switch to curved or straight
+  a the position of a switch to curved or straight.
 \item
-  \texttt{rv \textless{}train number\textgreater{}} reverses a train
+  \texttt{bsw (c\textbar{}s)} bulk set all switches to the given
+  configuration (curved or straight).
 \item
-  \texttt{q} exits the program
+  \texttt{rv \textless{}train number\textgreater{}} reverses a train.
+\item
+  \texttt{stp \textless{}train number\textgreater{} \textless{}node name\textgreater{} {[}\textless{}edge\textgreater{}{]} \textless{}displacement\textgreater{}}
+  stops the train at the given node, or offset thereof. I.e.
+  \texttt{stp 63 E8 0} would stop train 63 right on top of sensor E8. If
+  \texttt{\textless{}edge\textgreater{}} is specified, it denotes which
+  edge the offset is along (i.e.~for a branch node).
+\item
+  \texttt{bisect \textless{}train number\textgreater{}} performs
+  bisection to calibrate the stopping distance for
+  \texttt{\textless{}train number\textgreater{}}, exiting automatically
+  after 5 iterations.
+\item
+  \texttt{q} exits the program.
 \end{itemize}
 
 The positions of each switch is shown in the ASCII-art map of the train
 track. When a sensor is tripped, it is shown both on the ASCII-art map
 for as long as it is tripped, as well as to the right, on the list of
 recently-fired sensors.
-
-\subsection{Useful links:}\label{useful-links}
-
-\subsubsection{General}\label{general}
-
-\begin{itemize}
-\itemsep1pt\parskip0pt\parsep0pt
-\item
-  \href{http://www.cgl.uwaterloo.ca/~wmcowan/teaching/cs452/pdf/arm-architecture.pdf}{ARMv4
-  Manual}
-\item
-  \href{http://ascii-table.com/ansi-escape-sequences.php}{Terminal
-  escape sequences}
-\end{itemize}
-
-\subsubsection{TS7200 hardware}\label{ts7200-hardware}
-
-\begin{itemize}
-\itemsep1pt\parskip0pt\parsep0pt
-\item
-  \href{http://www.cgl.uwaterloo.ca/~wmcowan/teaching/cs452/pdf/ts-7200-manual.pdf}{TS7200
-  Manual}
-\item
-  \href{http://www.cgl.uwaterloo.ca/~wmcowan/teaching/cs452/pdf/ep93xx-user-guide.pdf}{Cirrus
-  EP9302 Manual}
-\item
-  \href{http://www.cgl.uwaterloo.ca/~wmcowan/teaching/cs452/pdf/icu-pl190.pdf}{Interrupt
-  controller manual}
-\end{itemize}
-
-\subsubsection{VersatilePB hardware emulated by
-QEMU}\label{versatilepb-hardware-emulated-by-qemu}
-
-\begin{itemize}
-\itemsep1pt\parskip0pt\parsep0pt
-\item
-  \href{https://balau82.wordpress.com/2010/02/28/hello-world-for-bare-metal-arm-using-qemu/}{Hello
-  World Tutorial}
-\item
-  \href{http://infocenter.arm.com/help/topic/com.arm.doc.dui0224i/DUI0224I_realview_platform_baseboard_for_arm926ej_s_ug.pdf}{SOC
-  manual}
-\item
-  \href{http://infocenter.arm.com/help/topic/com.arm.doc.ddi0271d/DDI0271.pdf}{Timer
-  manual}
-\item
-  \href{http://infocenter.arm.com/help/topic/com.arm.doc.ddi0181e/DDI0181.pdf}{Interrupt
-  controller manual} (Same as the TS7200 hardware)
-\item
-  \href{http://infocenter.arm.com/help/topic/com.arm.doc.ddi0183f/DDI0183.pdf}{UART
-  Manual}
-\end{itemize}
