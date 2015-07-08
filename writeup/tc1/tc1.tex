@@ -1,6 +1,7 @@
 \documentclass[titlepage]{article}
 \usepackage{listings}
 \usepackage{hyperref}
+\usepackage{graphicx}
 
 \lstset{basicstyle=\footnotesize\ttfamily,breaklines=true}
 
@@ -22,15 +23,6 @@
 % - traversal of track, helper methods
 % train alert srv
 
-% acceleration profile
-% initial v0 -> v1 way to get stopping distance (failed because can't run the
-% train at low speed)
-% partial deceleration method
-% train selfie data, and conclusions
-% bisection to find the stopping distance
-
-% talk about nested functions?
-% talk about new compiler?
 
 \subsection{Overview}
 
@@ -163,6 +155,93 @@ If the orientation of the turnouts or speed of the train is changed,
 the nonce is incremented by one, and a new timeout is begun.
 If the nonce doesn't match the nonce that the timeout has, then something
 must have changed during the timeout, so the timeout is simply ignored.
+
+% TODO: Talk about cyclic dependency and why it's not currently a problem.
+
+% acceleration profile
+% initial v0 -> v1 way to get stopping distance (failed because can't run the
+% train at low speed)
+% partial deceleration method
+% train selfie data, and conclusions
+% bisection to find the stopping distance
+
+% talk about nested functions?
+% talk about new compiler?
+\section{Acceleration/Stopping Distance Calibration}
+One of the significant tasks in this deliverable was to calibrate the trains.
+Above, we discuss the techniques used to calibrate the train's velocity,
+including doing online calibration. In this section, we describe the various
+techniques we attempted in order to calibrate the train
+acceleration/deacceleration curve and stopping distance. This turns out to be
+considerably more complex in general than measuring velocity, because getting
+an accurate picture requires a significantly higher resolution than the sensors
+normally provide, and there is no way to use sensors to measure the position of
+a train which is currently stopped.
+
+\subsection{Just Measure It}
+We avoided using the simple "stop the train
+at a sensor and measure displacement from the sensor" technique for quite a
+while, under the justification that:
+\begin{enumerate}
+\item It is not a good way to get an estimate for the train position during
+	the middle of the acceleration/deacceleration, and
+\item There is no way to automate the data collection, so a distance (and
+confidence interval) must be measured manually for each train at each possible
+speed for a complete model. This takes hours, and is prey to human error.
+\end{enumerate}
+Even with complete measurements, and assuming the humans doing the measurements
+are perfect (we try ;)), it is still difficult to refine the model with other
+data that we have. For example, if we know that the train has not finished
+accelerating, and hence is between two speeeds, what stopping distance do we
+assume? If we know a particular section of track causes the trains to slow
+down 10\%, how do we refine our estimate of stopping distance for that section
+of track? The brute force model seemed like it could be subject to
+combinatorial explosion in this case.
+
+\subsection{Measure Part of it, Extrapolate}
+After discussing the shortcomings of the "Just Measure It" approach, we decided
+to adopt a different technique. Rather than measure the distance to stop
+completely, we decided to just measure the time taken to travel a certain
+distance while deaccelerating, and then extrapolate the actual stopping distance
+based on our knowledge of the underlying deacceleration model in the train
+(i.e. a quartic model). We spent a couple days on this, deriving the various
+forms on the model, gathering measurements, testing our assumptions, and
+refining bugs in the model (i.e. accounting for the delay between knowing that
+a sensor tripped, and responding to the tripped sensor). However, we couldn't
+get any better than about 30cm of accuracy with this model, and we started to
+suspect that our model might not be accurate enough to be used in this way. As
+part of an investigation on this front, we tried to come up with some techniques
+for measuring what the actual deacceleration curve looked like.
+
+\subsection{The Way You Stop}
+After our extrapolation wasn't working, we wanted to come up with a way to
+validate the underlying model we were assuming for the deacceration of the
+train. We considered various techinques, but ultimately ended up using a
+camera, suspended above the track, with a easily distinguishable color marked
+on it for easy computerized tracking. We then captured data of the train
+starting, stopping, starting, stopping, several times over, and extracted
+the motion of the train by computing the centroid of the pixels which were
+close to the easily distinguishable color in value. We then took the pairwise
+differences of these points to get an approximation of velocity, smoothed the
+curve to reduce image capturing noise, and tried to fit a curve. The resulting
+curve would be well described as "definately not quartic nor cubic".
+\begin{figure}[ht!]
+\includegraphics[width=\linewidth]{deaccel.png}
+\caption{A fifth-order polynomial fit to experimentally derived data. Although
+the fifth-order polynomial fits reasonably well, one can see the data is
+definately not quartic nor cubic.}
+\end{figure}
+\begin{figure}[ht!]
+\includegraphics[width=\linewidth]{deaccel2.png}
+\caption{The same polynomial that was fit to the previous set of deacceration
+data seems to generalize fairly easily to other decceration curves from the
+same speed, although some error is clearly present. The exact degree of error
+is difficult to acertain, as there is still a fair bit of noise in the data
+despite smoothing.}
+\end{figure}
+The apparatus used to enable this has been dubbed "the
+train selfie stick".
+
 
 \section{Source Code}
 The source code is hosted on git, at \url{git.uwaterloo.ca/pgraboud/cs452-kernel}.
