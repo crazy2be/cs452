@@ -50,6 +50,14 @@ static struct train_state handle_query_spatials(struct trainsrv_state *state, in
 	return out;
 }
 
+static int handle_query_error(struct trainsrv_state *state, int train) {
+	struct internal_train_state *train_state = get_train_state(state, train);
+	if (train_state == NULL) {
+		return 0;
+	}
+	return train_state->measurement_error;
+}
+
 static void handle_query_active(struct trainsrv_state *state, int *trains) {
 	memset(trains, 0, MAX_ACTIVE_TRAINS*sizeof(*trains));
 	for (int i = 0; i < NUM_TRAIN; i++) {
@@ -96,6 +104,11 @@ static void trains_server(void) {
 		case QUERY_ARRIVAL: {
 			int ticks = handle_query_arrival(&state, req.train_number, req.distance);
 			reply(tid, &ticks, sizeof(ticks));
+			break;
+		}
+		case QUERY_ERROR: {
+			int error = handle_query_error(&state, req.train_number);
+			reply(tid, &error, sizeof(error));
 			break;
 		}
 		case SEND_SENSORS:
@@ -176,6 +189,15 @@ void trains_query_spatials(int train, struct train_state *state_out) {
 		.type = QUERY_SPATIALS,
 		 .train_number = train,
 	}), state_out);
+}
+
+int trains_query_error(int train) {
+	int error;
+	TSEND2(((struct trains_request) {
+		.type = QUERY_ERROR,
+		 .train_number = train,
+	}), &error);
+	return error;
 }
 
 int trains_query_arrival_time(int train, int distance) {
