@@ -24,6 +24,7 @@ struct internal_train_state {
 	//  3. Its current speed setting
 	int current_speed_setting;
 	int previous_speed_setting;
+	int constant_speed_starts;
 
 	//  4. Later, we'll have information about if (and at what rate) it is currently
 	//     accelerating

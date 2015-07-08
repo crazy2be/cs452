@@ -153,6 +153,7 @@ int update_train_speed(struct trainsrv_state *state, int train_id, int speed) {
 	reanchor(state, train_state); // TODO: Deacceration model.
 	train_state->previous_speed_setting = train_state->current_speed_setting;
 	train_state->current_speed_setting = speed;
+	train_state->constant_speed_starts = time() + 400;
 	return 1;
 }
 
@@ -214,7 +215,7 @@ static void log_position_estimation_error(const struct trainsrv_state *state,
 #define TELEPORT_ERROR -2
 int calculate_actual_velocity(struct internal_train_state *train_state,
                               const struct track_node *sensor_node, const struct switch_state *switches, int ticks) {
-
+	if (ticks < train_state->constant_speed_starts) return SILENT_ERROR;
 	ASSERT(sensor_node != NULL);
 	if (position_is_uninitialized(&train_state->last_known_position)) return SILENT_ERROR;
 
