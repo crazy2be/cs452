@@ -145,6 +145,10 @@ instantaenously, we can calculate the distance traveled since the last position
 a train was anchored at as simply the velocity of that train multiplied by
 the elapsed time.
 
+We discard velocity estimates derived from readings taken during the time
+that the train accelerates, since the data here violates the constant speed
+assumption, and would introduce error into the estimated velocity.
+
 \subsection{Train alert server}
 An operation that turns out to be useful when writing high-level train control
 routines is to wait until the train is at a particular position.
@@ -223,12 +227,12 @@ of track? The brute force model seemed like it could be subject to
 combinatorial explosion in this case.
 
 \subsection{Extrapolation}
-After discussing the shortcomings of the "Just Measure It" approach, we decided
+After discussing the shortcomings of the manual measurement approach, we decided
 to adopt a different technique. Rather than measure the distance to stop
 completely, we decided to just measure the time taken to travel a certain
 distance while deaccelerating, and then extrapolate the actual stopping distance
 based on our knowledge of the underlying deacceleration model in the train
-(i.e. a quartic model). We spent a couple days on this, deriving the various
+(i.e. the ``zero-acceleration model''). We spent a couple days on this, deriving the various
 forms on the model, gathering measurements, testing our assumptions, and
 refining bugs in the model (i.e. accounting for the delay between knowing that
 a sensor tripped, and responding to the tripped sensor). However, we couldn't
@@ -251,12 +255,14 @@ curve to reduce image capturing noise, and tried to fit a polynomial to the
 resulting data. The data was not well approximated by either a quartic or a
 cubic curve,the image below shows a fairly tight fitting of a fifth-order
 polynomial.
+
 \begin{figure}[ht!]
 \includegraphics[width=\linewidth]{deaccel.png}
 \caption{A fifth-order polynomial fit to experimentally derived data. Although
 the fifth-order polynomial fits reasonably well, one can see the data is
 definately not quartic nor cubic.}
 \end{figure}
+
 \begin{figure}[ht!]
 \includegraphics[width=\linewidth]{deaccel2.png}
 \caption{The same polynomial that was fit to the previous set of deacceration
@@ -265,6 +271,7 @@ same speed, although some error is clearly present. The exact degree of error
 is difficult to acertain, as there is still a fair bit of noise in the data
 despite smoothing.}
 \end{figure}
+
 The apparatus used to enable this has been dubbed "the
 train selfie stick".
 
@@ -301,7 +308,7 @@ the train, on average, doesn't do this.
 This causes the real stopping distance to be pruned out of the search range, so
 the algorithm will never find the right result.
 
-In particular, a flow in the way that velocity is estimated aggravated this problem.
+In particular, a flaw in the way that velocity is estimated aggravated this problem.
 We paused in the middle of the run, but the code that estimated the velocity
 of the train assumed that we operated at a constant speed.
 When the train accelerates, it moves at a small fraction of the top speed,
