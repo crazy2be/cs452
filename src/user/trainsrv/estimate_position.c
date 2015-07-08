@@ -183,22 +183,23 @@ static void log_position_estimation_error(const struct trainsrv_state *state,
 	// being very near to the tripped sensor when this happens
 	// we will calculate how far away from the sensor we thought we were
 	if (train_state->next_sensor != NULL) {
-		/* char feedback[80]; */
-		/* char sens_name[4]; */
-		/* sensor_repr(sensor_node->num, sens_name); */
+		char feedback[80];
+		char sens_name[4];
+		sensor_repr(sensor_node->num, sens_name);
 		ASSERTF(train_state->next_sensor->type == NODE_SENSOR, "sensor node was %x from %x, track = %x", (unsigned) train_state->next_sensor, (unsigned) train_state, (unsigned) track);
-		/* if (train_state->next_sensor == sensor_node) {
+		if (train_state->next_sensor == sensor_node) {
 			const int delta_d = train_state->mm_to_next_sensor - get_estimated_distance_travelled(train_state, time());
-			snprintf(feedback, sizeof(feedback), "Train was estimated at %d mm away from sensor %s when tripped (%d total)",
-			         delta_d, sens_name, train_state->mm_to_next_sensor);
-			displaysrv_console_feedback(state->displaysrv_tid, feedback);
+			train_state->measurement_error = delta_d;
+			/* snprintf(feedback, sizeof(feedback), "Train was estimated at %d mm away from sensor %s when tripped (%d total)", */
+			/*          delta_d, sens_name, train_state->mm_to_next_sensor); */
+			/* displaysrv_console_feedback(state->displaysrv_tid, feedback); */
 		} else {
 			char exp_sens_name[4];
 			sensor_repr(train_state->next_sensor->num, exp_sens_name);
 			snprintf(feedback, sizeof(feedback), "Train was expected to hit sensor %s, actually hit %s",
 			         exp_sens_name, sens_name);
 			displaysrv_console_feedback(state->displaysrv_tid, feedback);
-		} */
+		}
 	}
 	train_state->next_sensor = track_next_sensor(sensor_node, &state->switches,
 	                           &train_state->mm_to_next_sensor);
@@ -260,7 +261,6 @@ static void update_train_position_from_sensor(const struct trainsrv_state *state
 	log_position_estimation_error(state, train_state, sensor_node, ticks);
 
 	// adjust estimate for train speed
-	(void) update_train_velocity_estimate;
 	update_train_velocity_estimate(state, train_state, sensor_node, ticks);
 
 	// update internal train state

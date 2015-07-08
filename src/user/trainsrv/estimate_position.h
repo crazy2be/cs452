@@ -36,8 +36,11 @@ struct internal_train_state {
 	// it's sometimes convenient to be able to go back from a state to a train_id
 	int train_id;
 
+	// mostly for reporting purposes
 	// this, unlike last_known_position, is not affected by reanchoring
 	int last_sensor_hit;
+	// amount estimate was off by the last time we hit a sensor
+	int measurement_error;
 };
 
 // catch-all struct to avoid static memory allocation for a user space task
