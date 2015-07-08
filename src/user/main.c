@@ -49,7 +49,11 @@ void fuck_the_police(void) {
 void test_init(void) {
 	// initialize the track
 
+#ifdef TRACKA
 	init_tracka(track);
+#else
+	init_trackb(track);
+#endif
 
 	start_servers();
 

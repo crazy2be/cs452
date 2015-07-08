@@ -45,6 +45,7 @@ static struct train_state handle_query_spatials(struct trainsrv_state *state, in
 	} else {
 		out.position = get_estimated_train_position(state, train_state);
 		out.velocity = train_velocity_from_state(train_state);
+		out.speed_setting = train_state->current_speed_setting;
 	}
 	return out;
 }
@@ -119,6 +120,23 @@ static void trains_server(void) {
 		case SWITCH_GET:
 			reply(tid, &state.switches, sizeof(state.switches));
 			break;
+		case GET_STOPPING_DISTANCE: {
+			struct internal_train_state *ts = get_train_state(&state, req.train_number);
+			int distance = ts->est_stopping_distances[train_speed_index(ts)];
+			reply(tid, &distance, sizeof(distance));
+			break;
+		}
+		case SET_STOPPING_DISTANCE: {
+			struct internal_train_state *ts = get_train_state(&state, req.train_number);
+			ts->est_stopping_distances[train_speed_index(ts)] = req.stopping_distance;
+			reply(tid, NULL, 0);
+			break;
+		}
+		case GET_LAST_KNOWN_SENSOR: {
+			struct internal_train_state *ts = get_train_state(&state, req.train_number);
+			reply(tid, &ts->last_sensor_hit, sizeof(ts->last_sensor_hit));
+			break;
+		}
 		default:
 			WTF("UNKNOWN TRAINS REQ %d"EOL, req.type);
 			break;
@@ -206,4 +224,30 @@ struct switch_state trains_get_switches(void) {
 		.type = SWITCH_GET,
 	}), &switches);
 	return switches;
+}
+
+void trains_set_stopping_distance(int train_id, int stopping_distance) {
+	TSEND(((struct trains_request) {
+		.type = SET_STOPPING_DISTANCE,
+		 .train_number = train_id,
+		  .stopping_distance = stopping_distance,
+	}));
+}
+
+int trains_get_stopping_distance(int train_id) {
+	int stopping_distance;
+	TSEND2(((struct trains_request) {
+		.type = GET_STOPPING_DISTANCE,
+		 .train_number = train_id,
+	}), &stopping_distance);
+	return stopping_distance;
+}
+
+int trains_get_last_known_sensor(int train_id) {
+	int sensor;
+	TSEND2(((struct trains_request) {
+		.type = GET_LAST_KNOWN_SENSOR,
+		 .train_number = train_id,
+	}), &sensor);
+	return sensor;
 }

@@ -16,4 +16,6 @@ struct trains_request {
 
 	int distance;
 	struct sensor_state sensors;
+
+	int stopping_distance;
 };

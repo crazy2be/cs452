@@ -13,6 +13,8 @@ struct train_state {
 
 	// micrometers per clock tick?
 	int velocity;
+
+	int speed_setting;
 };
 
 #define MAX_ACTIVE_TRAINS 8 // way more than we'll be able to have on the track in practice
@@ -26,6 +28,10 @@ void trains_set_speed(int train, int speed);
 void trains_reverse(int train);
 void trains_switch(int switch_numuber, enum sw_direction d);
 struct switch_state trains_get_switches(void);
+
+void trains_set_stopping_distance(int train_id, int stopping_distance);
+int trains_get_stopping_distance(int train_id);
+int trains_get_last_known_sensor(int train_id);
 
 void trains_start(void);
 

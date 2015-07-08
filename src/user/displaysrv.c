@@ -447,7 +447,7 @@ static void update_train_states(int active_trains, struct display_train_state *a
 	puts("\e[s");
 	for (int i = 0; i < active_trains; i++) {
 		const int row = i % 4;
-		const int col = i / 2;
+		const int col = i / 4;
 
 		const int term_row = TRAIN_STATUS_X_OFFSET + col * ((SCREEN_WIDTH - 2) / 2);
 		const int term_col = TRAIN_STATUS_Y_OFFSET + row;
@@ -461,14 +461,15 @@ static void update_train_states(int active_trains, struct display_train_state *a
 			const int displacement = active_train_states[i].state.position.displacement;
 			const char *pos_name = active_train_states[i].state.position.edge->src->name;
 			const int velocity = active_train_states[i].state.velocity;
+			const int stopping_distance = trains_get_stopping_distance(train_id);
 
 			int distance_to_next = -1;
 			const struct track_node *next_node = active_train_states[i].state.position.edge->src;
 			next_node = track_next_sensor(active_train_states[i].state.position.edge->src, switches, &distance_to_next);
 
-			printf("\e[%d;%dHTrain %d, %d mm past %s, vel %d, %d to %s    ",
+			printf("\e[%d;%dHTrain %d, %d mm past %s, vel %d, %d to %s, %d to stop",
 			       term_col, term_row, train_id, displacement, pos_name, velocity,
-			       distance_to_next - displacement, next_node->name);
+			       distance_to_next - displacement, next_node->name, stopping_distance);
 
 		}
 	}
