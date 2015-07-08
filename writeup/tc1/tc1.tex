@@ -202,7 +202,7 @@ an accurate picture requires a significantly higher resolution than the sensors
 normally provide, and there is no way to use sensors to measure the position of
 a train which is currently stopped.
 
-\subsection{Just Measure It}
+\subsection{Manual Measurement}
 We avoided using the simple "stop the train
 at a sensor and measure displacement from the sensor" technique for quite a
 while, under the justification that:
@@ -214,7 +214,7 @@ confidence interval) must be measured manually for each train at each possible
 speed for a complete model. This takes hours, and is prey to human error.
 \end{enumerate}
 Even with complete measurements, and assuming the humans doing the measurements
-are perfect (we try ;)), it is still difficult to refine the model with other
+are perfect (we try), it is still difficult to refine the model with other
 data that we have. For example, if we know that the train has not finished
 accelerating, and hence is between two speeeds, what stopping distance do we
 assume? If we know a particular section of track causes the trains to slow
@@ -222,7 +222,7 @@ down 10\%, how do we refine our estimate of stopping distance for that section
 of track? The brute force model seemed like it could be subject to
 combinatorial explosion in this case.
 
-\subsection{Measure Part of it, Extrapolate}
+\subsection{Extrapolation}
 After discussing the shortcomings of the "Just Measure It" approach, we decided
 to adopt a different technique. Rather than measure the distance to stop
 completely, we decided to just measure the time taken to travel a certain
@@ -237,18 +237,20 @@ suspect that our model might not be accurate enough to be used in this way. As
 part of an investigation on this front, we tried to come up with some techniques
 for measuring what the actual deacceleration curve looked like.
 
-\subsection{The Way You Stop}
+\subsection{Curve Validation}
 After our extrapolation wasn't working, we wanted to come up with a way to
 validate the underlying model we were assuming for the deacceration of the
 train. We considered various techinques, but ultimately ended up using a
 camera, suspended above the track, with a easily distinguishable color marked
-on it for easy computerized tracking. We then captured data of the train
+on the train for easy computerized tracking. We then captured data of the train
 starting, stopping, starting, stopping, several times over, and extracted
 the motion of the train by computing the centroid of the pixels which were
 close to the easily distinguishable color in value. We then took the pairwise
 differences of these points to get an approximation of velocity, smoothed the
-curve to reduce image capturing noise, and tried to fit a curve. The resulting
-curve would be well described as "definately not quartic nor cubic".
+curve to reduce image capturing noise, and tried to fit a polynomial to the
+resulting data. The data was not well approximated by either a quartic or a
+cubic curve,the image below shows a fairly tight fitting of a fifth-order
+polynomial.
 \begin{figure}[ht!]
 \includegraphics[width=\linewidth]{deaccel.png}
 \caption{A fifth-order polynomial fit to experimentally derived data. Although
@@ -266,16 +268,20 @@ despite smoothing.}
 The apparatus used to enable this has been dubbed "the
 train selfie stick".
 
-\subsection{Bisecting for the stopping distance}
-We wanted to find some way of automating collection of the stopping distance,
-because collecting stopping distances with a tape measure, and hardcoding
-them into a table is time consuming.
-We originally wanted to derive the stopping distance from the acceleration curve,
-but we had problems finding the acceleration curve, as described above.
+The curve validation did allow us to get a better idea of how the train
+deaccelerates, and will most likely prove useful as we need a better idea
+of the trains position during deacceleration for tc2. It also gave us lots
+of tools for analysing our calibration and assumptions about the motion of
+the train, which I'm sure will prove their worth with time as well. However,
+for measuing stopping distance, we weren't able to get closer than around 7cm
+with this model, most likely due to noise in the data. We have some ideas
+for how to address this, but we were not able to complete them in time for
+the tc1 demo.
 
-A simpler technique turned out to be to start with a range of possible
-values for the stopping distance, and then tighten this range by bisecting
-the range iteratively.
+\subsection{Bisecting for the stopping distance}
+A simpler technique for measuring the stopping distance turned out to be to
+start with a range of possible values for the stopping distance, and then
+tighten this range by bisecting the range iteratively.
 At each step, we assume the stopping distance is the midpoint of
 the range, and attempt to stop exactly on top of a sensor.
 If the sensor is tripped, then we know that the actual stopping distance
