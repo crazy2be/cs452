@@ -247,7 +247,9 @@ static void bisect_task(void) {
 	char target_repr[4];
 	sensor_repr(target_sensor, target_repr);
 
-	for (int i = 0; i < 5; i++) {
+	const int iterations = 8;
+
+	for (int i = 0; i < iterations; i++) {
 		guess = (lo + hi) / 2;
 		struct position stopping_point = position_calculate_stopping_position(&ts.position, &target, guess, &switches);
 
