@@ -112,7 +112,7 @@ struct position position_calculate_stopping_position(const struct position *curr
 		} while (distance < 0);
 	}
 
-	ASSERT(distance > 0);
+	ASSERT(distance >= 0);
 
 	struct position stopping_point = *current;
 	position_travel_forwards(&stopping_point, distance, switches);

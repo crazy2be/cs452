@@ -21,11 +21,8 @@ int train_eta(struct trainsrv_state *state, int train_id, int distance) {
 	struct internal_train_state *train_state = get_train_state(state, train_id);
 	ASSERT(train_state != NULL);
 	int velocity = train_velocity_from_state(train_state);
-	if (velocity > 0) {
-		return distance / velocity;
-	} else {
-		return -1;
-	}
+	int time = (velocity > 0) ? distance * 1000 / velocity : -1;
+	return time;
 }
 
 int get_estimated_distance_travelled(struct internal_train_state *train_state, int now) {

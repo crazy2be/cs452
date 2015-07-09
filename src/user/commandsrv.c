@@ -194,7 +194,8 @@ static void handle_stop(int displaysrv, int train, struct position pos) {
 	trains_query_spatials(train, &state);
 	struct switch_state switches = trains_get_switches();
 
-	struct position stopping_point = position_calculate_stopping_position(&state.position, &pos, 900, &switches);
+	int stopping_distance = trains_get_stopping_distance(train);
+	struct position stopping_point = position_calculate_stopping_position(&state.position, &pos, stopping_distance, &switches);
 	if (position_is_uninitialized(&stopping_point)) {
 		displaysrv_console_feedback(displaysrv, "No path to target location");
 		return;
@@ -214,7 +215,8 @@ static void bisect_task(void) {
 	reply(tid, NULL, 0);
 
 #ifdef TRACKA
-	struct position target = { &track[61].edge[DIR_STRAIGHT], 0 }; // d14
+	/* struct position target = { &track[61].edge[DIR_STRAIGHT], 0 }; // d14 */
+	struct position target = { &track[31].edge[DIR_STRAIGHT], 0 }; // b16
 #else
 	struct position target = { &track[21].edge[DIR_STRAIGHT], 0 }; // b6
 #endif
@@ -232,6 +234,7 @@ static void bisect_task(void) {
 	struct train_state ts;
 	trains_query_spatials(params.train, &ts);
 	struct switch_state switches = trains_get_switches();
+	const int speed_setting = ts.speed_setting;
 
 	// initial guesses for the train stopping distance
 	int lo = 0;
@@ -270,9 +273,12 @@ static void bisect_task(void) {
 			displaysrv_console_feedback(params.displaysrv, buf);
 		}
 
-		trains_set_speed(params.train, ts.speed_setting);
+		trains_set_speed(params.train, speed_setting);
 
 		trains_query_spatials(params.train, &ts);
+
+		// delay
+		delay(500);
 	}
 
 
