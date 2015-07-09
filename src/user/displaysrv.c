@@ -465,10 +465,15 @@ static void update_train_states(int active_trains, struct display_train_state *a
 			const int stopping_distance = trains_get_stopping_distance(train_id);
 			const int error = active_train_states[i].error;
 
-			printf("\e[%d;%dHTrain %d, %d mm past %s, vel %d, %d to stop, %d error",
+			char buf[78];
+			int len = snprintf(buf, sizeof(buf), "\e[%d;%dHTrain %d, %d mm past %s, vel %d, %d to stop, %d error",
 			       term_col, term_row, train_id, displacement, pos_name, velocity,
 			       stopping_distance, error);
-
+			while (len < 78) {
+				buf[len] = ' ';
+				len++;
+			}
+			fput_buf(buf, sizeof(buf), COM2);
 		}
 	}
 	puts("\e[u");
