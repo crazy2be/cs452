@@ -31,6 +31,7 @@ struct switch_state switch_historical_get(const struct switch_historical_state *
 		if (s->history[index].time < time) return s->history[prev_index].st;
 		prev_index = index;
 	}
+	/* ASSERT(s->history[prev_index].time <= time); */
 	return s->history[prev_index].st;
 }
 
