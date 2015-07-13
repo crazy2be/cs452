@@ -10,6 +10,8 @@
 struct internal_train_state {
 	//  1. Its current estimated position
 	//     position_unitialized(&position) iff train_id == state->unknown_train_id
+	//     "last known" is something of a misnomer - this changes when we reanchor the trains,
+	//     so it is subject to estimation error if we reanchor.
 	struct position last_known_position;
 	int last_known_time;
 
@@ -40,6 +42,8 @@ struct internal_train_state {
 	// mostly for reporting purposes
 	// this, unlike last_known_position, is not affected by reanchoring
 	int last_sensor_hit;
+	int last_sensor_hit_time;
+
 	// amount estimate was off by the last time we hit a sensor
 	int measurement_error;
 };
@@ -62,7 +66,7 @@ struct trainsrv_state {
 	// this is difficult, so we don't do this.)
 	int unknown_train_id;
 
-	struct switch_state switches;
+	struct switch_historical_state switch_history;
 	struct sensor_state sens_prev;
 	int sensors_are_known;
 };
@@ -72,6 +76,7 @@ int train_velocity_from_state(struct internal_train_state *train_state);
 int train_velocity(struct trainsrv_state *state, int train);
 struct position get_estimated_train_position(struct trainsrv_state *state,
         struct internal_train_state *train_state);
+int train_eta_from_state(struct trainsrv_state *state, struct internal_train_state *train_state, int distance);
 int train_eta(struct trainsrv_state *state, int train_id, int distance);
 
 struct internal_train_state* get_train_state(struct trainsrv_state *state, int train_id);

@@ -79,7 +79,7 @@ static void trains_server(void) {
 
 	trainsrv_state_init(&state);
 
-	train_alert_start(state.switches, true);
+	train_alert_start(switch_historical_get_current(&state.switch_history), true);
 
 	// TODO: we should block the creating task from continuing until init is done
 
@@ -130,9 +130,11 @@ static void trains_server(void) {
 			/* displaysrv_update_switch(displaysrv, &switches); */
 			reply(tid, NULL, 0);
 			break;
-		case SWITCH_GET:
-			reply(tid, &state.switches, sizeof(state.switches));
+		case SWITCH_GET: {
+			struct switch_state switches = switch_historical_get_current(&state.switch_history);
+			reply(tid, &switches, sizeof(switches));
 			break;
+		}
 		case GET_STOPPING_DISTANCE: {
 			struct internal_train_state *ts = get_train_state(&state, req.train_number);
 			int distance = ts->est_stopping_distances[train_speed_index(ts)];
