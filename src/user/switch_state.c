@@ -5,11 +5,6 @@ void switch_historical_init(struct switch_historical_state *s) {
 	s->len = 0;
 }
 
-struct switch_state switch_historical_get_current(const struct switch_historical_state *s) {
-	ASSERT(s->len > 0);
-	return s->history[s->offset].st;
-}
-
 static inline int normalize_offset(int initial, int delta) {
 	initial += delta;
 	// these conditions should get optimized out during inlining
@@ -19,6 +14,11 @@ static inline int normalize_offset(int initial, int delta) {
 		initial %= SWITCH_HISTORY_LEN;
 	}
 	return initial;
+}
+
+struct switch_state switch_historical_get_current(const struct switch_historical_state *s) {
+	ASSERT(s->len > 0);
+	return s->history[normalize_offset(s->offset, -1)].st;
 }
 
 // return the most recent switch state that was set before the provided time
@@ -36,6 +36,7 @@ struct switch_state switch_historical_get(const struct switch_historical_state *
 }
 
 void switch_historical_set(struct switch_historical_state *s, struct switch_state current, int time) {
+	ASSERTF(s->len == 0 || time >= s->history[normalize_offset(s->offset, -1)].time, "Switch records went backwards in time");
 	s->history[s->offset].st = current;
 	s->history[s->offset].time = time;
 

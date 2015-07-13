@@ -19,6 +19,9 @@ static bool guess_improved(struct trainsrv_state *state, int now,
 	int old_eta_error = abs((now - old->last_sensor_hit_time) - train_eta_from_state(state, old, old_dist));
 	int candidate_eta_error = abs((now - candidate->last_sensor_hit_time) - train_eta_from_state(state, candidate, candidate_dist));
 
+	DEBUG("Compared candidates: incumbent %d has eta err = %d, candidate %d has eta err = %d" EOL,
+			old->train_id, old_eta_error, candidate->train_id, candidate_eta_error);
+
 	return candidate_eta_error < old_eta_error;
 }
 
@@ -57,6 +60,7 @@ static int attribute_sensor_to_known_train(struct trainsrv_state *state, const s
 
 	struct internal_train_state *train_candidate = NULL;
 	int train_candidate_errors_assumed = 0, train_candidate_distance = 0;
+	DEBUG("STARTING RUN" EOL);
 
 	// TODO: should write this to eliminate copying context back and forth repeatedly
 	while (queue_len > 0) {
@@ -74,6 +78,7 @@ static int attribute_sensor_to_known_train(struct trainsrv_state *state, const s
 		//     but we want to be tolerant of the fact that this may not be the case.
 		//  2) Reanchoring doesn't happen, so we don't need to worry about the case where the train
 		//     is estimated to be *past* the sensor it just hit.
+		DEBUG("Traversing through node %s" EOL, node->name);
 		if (node->type == NODE_SENSOR) {
 			for (int i = 0; i < state->num_active_trains; i++) {
 				if (state->train_states[i].last_sensor_hit == node->reverse->num) {
@@ -82,7 +87,7 @@ static int attribute_sensor_to_known_train(struct trainsrv_state *state, const s
 
 					// check if the train going up this path would have required going the wrong way over a switch
 					int errors_assumed = context.errors_assumed;
-					/* printf("Found train %d at sensor %s, assuming %d errors" EOL, train_state->train_id, node->name, errors_assumed); */
+					DEBUG("Found train %d at sensor %s, assuming %d errors" EOL, train_state->train_id, node->name, errors_assumed);
 					for (int m = 0; errors_assumed < errors_assumed_threshold && m < context.merges_hit_count; m++) {
 						const struct track_edge *expected_branch_edge = context.merges_hit[m].branch_edge;
 						const struct track_node *branch = expected_branch_edge->src;
@@ -94,26 +99,26 @@ static int attribute_sensor_to_known_train(struct trainsrv_state *state, const s
 						const int direction = switch_get(&switches, branch->num);
 
 						if (&branch->edge[direction] != expected_branch_edge) {
-							ASSERTF(&branch->edge[!direction] == context.edge->reverse, "Unknown edge: %s->%s, expected %s->%s or %s->%s",
+							ASSERTF(&branch->edge[!direction] == expected_branch_edge, "Unknown edge: %s->%s, expected %s->%s or %s->%s",
 									expected_branch_edge->src->name, expected_branch_edge->dest->name,
 									branch->edge[direction].src->name, branch->edge[direction].dest->name,
 									branch->edge[!direction].src->name, branch->edge[!direction].dest->name);
-							/* printf("Train would have needed to go the wrong way at %s, switch direction was %d" EOL, branch->name, direction); */
+							DEBUG("Train would have needed to go the wrong way at %s, switch direction was %d" EOL, branch->name, direction);
 							errors_assumed++;
 						}
 					}
 
-					/* printf("Errors assumed = %d" EOL, errors_assumed); */
+					DEBUG("Errors assumed = %d" EOL, errors_assumed);
 					// ignore the guess if it would require assuming too many errors
 					if (errors_assumed >= errors_assumed_threshold) continue;
-					/* printf("Errors within tolerance" EOL); */
+					DEBUG("Errors within tolerance" EOL);
 
 					// we want to figure out if this is a better guess for which train hit
 					// the sensor than any guess we might have so far
 					if (guess_improved(state, now,
 							train_candidate, train_candidate_errors_assumed, train_candidate_distance,
 							train_state, errors_assumed, context.distance)) {
-						/* printf("Choosing train as new candidate" EOL); */
+						DEBUG("Choosing train as new candidate" EOL);
 						train_candidate = train_state;
 						train_candidate_errors_assumed = errors_assumed;
 						train_candidate_distance = context.distance;
@@ -147,6 +152,8 @@ static int attribute_sensor_to_known_train(struct trainsrv_state *state, const s
 			queue[queue_len] = context;
 			queue[queue_len].edge = &node->edge[DIR_CURVED];
 			queue_len++;
+		} else if (node->type == NODE_EXIT) {
+			continue;
 		}
 
 		// traverse to the next branch

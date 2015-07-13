@@ -25,23 +25,86 @@ static struct internal_train_state* init_train(struct trainsrv_state *state, int
 	return train;
 }
 
-void sensor_attribution_tests() {
-	struct trainsrv_state state;
-	state.num_active_trains = 0;
-
-	struct internal_train_state *train_a = init_train(&state, 63, 36, 200, 5000); // C6
-	struct internal_train_state *train_b = init_train(&state, 58, 70, 200, 5000); // E7
-
-	(void) train_b;
-
-	state.unknown_train_id = 0;
-	switch_historical_init(&state.switch_history);
+static void init_state(struct trainsrv_state *state) {
+	state->num_active_trains = 0;
+	state->unknown_train_id = 0;
+	switch_historical_init(&state->switch_history);
 	struct switch_state switches = {};
-	switch_historical_set(&state.switch_history, switches, 50);
-
-
+	switch_historical_set(&state->switch_history, switches, 50);
 	// sens_prev & sensors_are_known should not be used
+}
 
-	// we expect train A to hit this (travelling 300mm in ~ 60 ticks, and actually takes 50)
-	ASSERT_INTEQ(train_a->train_id, attribute_sensor_to_train(&state, 46, 250)); // C15
+void sensor_attribution_tests() {
+	{
+		struct trainsrv_state state;
+		init_state(&state);
+
+		struct internal_train_state *train_a = init_train(&state, 63, 36, 200, 5000); // C5
+		struct internal_train_state *train_b = init_train(&state, 58, 70, 200, 5000); // E7
+
+		// we expect train A to hit this (travelling 300mm in ~ 60 ticks, and actually takes 50)
+		ASSERT_INTEQ(train_a->train_id, attribute_sensor_to_train(&state, 46, 250)); // C15
+
+		// shouldn't attribute a totally random value to a sensor
+		ASSERT_INTEQ(-1, attribute_sensor_to_train(&state, 10, 250)); // A11
+
+		// shouldn't attribute to a train that just hit that sensor
+		ASSERT_INTEQ(-1, attribute_sensor_to_train(&state, 36, 250)); // C6
+
+		// should attribute a train, while assuming we've missed a single sensor
+		// (went from E7 to D9, skipping D7)
+		ASSERT_INTEQ(train_b->train_id, attribute_sensor_to_train(&state, 56, 500)); // D9
+
+		// shouldn't attribute sensor too far ahead of a train (can't go from E7 to E12,
+		// skipping both D7 and D9)
+		ASSERT_INTEQ(-1, attribute_sensor_to_train(&state, 75, 250)); // E12
+
+		// allow getting one turnout wrong
+		ASSERT_INTEQ(train_a->train_id, attribute_sensor_to_train(&state, 34, 250)); // C3
+
+		// don't allow getting one turnout wrong (this particular case is also equivalent to getting 2 wrong)
+		ASSERT_INTEQ(-1, attribute_sensor_to_train(&state, 74, 250)); // E11
+	}
+
+	{
+		struct trainsrv_state state;
+		init_state(&state);
+
+		struct internal_train_state *train_a = init_train(&state, 63, 31, 200, 5000); // B16
+		struct internal_train_state *train_b = init_train(&state, 58, 45, 200, 5000); // C14
+
+		struct switch_state switches = {};
+		switch_set(&switches, 4, CURVED);
+		switch_set(&switches, 15, CURVED);
+		switch_set(&switches, 16, CURVED);
+		switch_historical_set(&state.switch_history, switches, 51);
+
+		// 1 bad sensor
+		ASSERT_INTEQ(train_a->train_id, attribute_sensor_to_train(&state, 18, 250)); // B3
+		// 1 bad sensor & 1 bad turnout
+		ASSERT_INTEQ(-1, attribute_sensor_to_train(&state, 16, 250)); // B1
+
+		// 0 bad turnouts
+		ASSERT_INTEQ(train_b->train_id, attribute_sensor_to_train(&state, 1, 250)); // A2
+
+		// 1 bad turnout
+		ASSERT_INTEQ(train_b->train_id, attribute_sensor_to_train(&state, 13, 250)); // A14
+
+		// 2 bad turnouts
+		ASSERT_INTEQ(-1, attribute_sensor_to_train(&state, 14, 250)); // A15
+
+
+	}
+
+	{
+		struct trainsrv_state state;
+		init_state(&state);
+
+		// train b is behind train a
+		struct internal_train_state *train_a = init_train(&state, 63, 3, 200, 5000); // A4
+		struct internal_train_state *train_b = init_train(&state, 58, 3, 300, 5000); // A4
+		(void) train_b;
+
+		ASSERT_INTEQ(train_a->train_id, attribute_sensor_to_train(&state, 31, 250)); // B16
+	}
 }
