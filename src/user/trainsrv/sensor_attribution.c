@@ -15,9 +15,17 @@ static bool guess_improved(struct trainsrv_state *state, int now,
 		return true;
 	}
 
+	int old_eta = train_eta_from_state(state, old, old_dist);
+	int candidate_eta = train_eta_from_state(state, candidate, candidate_dist);
+
+	// if some of the etas are unknown, prefer the known ones
+	if (candidate_eta < 0 || old_eta < 0) {
+		return old_eta < 0;
+	}
+
 	// otherwise, base guess on which matches the eta better
-	int old_eta_error = abs((now - old->last_sensor_hit_time) - train_eta_from_state(state, old, old_dist));
-	int candidate_eta_error = abs((now - candidate->last_sensor_hit_time) - train_eta_from_state(state, candidate, candidate_dist));
+	int old_eta_error = abs((now - old->last_sensor_hit_time) - old_eta);
+	int candidate_eta_error = abs((now - candidate->last_sensor_hit_time) - candidate_eta);
 
 	DEBUG("Compared candidates: incumbent %d has eta err = %d, candidate %d has eta err = %d" EOL,
 			old->train_id, old_eta_error, candidate->train_id, candidate_eta_error);
@@ -41,7 +49,7 @@ struct search_context {
 	} merges_hit[MAX_BRANCHES_IN_SEARCH];
 };
 
-static int attribute_sensor_to_known_train(struct trainsrv_state *state, const struct track_node *sensor, int now) {
+static struct internal_train_state* attribute_sensor_to_known_train(struct trainsrv_state *state, const struct track_node *sensor, int now) {
 	// this is much bigger than it needs to be - we should only need enough entries
 	// so that we can merge in every possible way without hitting a sensor.
 	const int queue_size = MAX_BRANCHES_IN_SEARCH;
@@ -163,15 +171,15 @@ static int attribute_sensor_to_known_train(struct trainsrv_state *state, const s
 
 		ASSERT(0 <= queue_len && queue_len <= queue_size);
 	}
-	return (train_candidate != NULL) ? train_candidate->train_id : -1;
+	return train_candidate;
 }
 
-int attribute_sensor_to_train(struct trainsrv_state *state, int sensor, int now) {
+struct internal_train_state* attribute_sensor_to_train(struct trainsrv_state *state, int sensor, int now) {
 	const struct track_node *sensor_node = track_node_from_sensor(sensor);
-	int train_id = attribute_sensor_to_known_train(state, sensor_node, now);
-	if (train_id == -1 && state->unknown_train_id > 0) {
-		train_id = state->unknown_train_id;
+	struct internal_train_state *train = attribute_sensor_to_known_train(state, sensor_node, now);
+	if (train == NULL && state->unknown_train_id > 0) {
+		train = get_train_state(state, state->unknown_train_id);
 		state->unknown_train_id = 0;
 	}
-	return train_id;
+	return train;
 }
