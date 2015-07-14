@@ -1,6 +1,7 @@
 #include "estimate_position.h"
 #include "track_control.h"
 #include "train_alert_srv.h"
+#include "sensor_attribution.h"
 #include "../track.h"
 #include "../displaysrv.h"
 #include "../sys.h"
@@ -281,33 +282,34 @@ static void update_train_position_from_sensor(const struct trainsrv_state *state
 	train_alert_update_train(train_state->train_id, train_state->last_known_position);
 }
 
+struct sensor_context {
+	struct trainsrv_state *state;
+	int time;
+
+	unsigned train_already_hit[NUM_TRAIN / 32];
+};
+
 static void sensor_cb(int sensor, void *ctx) {
-	int *sensor_dest= (int*) ctx;
-	*sensor_dest = sensor;
+	struct sensor_context *context = (struct sensor_context*) ctx;
+	struct internal_train_state *train = attribute_sensor_to_train(context->state, sensor, context->time);
+	const int index = (train->train_id - 1) / 32;
+	const int offset = (train->train_id - 1) % 32;
+	const unsigned mask = 1 << offset;
+
+	if (context->train_already_hit[index] & mask) return;
+
+	context->train_already_hit[index] |= mask;
+	update_train_position_from_sensor(context->state, train, sensor, context->time);
 }
 
 void update_sensors(struct trainsrv_state *state, struct sensor_state sens) {
 	if (state->sensors_are_known) {
-		struct internal_train_state *train_state = NULL;
-		if (state->unknown_train_id > 0) {
-			train_state = get_train_state(state, state->unknown_train_id);
-		} else if (state->num_active_trains >= 1) {
-			// TODO: Currently this is horribly naive, and will only work when a
-			// single train is on the track. It's also not robust against anything.
-			train_state = state->state_for_train[0];
-		} else {
-			return;
-		}
+		struct sensor_context context;
+	    context.state = state;
+		context.time = sens.ticks;
+		memset(&context.train_already_hit, 0, sizeof(context.train_already_hit));
 
-		ASSERT(train_state != NULL);
-
-
-		// TODO: this doesn't work if multiple sensors are tripped at the same time
-		int sensor = -1;
-		sensor_each_new(&state->sens_prev, &sens, sensor_cb, &sensor);
-		if (sensor == -1) return;
-
-		update_train_position_from_sensor(state, train_state, sensor, sens.ticks);
+		sensor_each_new(&state->sens_prev, &sens, sensor_cb, &context);
 	} else {
 		state->sensors_are_known = 1;
 	}
