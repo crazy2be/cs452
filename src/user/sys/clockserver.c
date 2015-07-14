@@ -53,9 +53,11 @@ void clockserver(void) {
 			break;
 		case DELAY:
 			//printf("Clockserver got delay %d"EOL, req.ticks);
+			ASSERTF(req.ticks >= 0, "%d", req.ticks);
 			min_heap_push(&delayed, num_ticks + req.ticks, tid);
 			break;
 		case DELAY_UNTIL:
+			ASSERTF(req.ticks >= 0, "%d", req.ticks);
 			min_heap_push(&delayed, req.ticks, tid);
 			break;
 		case TIME:
