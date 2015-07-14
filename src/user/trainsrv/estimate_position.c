@@ -292,6 +292,9 @@ struct sensor_context {
 static void sensor_cb(int sensor, void *ctx) {
 	struct sensor_context *context = (struct sensor_context*) ctx;
 	struct internal_train_state *train = attribute_sensor_to_train(context->state, sensor, context->time);
+
+	if (train == NULL) return;
+
 	const int index = (train->train_id - 1) / 32;
 	const int offset = (train->train_id - 1) % 32;
 	const unsigned mask = 1 << offset;
