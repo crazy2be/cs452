@@ -198,7 +198,7 @@ class Game(object):
 	def play_game(self):
 		self.start_screen()
 
-from itertools import izip
+import itertools
 import numpy as np
 from numpy.random import randint
 import numpy.random
@@ -227,18 +227,22 @@ def main():
 	n_color = g.new_vertex_property("string")
 	e_title = g.new_edge_property("string")
 	e_weight = g.new_edge_property("double")
+	v_weight = g.new_vertex_property("double")
 	import pickle
 	if os.path.isfile('previous_pos.pickle') and len(open('previous_pos.pickle').read()) > 0:
-		previous_pos = g.own_property(pickle.load(open('previous_pos.pickle')))
+		pos = g.own_property(pickle.load(open('previous_pos.pickle')))
 	else:
 		print "Generating random layout."
-		previous_pos = g.new_vertex_property("vector<double>")
+		pos = g.new_vertex_property("vector<double>")
 		for node in t:
-			previous_pos[g.vertex(node.i)] = (np.random.random(), np.random.random())
+			pos[g.vertex(node.i)] = (np.random.random(), np.random.random())
 
+	middle_nodes = map("".join, itertools.product(["BR", "MR"], map(str, [153, 154, 155, 156]))) + ["EN1", "EN2", "EX1", "EX2"]
 	for node in t:
 		v = g.vertex(node.i)
 		n_title[v] = node.name
+		v_weight[v] = 1.0
+		if node.name in middle_nodes: v_weight[v] = 0.0
 		e = g.add_edge(g.vertex(node.i), g.vertex(node.reverse.i))
 		e_weight[e] = 1.
 		if node.typ == track.NODE_SENSOR: n_color[v] = "blue"
@@ -250,12 +254,11 @@ def main():
 		for edge in node.edge:
 			if edge.src is None: continue
 			e = g.add_edge(g.vertex(edge.src.i), g.vertex(edge.dest.i))
-			e_weight[e] = 1./edge.dist
+			e_weight[e] = 1./(edge.dist**2)
 			e_title[e] = "%.2f" % (edge.dist)
 
 	#pos = graph_tool.draw.fruchterman_reingold_layout(g, weight=e_weight, pos=previous_pos)
 	#pos = graph_tool.draw.sfdp_layout(g, eweight=e_weight, pos=previous_pos)
-	pos = previous_pos
 	#new_pos, _ = graph_tool.draw.interactive_window(g, pos=pos, vertex_text=n_title,
 	#								   edge_text=e_title, vertex_fill_color=n_color,
 	#								   cr=surface)
@@ -265,7 +268,7 @@ def main():
 		win.destroy()
 		Gtk.main_quit()
 	count_of_draw_calls = [0]
-	K = 100.
+	K = 1.
 	layout_step = [K]
 	def my_draw(da, cr):
 		count_of_draw_calls[0] += 1
@@ -274,23 +277,20 @@ def main():
 		cr.set_source_rgb(102. / 256, 102. / 256, 102. / 256)
 		cr.show_text("HElllo Wold number %d" % count_of_draw_calls[0])
 		cr.fill()
-		#pos_temp = ungroup_vector_property(pos, [0, 1])
-		graph_tool.draw.sfdp_layout(g, eweight=e_weight, pos=pos, max_iter=5,
-									K=K, init_step=layout_step[0])
-		#graph_tool.draw.fruchterman_reingold_layout(g, weight=e_weight, pos=pos)
-		#graph_tool.draw.arf_layout(g, weight=e_weight, dt=layout_step[0], max_iter=5, pos=pos)
-		layout_step[0] *= 0.9
+		# Uncomment this if the shitty current layout doesn't satisfy and you
+		# want to tweak it. With this enabled, the whole graph will morph you
+		# drag a node, so that you don't have to drag each node individually.
+		#graph_tool.draw.sfdp_layout(g, eweight=e_weight, pos=pos, max_iter=5,
+		#							K=K, p=0.5, init_step=layout_step[0])
+		layout_step[0] = layout_step[0] - math.log(layout_step[0])
 		if da.vertex_matrix is not None:
 			da.vertex_matrix.update()
 		da.regenerate_surface(lazy=False)
 		da.queue_draw()
-		#ps = ungroup_vector_property(pos, [0, 1])
-		#delta = np.sqrt((pos_temp[0].fa - ps[0].fa) ** 2 +
-		#				(pos_temp[1].fa - ps[1].fa) ** 2).mean()
 	win.connect("delete_event", destroy_callback)
 	win.graph.connect("draw", my_draw)
 	Gtk.main()
-	#pickle.dump(new_pos, open('previous_pos.pickle', 'w'))
+	pickle.dump(pos, open('previous_pos.pickle', 'w'))
 	#game = Game(surface, conn, g, pos, n_title)
 	#game.play_game()
 
