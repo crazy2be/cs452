@@ -269,14 +269,37 @@ def main():
 	def destroy_callback(*args, **kwargs):
 		win.destroy()
 		Gtk.main_quit()
-	count_of_draw_calls = [0]
+
 	K = 1.
 	layout_step = [K]
-	trains = {12: [t[0].edge[0], 100]}
+	# Use this draw instead if the shitty current layout doesn't satisfy and you
+	# want to tweak it. With this enabled, the whole graph will morph you
+	# drag a node, so that you don't have to drag each node individually.
+	def relayout_draw(da, cr):
+		graph_tool.draw.sfdp_layout(g, eweight=e_weight, pos=pos, max_iter=5,
+									K=K, p=0.5, init_step=layout_step[0])
+		layout_step[0] = layout_step[0] - math.log(layout_step[0])
+		if da.vertex_matrix is not None:
+			da.vertex_matrix.update()
+		da.regenerate_surface(lazy=False)
+
+	def set_switch(sw, d):
+		for node in t:
+			if node.typ == track.NODE_BRANCH and node.num == sw:
+				node.switch_direction = d
+				return
+		print "WARN: Could not find switch %d" % sw
+
+	trains = {12: [0, [t[0].edge[0], 100]]}
 	def my_draw(da, cr):
-		count_of_draw_calls[0] += 1
-		print "Draw called with ", da, cr
-		for (train, train_pos) in trains.iteritems():
+		(typ, a1, a2) = conn.next_cmd()
+		if typ is None: pass
+		elif typ == 'set_speed': trains[a1][0] = a2
+		elif typ == 'toggle_reverse': trains[a1][1][0] = trains[a1][1][0].reverse
+		elif typ == 'switch': set_switch(a1, a2)
+		else: print "Ignoring command %s" % typ
+		for (train, train_data) in trains.iteritems():
+			train_pos = train_data[1]
 			e = g.edge(train_pos[0].src.i, train_pos[0].dest.i)
 			# g: graph coordinates, s: screen coordinates, d: device coordinates
 			sstart, send = np.array(pos[e.source()]), np.array(pos[e.target()])
@@ -285,24 +308,22 @@ def main():
 			alpha = train_pos[1] / gl
 			sp = sstart + alpha*(send - sstart)
 			dp = win.graph.pos_to_device(sp)
-			print dp
+			#print dp
 			cr.rectangle(dp[0], dp[1], 20, 20)
 			cr.set_source_rgb(102. / 256, 102. / 256, 102. / 256)
-			cr.show_text("HElllo Wold number %d" % count_of_draw_calls[0])
 			cr.fill()
-			train_pos[1] += 10
+			cr.move_to(dp[0], dp[1] + 20 - 12./2)
+			cr.set_source_rgb(1., 1., 1.)
+			cr.set_font_size(12)
+			cr.show_text("%d" % train)
+			cr.fill()
+			train_pos[1] += train_data[0]
 			if train_pos[1] > gl:
-				train_pos[0] = train_pos[0].dest.edge[0]
+				if train_pos[0].dest.typ == track.NODE_SENSOR:
+					conn.set_sensor_tripped(train_pos[0].dest.num)
+				o = train_pos[0].dest.switch_direction
+				train_pos[0] = train_pos[0].dest.edge[o]
 				train_pos[1] = 0
-		# Uncomment this if the shitty current layout doesn't satisfy and you
-		# want to tweak it. With this enabled, the whole graph will morph you
-		# drag a node, so that you don't have to drag each node individually.
-		#graph_tool.draw.sfdp_layout(g, eweight=e_weight, pos=pos, max_iter=5,
-		#							K=K, p=0.5, init_step=layout_step[0])
-		layout_step[0] = layout_step[0] - math.log(layout_step[0])
-		if da.vertex_matrix is not None:
-			da.vertex_matrix.update()
-		da.regenerate_surface(lazy=False)
 		da.queue_draw()
 	win.connect("delete_event", destroy_callback)
 	win.graph.connect("draw", my_draw)

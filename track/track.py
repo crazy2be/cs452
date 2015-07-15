@@ -20,6 +20,7 @@ class TrackEdge():
 
 class TrackNode():
   name = "no name"
+  switch_direction = 0
   typ = -1
   num = -1
   reverse = None # TrackNode in the same location, but opposite direction.

@@ -38,7 +38,7 @@ class Conn():
 	def __init__(self, tn=None):
 		self.tn = tn if tn is not None else FakeTelnet()
 		self.s = ''
-		self.sensors = ['\x00'*10]
+		self.sensors = bytearray(10)
 		while True:
 			self.s += self.tn.read()
 			if len(self.s) > 0:
@@ -52,13 +52,17 @@ class Conn():
 		self.s, typ, a1, a2 = self._parse_cmd(self.s)
 		return (typ, a1, a2)
 
-	def set_sensor_tripped(self, n, tripped):
+	def set_sensor_tripped(self, num):
+		self.set_sensor_is_tripped(num, True)
+
+	def set_sensor_is_tripped(self, num, tripped):
 		word_num = num / 8
 		offset = 7 - num % 8
 		bit = 0x1 << offset
 
 		assert word_num < len(self.sensors)
 		mask = self.sensors[word_num]
+		print num, tripped, word_num, offset, bit, mask
 		mask = (mask | bit) if tripped else (mask & ~bit)
 		self.sensors[word_num] = mask
 
@@ -69,7 +73,7 @@ class Conn():
 		if 0 <= f <= 14:
 			if len(s) < 2: return (s, None, None, None)
 			print "Setting speed of %d to %d" % (ord(s[1]), f)
-			return (s[2:], 'set_speed', f, ord(s[1]))
+			return (s[2:], 'set_speed', ord(s[1]), f)
 		elif f == 15:
 			if len(s) < 2: return (s, None, None, None)
 			print "Toggling reverse of %d" % ord(s[1])
@@ -80,10 +84,11 @@ class Conn():
 		elif 0x21 <= f <= 0x22:
 			if len(s) < 2: return (s, None, None, None)
 			print "Switch command not supported %d %d" % (f, ord(s[1]))
-			return (s[2:], 'switch', f - 0x21, ord(s[1]))
+			return (s[2:], 'switch', ord(s[1]), f - 0x21)
 		elif f == 0x85:
 			print "Got sensor poll"
 			self.tn.write(self.sensors)
+			self.sensors = bytearray(10)
 			return self._parse_cmd(s[1:])
 		raise Exception("Unknown command %s" % s.encode('hex'))
 
@@ -103,3 +108,7 @@ if __name__ == '__main__':
 	cp = Conn(FakeTelnet())
 	print cp._parse_cmd('\x00\x35')
 	print cp._parse_cmd('\x21\x22')
+	cp.set_sensor_is_tripped(44, True)
+	print [hex(c) for c in cp.sensors]
+	cp.set_sensor_is_tripped(44, False)
+	print [hex(c) for c in cp.sensors]
