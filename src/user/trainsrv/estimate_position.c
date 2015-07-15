@@ -8,9 +8,10 @@
 
 int train_speed_index(struct internal_train_state *train_state) {
 	int cur_speed = train_state->current_speed_setting;
-	int i = cur_speed*2 + (train_state->previous_speed_setting >= cur_speed) - 1;
-	ASSERT(i >= 0);
-	ASSERT(i < sizeof(train_state->est_velocities) / sizeof(train_state->est_velocities[0]));
+	int prev_speed = train_state->previous_speed_setting;
+	int i = cur_speed*2 + (prev_speed >= cur_speed) - 1;
+	ASSERTF(0 <= i && i < sizeof(train_state->est_velocities) / sizeof(train_state->est_velocities[0]),
+			"i = %d, cur_speed = %d, prev_speed = %d", i, cur_speed, prev_speed);
 	return i;
 }
 
