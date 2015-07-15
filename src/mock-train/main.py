@@ -1,205 +1,7 @@
 #!/usr/bin/python
-
-import os
-import random
-import math
-
-import pygame
-import vec2d
-def v2(x, y): return vec2d.Vec2d(x, y)
-from bezier import calculate_bezier
-
-def deg_to_rad(deg): return deg * math.pi / 180
-def rot_center(image, rect, angle):
-	"""rotate an image while keeping its center"""
-	# http://www.pygame.org/wiki/RotateCenter
-	rot_image = pygame.transform.rotate(image, angle)
-	rot_rect = rot_image.get_rect(center=rect.center)
-	return rot_image,rot_rect
-
-class TrainSprite():
-	def __init__(self):
-		surf = pygame.Surface((10, 5))
-		surf.fill((0, 0, 0))
-		surf.set_colorkey((0, 0, 0))
-		self.raw_image = surf
-		self.raw_rect = pygame.Rect(0, 0, 10, 5)
-		self.rot = 0
-		self.off = (100, 100)
-		pygame.draw.rect(surf, (100, 0, 0), self.raw_rect)
-
-	def rotate(self, drad): self.rotate_to(self.rad + drad)
-	def rotate_to(self, rad):
-		self.rad = rad
-		deg = rad * 180 / math.pi
-		self.image, self.rect = rot_center(self.raw_image, self.raw_rect, deg)
-
-	def move(self, amount):
-		self.off = (self.off[0] + amount[0], self.off[1] + amount[1])
-	def move_to(self, loc): self.off = loc
-
-	def update(self):
-		self.rotate(1)
-		self.move((random.randint(-5, 5), random.randint(-5, 5)))
-
-	def draw(self, surf):
-		surf.blit(self.image, self.rect.move(self.off))
-
-class TrainTrackData():
-	def __init__(ttd):
-		ttd.piece = 0 # Current track piece we are on
-		ttd.segment = 0 # Current segment in the current piece
-		ttd.offset = 0 # Current offset along the segment
-	def __str__(ttd):
-		return "piece: {0}, segment: {1}, offset: {2}".format(ttd.piece, ttd.segment, ttd.offset)
-	def pc(ttd, ps): return ps[ttd.piece]
-	def start(ttd, pc): return pc.seg(ttd.segment)
-	def end(ttd, pc): return pc.seg(ttd.segment+1)
-	def vec(ttd, pc): return ttd.end(pc) - ttd.start(pc)
-	def loc(ttd, pc):
-		return ttd.start(pc).lerp(ttd.end(pc), ttd.offset / ttd.vec(pc).length)
-
-GRAY = (100,100,100)
-LIGHT_GRAY = (200,200,200)
-RED = (255,0,0)
-GREEN = (0,255,0)
-BLUE = (0,0,255)
-
-class Train():
-	def __init__(self):
-		self.sprite = TrainSprite()
-		self.ttd = TrainTrackData()
-		self.s = 5.
-		self.direction = -1.
-
-	def update(self, track):
-		track.advance(self.ttd, self.s*self.direction)
-		direction = track.direction(self.ttd)
-		position = track.position(self.ttd)
-		self.sprite.move_to(position)
-		self.sprite.rotate_to(-math.atan2(direction[1], direction[0]))
-
-	def set_speed(self, speed):
-		# TODO: Smooth function here
-		self.s = speed
-
-	def toggle_reverse(self): self.direction *= -1
-
-	def draw(self, surf): self.sprite.draw(surf)
-
-class TrackPiece():
-	track_types = [
-		[v2(0,0), v2(0,1), v2(1,1), v2(1,0)],
-		[v2(0,1), v2(0,0), v2(1,0), v2(1,1)]
-	]
-	def __init__(self, typ, off):
-		self.ctrl = [p*100 + off for p in self.track_types[typ]]
-		self.points = calculate_bezier(self.ctrl)
-
-	def seg(self, i): return self.points[i]
-	def nseg(self): return len(self.points)
-
-	def draw(self, surf):
-		# Draw control points
-		for p in self.ctrl:
-			pygame.draw.circle(surf, BLUE, p, 4)
-		# Draw control "lines"
-		pygame.draw.lines(surf, LIGHT_GRAY, False, self.ctrl)
-		# Draw bezier segments
-		pygame.draw.lines(surf, RED, False, self.points)
-
-class Track():
-	def __init__(self):
-		self.pieces = [TrackPiece(0, (100, 100)), TrackPiece(1, (200, 0))]
-
-	def advance(self, ttd, amount):
-		def mod(n, m): return ((n % m) + m) % m
-		ttd.offset += amount
-		# TODO: This code is pretty gross. It would be nice to clean it
-		# up at least a little bit... I feel like we aught to be able to
-		# better generalize forward/backward travel at the very least.
-		if amount < 0:
-			while True:
-				pc = self.pieces[ttd.piece]
-				if ttd.segment < 0:
-					ttd.piece = mod(ttd.piece - 1, len(self.pieces))
-					ttd.segment = self.pieces[ttd.piece].nseg() - 2
-					pc = self.pieces[ttd.piece]
-					ttd.offset += ttd.vec(pc).length
-					continue
-				if ttd.offset < 0:
-					ttd.segment -= 1
-					if ttd.segment >= 0:
-						ttd.offset += ttd.vec(pc).length
-					continue
-				return
-		else:
-			while True:
-				pc = self.pieces[ttd.piece]
-				if ttd.segment + 1 >= pc.nseg():
-					ttd.piece = mod(ttd.piece + 1, len(self.pieces))
-					ttd.segment = 0
-					continue
-				d = ttd.vec(pc).length
-				if ttd.offset >= d:
-					ttd.offset -= d # length of current segment
-					ttd.segment += 1
-					continue
-				return
-
-	def position(self, ttd): return ttd.loc(ttd.pc(self.pieces))
-	def direction(self, ttd): return ttd.vec(ttd.pc(self.pieces))
-
-	def draw(self, surf):
-		for pc in self.pieces:
-			pc.draw(surf)
-
-class Game(object):
-	def __init__(self, surface, conn, g, pos, n_title):
-		self.surface = surface
-		self.conn = conn
-		self.g = g
-		self.pos = pos
-		self.n_title = n_title
-		self.clock = pygame.time.Clock()
-		self.train = Train()
-
-	def start_screen(self):
-		font = pygame.font.Font(None, 36)
-		text = font.render("Hello There", 1, (10, 10, 10))
-
-		rot = 45
-		track = Track()
-		while True:
-			for event in pygame.event.get():
-				if event.type == pygame.QUIT:
-					return
-			(typ, a1, a2) = self.conn.next_cmd()
-			if typ is None: pass
-			elif typ == 'set_speed': self.train.set_speed(a2)
-			elif typ == 'toggle_reverse': self.train.toggle_reverse()
-			else: print "Ignoring command %s" % typ
-			self.surface.fill((255, 255, 255))
-			#track.update()
-			self.train.update(track)
-			for v in self.g.vertices():
-				p = self.pos[v]
-				p = (int(p[0]*50), int(p[1]*50))
-				pygame.draw.circle(self.surface, (100, 100, 100), p, 10)
-				self.surface.blit(font.render(self.n_title[v], 1, (10, 10, 10)), p)
-			track.draw(self.surface)
-			self.train.draw(self.surface)
-			textpos = text.get_rect()
-			textpos.centerx = self.surface.get_rect().centerx
-			self.surface.blit(text, textpos)
-			pygame.display.flip()
-			self.clock.tick(30)
-
-	def play_game(self):
-		self.start_screen()
-
 import itertools
 import numpy as np
+import os
 from numpy.random import randint
 import numpy.random
 from graph_tool import Graph
@@ -209,12 +11,6 @@ from gi.repository import Gtk, Gdk, GdkPixbuf
 
 import serial_interface
 def main():
-	#pygame.init()
-
-	#surface = pygame.display.set_mode([800, 600])
-	#pygame.mouse.set_visible(False)
-	#pygame.display.set_caption("Trains")
-
 	conn = serial_interface.connect()
 
 	t = track.init_tracka()
@@ -259,11 +55,6 @@ def main():
 			e_dist[e] = edge.dist
 			e_title[e] = "%.2f" % (edge.dist)
 
-	#pos = graph_tool.draw.fruchterman_reingold_layout(g, weight=e_weight, pos=previous_pos)
-	#pos = graph_tool.draw.sfdp_layout(g, eweight=e_weight, pos=previous_pos)
-	#new_pos, _ = graph_tool.draw.interactive_window(g, pos=pos, vertex_text=n_title,
-	#								   edge_text=e_title, vertex_fill_color=n_color,
-	#								   cr=surface)
 	win = graph_tool.draw.GraphWindow(g, pos, (640, 480), edge_text=e_title, vertex_fill_color=n_color, vertex_text=n_title)
 	win.show_all()
 	def destroy_callback(*args, **kwargs):
@@ -290,49 +81,68 @@ def main():
 				return
 		print "WARN: Could not find switch %d" % sw
 
-	trains = {12: [0, [t[0].edge[0], 100]]}
-	def my_draw(da, cr):
-		(typ, a1, a2) = conn.next_cmd()
-		if typ is None: pass
-		elif typ == 'set_speed': trains[a1][0] = a2
-		elif typ == 'toggle_reverse': trains[a1][1][0] = trains[a1][1][0].reverse
-		elif typ == 'switch': set_switch(a1, a2)
-		else: print "Ignoring command %s" % typ
-		for (train, train_data) in trains.iteritems():
-			train_pos = train_data[1]
-			e = g.edge(train_pos[0].src.i, train_pos[0].dest.i)
-			# g: graph coordinates, s: screen coordinates, d: device coordinates
-			sstart, send = np.array(pos[e.source()]), np.array(pos[e.target()])
-			#print send, sstart
-			gl = e_dist[e]
-			alpha = train_pos[1] / gl
-			sp = sstart + alpha*(send - sstart)
-			dp = win.graph.pos_to_device(sp)
-			#print dp
+	class Train():
+		num = -1
+		speed = 0
+		edge = t[0].edge[0]
+		edge_dist = 0
+
+		def __init__(self, num):
+			self.num = num
+
+		def update(self):
+			e = g.edge(self.edge.src.i, self.edge.dest.i)
+			self.edge_dist += self.speed
+			if self.edge_dist > e_dist[e]:
+				if self.edge.dest.typ == track.NODE_SENSOR:
+					conn.set_sensor_tripped(self.edge.dest.num)
+				self.edge = self.edge.dest.edge[self.edge.dest.switch_direction]
+				self.edge_dist -= e_dist[e]
+
+		def draw(self, pos, da, cr):
+			e = g.edge(self.edge.src.i, self.edge.dest.i)
+			start, end = np.array(pos[e.source()]), np.array(pos[e.target()])
+			alpha = self.edge_dist / e_dist[e]
+			pos = start + alpha*(end - start)
+			dp = win.graph.pos_to_device(pos) # dp: device position
 			cr.rectangle(dp[0], dp[1], 20, 20)
 			cr.set_source_rgb(102. / 256, 102. / 256, 102. / 256)
 			cr.fill()
 			cr.move_to(dp[0], dp[1] + 20 - 12./2)
 			cr.set_source_rgb(1., 1., 1.)
 			cr.set_font_size(12)
-			cr.show_text("%d" % train)
+			cr.show_text("%d" % self.num)
 			cr.fill()
-			train_pos[1] += train_data[0]
-			if train_pos[1] > gl:
-				if train_pos[0].dest.typ == track.NODE_SENSOR:
-					conn.set_sensor_tripped(train_pos[0].dest.num)
-				o = train_pos[0].dest.switch_direction
-				train_pos[0] = train_pos[0].dest.edge[o]
-				train_pos[1] = 0
+
+		def set_speed(self, speed): self.speed = speed
+		def toggle_reverse(self):
+			self.edge = self.edge.reverse
+			self.edge_dist = e_dist[self.edge] - self.edge_dist
+
+	def find_train(train_number):
+		for train in trains:
+			if train.num == train_number:
+				return train
+		train = Train(train_number)
+		trains.append(train)
+		return train
+
+	trains = [Train(12)]
+	def my_draw(da, cr):
+		(typ, a1, a2) = conn.next_cmd()
+		if typ is None: pass
+		elif typ == 'set_speed': find_train(a1).set_speed(a2)
+		elif typ == 'toggle_reverse': find_train(a1).toggle_reverse()
+		elif typ == 'switch': set_switch(a1, a2)
+		else: print "Ignoring command %s" % typ
+		for train in trains:
+			train.update()
+			train.draw(pos, da, cr)
 		da.queue_draw()
+
 	win.connect("delete_event", destroy_callback)
 	win.graph.connect("draw", my_draw)
 	Gtk.main()
 	pickle.dump(pos, open('previous_pos.pickle', 'w'))
-	#game = Game(surface, conn, g, pos, n_title)
-	#game.play_game()
-
-	#pygame.quit()
 
 main()
-#sys.exit(0)
