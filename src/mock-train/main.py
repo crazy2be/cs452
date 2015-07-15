@@ -228,6 +228,7 @@ def main():
 	e_title = g.new_edge_property("string")
 	e_weight = g.new_edge_property("double")
 	v_weight = g.new_vertex_property("double")
+	e_dist = g.new_edge_property("double")
 	import pickle
 	if os.path.isfile('previous_pos.pickle') and len(open('previous_pos.pickle').read()) > 0:
 		pos = g.own_property(pickle.load(open('previous_pos.pickle')))
@@ -255,6 +256,7 @@ def main():
 			if edge.src is None: continue
 			e = g.add_edge(g.vertex(edge.src.i), g.vertex(edge.dest.i))
 			e_weight[e] = 1./(edge.dist**2)
+			e_dist[e] = edge.dist
 			e_title[e] = "%.2f" % (edge.dist)
 
 	#pos = graph_tool.draw.fruchterman_reingold_layout(g, weight=e_weight, pos=previous_pos)
@@ -270,13 +272,28 @@ def main():
 	count_of_draw_calls = [0]
 	K = 1.
 	layout_step = [K]
+	trains = {12: [t[0].edge[0], 100]}
 	def my_draw(da, cr):
 		count_of_draw_calls[0] += 1
 		print "Draw called with ", da, cr
-		cr.rectangle(7, 7, 7, 7)
-		cr.set_source_rgb(102. / 256, 102. / 256, 102. / 256)
-		cr.show_text("HElllo Wold number %d" % count_of_draw_calls[0])
-		cr.fill()
+		for (train, train_pos) in trains.iteritems():
+			e = g.edge(train_pos[0].src.i, train_pos[0].dest.i)
+			# g: graph coordinates, s: screen coordinates, d: device coordinates
+			sstart, send = np.array(pos[e.source()]), np.array(pos[e.target()])
+			#print send, sstart
+			gl = e_dist[e]
+			alpha = train_pos[1] / gl
+			sp = sstart + alpha*(send - sstart)
+			dp = win.graph.pos_to_device(sp)
+			print dp
+			cr.rectangle(dp[0], dp[1], 20, 20)
+			cr.set_source_rgb(102. / 256, 102. / 256, 102. / 256)
+			cr.show_text("HElllo Wold number %d" % count_of_draw_calls[0])
+			cr.fill()
+			train_pos[1] += 10
+			if train_pos[1] > gl:
+				train_pos[0] = train_pos[0].dest.edge[0]
+				train_pos[1] = 0
 		# Uncomment this if the shitty current layout doesn't satisfy and you
 		# want to tweak it. With this enabled, the whole graph will morph you
 		# drag a node, so that you don't have to drag each node individually.
