@@ -28,5 +28,8 @@ struct track_node {
 	node_type type;
 	int num;              /* sensor or switch number */
 	track_node *reverse;  /* same location, but opposite direction */
+	// Provides a planar embedding. This is derived from pixel coords from a photo
+	// so it's only useful for computing relative distance.
+	int coord_x, coord_y;
 	track_edge edge[2];
 };
