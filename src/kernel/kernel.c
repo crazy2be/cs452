@@ -23,7 +23,6 @@ void setup_cache(void) {
 #else
 	flags &= ~FLAG_BITS;
 #endif
-	fputc(COM2_DEBUG, '!');
 	__asm__ __volatile__ ("mcr p15, 0, %0, c1, c0, 0" : : "r"(flags));
 }
 
@@ -59,32 +58,32 @@ void setup(void) {
 	uart_clrerr(COM1);
 	uart_clrerr(COM2);
 
-	fputs(COM2_DEBUG, "Boot");
+	kputs("Boot");
 
 	clear_bss();
-	fputc(COM2_DEBUG, '.');
+	kputc('.');
 
 	setup_irq_table();
-	fputc(COM2_DEBUG, '.');
+	kputc('.');
 
 	await_init();
-	fputc(COM2_DEBUG, '.');
+	kputc('.');
 
 	irq_setup();
-	fputc(COM2_DEBUG, '.');
+	kputc('.');
 
 	setup_cache();
-	fputc(COM2_DEBUG, '.');
+	kputc('.');
 
 	rand_init(0xdeadbeef);
-	fputc(COM2_DEBUG, '.');
+	kputc('.');
 
 	tasks_init();
-	fputc(COM2_DEBUG, '.');
+	kputc('.');
 
 	timer_init();
-	fputc(COM2_DEBUG, '.');
-	fputs(COM2_DEBUG, EOL);
+	kputc('.');
+	kputs(EOL);
 
 }
 
@@ -138,7 +137,9 @@ int boot(void (*init_task)(void), int init_task_priority, int debug) {
 
 		task_check_stack_canary(current_task);
 
+		unsigned old_user_time = current_task->user_time_useconds;
 		current_task->user_time_useconds += ts_after - ts_before;
+		KASSERT(current_task->user_time_useconds >= old_user_time);
 
 		// after returning from that task, save it's place in the task's
 		// task descriptor
@@ -162,6 +163,7 @@ int boot(void (*init_task)(void), int init_task_priority, int debug) {
 		case SYSCALL_SHOULD_IDLE: should_idle_handler(current_task); break;
 		case SYSCALL_IRQ:         irq_handler(current_task);         break;
 		case SYSCALL_HALT:        running = 0;                       break;
+		case SYSCALL_IDLE_PERMILLE: idle_permille_handler(current_task, ts_start); break;
 		default:
 			KASSERT(0 && "UNKNOWN SYSCALL NUMBER");
 			break;

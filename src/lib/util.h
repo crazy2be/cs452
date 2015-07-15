@@ -23,6 +23,7 @@ void exited_main(void);
 
 void sleep(int n);
 void *memset(void *ptr, int value, int num);
+#define memzero(ptr) memset(ptr, 0, sizeof(*(ptr)))
 typedef unsigned size_t;
 void* memcpy(void *dst, const void *src, size_t len);
 
@@ -31,9 +32,14 @@ int strlen(const char *s);
 char* strcpy(char *dst, const char *src);
 int strcmp(const char *a, const char *b);
 int strncmp(const char *a, const char *b, int n);
+unsigned sqrti(unsigned n);
 
 static inline int usermode(void) {
 	unsigned cpsr;
 	__asm__ ("mrs %0, cpsr" : "=r"(cpsr));
 	return (cpsr & 0x1f) == 0x10;
+}
+
+static inline int abs(int a) {
+	return (a < 0) ? -a : a;
 }

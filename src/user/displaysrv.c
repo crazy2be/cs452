@@ -1,14 +1,14 @@
 #include "displaysrv.h"
 #include "signal.h"
-#include "nameserver.h"
+#include "sys.h"
 #include "util.h"
-#include "clockserver.h"
 #include "switch_state.h"
 #include "trainsrv.h"
 #include "track.h"
 
 #include <assert.h>
 #include <kernel.h>
+#include <io.h>
 
 #define TRACK_DISPLAY_WIDTH 58
 #define TRACK_DISPLAY_HEIGHT 25
@@ -18,31 +18,31 @@
 // to representa a train's position
 
 static const char track_repr[TRACK_DISPLAY_HEIGHT][TRACK_DISPLAY_WIDTH] = {
-"    ___________________________________________________  ",
-"             /                \\        \\                 ",
-"            /                  \\        \\                ",
-"        ___/____________________\\___     \\_____________  ",
-"       /                            \\     \\              ",
-"      /                              \\     \\             ",
-"     /    _________________________   \\     \\__________  ",
-"    /    /       \\         /       \\   \\     \\           ",
-"    |   /         \\   |   /         \\   |     \\          ",
-"    |  /           \\  |  /           \\  |      \\         ",
-"    | /             \\ | /             \\ |       |        ",
-"    |/               \\|/               \\|       |        ",
-"    |                 |                 |       |        ",
-"    |                 |                 |       |        ",
-"    |                 |                 |       |        ",
-"    |                 |                 |       |        ",
-"    |                 |                 |       |        ",
-"    |\\               /|\\               /|       |        ",
-"    | \\             / | \\             / |       |        ",
-"    |  \\           /  |  \\           /  |      /         ",
-"    |   \\         /   |   \\         /   |     /          ",
-"    |    \\_______/_________\\_______/   /     /_________  ",
-"     \\                                /     /            ",
-"      \\                              /     /             ",
-"       \\____________________________/_____/____________  "
+	"    ___________________________________________________  ",
+	"             /                \\        \\                 ",
+	"            /                  \\        \\                ",
+	"        ___/____________________\\___     \\_____________  ",
+	"       /                            \\     \\              ",
+	"      /                              \\     \\             ",
+	"     /    _________________________   \\     \\__________  ",
+	"    /    /       \\         /       \\   \\     \\           ",
+	"    |   /         \\   |   /         \\   |     \\          ",
+	"    |  /           \\  |  /           \\  |      \\         ",
+	"    | /             \\ | /             \\ |       |        ",
+	"    |/               \\|/               \\|       |        ",
+	"    |                 |                 |       |        ",
+	"    |                 |                 |       |        ",
+	"    |                 |                 |       |        ",
+	"    |                 |                 |       |        ",
+	"    |                 |                 |       |        ",
+	"    |\\               /|\\               /|       |        ",
+	"    | \\             / | \\             / |       |        ",
+	"    |  \\           /  |  \\           /  |      /         ",
+	"    |   \\         /   |   \\         /   |     /          ",
+	"    |    \\_______/_________\\_______/   /     /_________  ",
+	"     \\                                /     /            ",
+	"      \\                              /     /             ",
+	"       \\____________________________/_____/____________  "
 };
 
 // this doesn't handle the 3-way switches in the middle
@@ -159,7 +159,7 @@ static const struct sensor_display sensor_display_info[] = {
 #define TRAIN_STATUS_X_OFFSET TRACK_X_OFFSET
 #define TRAIN_STATUS_Y_OFFSET (1 + TRACK_DISPLAY_HEIGHT + 1 + 2 + 1)
 #define FEEDBACK_X_OFFSET TRACK_X_OFFSET
-#define FEEDBACK_Y_OFFSET (TRAIN_STATUS_X_OFFSET + 4 + 1)
+#define FEEDBACK_Y_OFFSET (TRAIN_STATUS_Y_OFFSET + 4 + 1)
 #define CONSOLE_X_OFFSET TRACK_X_OFFSET
 #define CONSOLE_Y_OFFSET (FEEDBACK_Y_OFFSET + 2)
 
@@ -203,13 +203,12 @@ static void initial_draw(void) {
 	vbox(1, SCREEN_WIDTH - 2, 0);
 
 	// reset the cursor to where the track is, then print out the right menu
-	printf("\e[%d;%dH", 2, 1);
-	vbox(1, SCREEN_WIDTH - 2 - TRACK_DISPLAY_WIDTH + 1, RIGHT_BAR_X_OFFSET);
+	printf("\e[%d;%dH" VLINE "          " VLINE "          " VLINE EOL, 2, RIGHT_BAR_X_OFFSET + 1);
 	printf("\e[%dC", RIGHT_BAR_X_OFFSET);
 	hline(SCREEN_WIDTH - TRACK_DISPLAY_WIDTH + 1, LTEE, RTEE);
 	puts(EOL);
 	vbox(TRACK_DISPLAY_HEIGHT - 1, SCREEN_WIDTH - 2 - TRACK_DISPLAY_WIDTH + 1,
-		RIGHT_BAR_X_OFFSET);
+	     RIGHT_BAR_X_OFFSET);
 
 	// print out the bar below the track
 	hline(TRACK_DISPLAY_WIDTH, LTEE, UTEE);
@@ -238,11 +237,13 @@ static void initial_draw(void) {
 
 #define MAX_FEEDBACK_LEN 80
 enum displaysrv_req_type { UPDATE_SWITCH, UPDATE_SENSOR, UPDATE_TIME, CONSOLE_INPUT,
-	CONSOLE_BACKSPACE, CONSOLE_CLEAR, CONSOLE_FEEDBACK, QUIT };
+                           CONSOLE_BACKSPACE, CONSOLE_CLEAR, CONSOLE_FEEDBACK, QUIT
+                         };
 
 struct display_train_state {
 	int train_id;
 	struct train_state state;
+	int error;
 };
 
 struct displaysrv_req {
@@ -254,6 +255,7 @@ struct displaysrv_req {
 		} sw;
 		struct {
 			struct sensor_state state;
+			unsigned avg_delay;
 		} sensor;
 		struct {
 			char input;
@@ -309,10 +311,12 @@ static void update_sensor_display(int sensor, int blank) {
 		buf[3] = '\0';
 	}
 	printf("\e[s\e[%d;%dH%s\e[u", coords.y + TRACK_Y_OFFSET,
-		coords.x + TRACK_X_OFFSET, buf);
+	       coords.x + TRACK_X_OFFSET, buf);
 }
 
-static void update_sensor(struct sensor_state *sensors, struct sensor_state *old_sensors, struct sensor_reads *reads) {
+static void update_sensor(struct sensor_state *sensors, struct sensor_state *old_sensors, struct sensor_reads *reads, unsigned delay_time) {
+	// update displayed sensor delay time
+	printf("\e[s\e[%d;%dH%03d\e[u", CLOCK_Y_OFFSET, CLOCK_X_OFFSET + 17, delay_time);
 	for (int i = 0; i < SENSOR_COUNT; i += 2) {
 		int s1 = sensor_get(sensors, i);
 		int s2 = sensor_get(sensors, i + 1);
@@ -355,8 +359,8 @@ static void update_single_2switch(int sw, enum sw_direction pos) {
 			last_x += (disp.cr == '/') ? 1 : -1;
 		}
 		printf("\e[s\e[%d;%dH\e[1;31m%c\e[0m\e[%d;%dH%c\e[u",
-			current_y + TRACK_Y_OFFSET, current_x + TRACK_X_OFFSET, switch_char,
-			last_y + TRACK_Y_OFFSET, last_x + TRACK_X_OFFSET, filler_char);
+		       current_y + TRACK_Y_OFFSET, current_x + TRACK_X_OFFSET, switch_char,
+		       last_y + TRACK_Y_OFFSET, last_x + TRACK_X_OFFSET, filler_char);
 	} else {
 		//ASSERT(0 && "Unknown switch number");
 	}
@@ -398,9 +402,9 @@ static void update_single_3switch(int first_switch, enum sw_direction s1, enum s
 		b2y = coords->ry;
 	}
 	printf("\e[s\e[%d;%dH\e[1;31m%c\e[0m\e[%d;%dH \e[%d;%dH \e[u",
-		ty + TRACK_Y_OFFSET, tx + TRACK_X_OFFSET, switch_char,
-		b1y + TRACK_Y_OFFSET, b1x + TRACK_X_OFFSET,
-		b2y + TRACK_Y_OFFSET, b2x + TRACK_Y_OFFSET);
+	       ty + TRACK_Y_OFFSET, tx + TRACK_X_OFFSET, switch_char,
+	       b1y + TRACK_Y_OFFSET, b1x + TRACK_X_OFFSET,
+	       b2y + TRACK_Y_OFFSET, b2x + TRACK_Y_OFFSET);
 
 }
 
@@ -429,16 +433,22 @@ static void update_time(unsigned millis) {
 	seconds %= 60;
 	minutes %= 60;
 
-	printf("\e[s\e[%d;%dH%02d:%02d:%d\e[u", CLOCK_Y_OFFSET, CLOCK_X_OFFSET, minutes, seconds, tenths);
+	int idle = idle_permille();
+	int idle_whole = idle / 10;
+	int idle_decimal = idle % 10;
+
+	printf("\e[s\e[%d;%dH%02d:%02d:%d " VLINE " %02d.%d%% " VLINE "\e[u",
+			CLOCK_Y_OFFSET, CLOCK_X_OFFSET - 1, minutes, seconds, tenths,
+			idle_whole, idle_decimal);
 }
 
 static void update_train_states(int active_trains, struct display_train_state *active_train_states,
-		const struct switch_state *switches) {
+                                const struct switch_state *switches) {
 
 	puts("\e[s");
 	for (int i = 0; i < active_trains; i++) {
 		const int row = i % 4;
-		const int col = i / 2;
+		const int col = i / 4;
 
 		const int term_row = TRAIN_STATUS_X_OFFSET + col * ((SCREEN_WIDTH - 2) / 2);
 		const int term_col = TRAIN_STATUS_Y_OFFSET + row;
@@ -446,21 +456,24 @@ static void update_train_states(int active_trains, struct display_train_state *a
 		const int train_id = active_train_states[i].train_id;
 
 		if (position_is_uninitialized(&active_train_states[i].state.position)) {
-				printf("\e[%d;%dHTrain %d, position unknown",
-				term_col, term_row, train_id);
+			printf("\e[%d;%dHTrain %d, position unknown",
+			       term_col, term_row, train_id);
 		} else {
 			const int displacement = active_train_states[i].state.position.displacement;
 			const char *pos_name = active_train_states[i].state.position.edge->src->name;
 			const int velocity = active_train_states[i].state.velocity;
+			const int stopping_distance = trains_get_stopping_distance(train_id);
+			const int error = active_train_states[i].error;
 
-			int distance_to_next = -1;
-			const struct track_node *next_node = active_train_states[i].state.position.edge->src;
-			next_node = track_next_sensor(active_train_states[i].state.position.edge->src, switches, &distance_to_next);
-
-			printf("\e[%d;%dHTrain %d, %d mm past %s, vel %d, %d to %s",
-				term_col, term_row, train_id, displacement, pos_name, velocity,
-				distance_to_next - displacement, next_node->name);
-
+			char buf[78];
+			int len = snprintf(buf, sizeof(buf), "\e[%d;%dHTrain %d, %d mm past %s, vel %d, %d to stop, %d error",
+			       term_col, term_row, train_id, displacement, pos_name, velocity,
+			       stopping_distance, error);
+			while (len < 78) {
+				buf[len] = ' ';
+				len++;
+			}
+			fput_buf(buf, sizeof(buf), COM2);
 		}
 	}
 	puts("\e[u");
@@ -475,9 +488,10 @@ static void console_backspace(void) {
 }
 
 static void console_feedback(char *fb) {
+	puts("\e[s");
 	clear_line(FEEDBACK_Y_OFFSET);
 	puts(fb);
-	reset_console_cursor();
+	puts("\e[u");
 }
 
 static void console_clear(void) {
@@ -500,12 +514,15 @@ static void clock_update_task(void) {
 			const int train_id = active_trains_ids[i];
 			active_train_states[i].train_id = train_id;
 			trains_query_spatials(train_id, &active_train_states[i].state);
+			active_train_states[i].error = trains_query_error(train_id);
 		}
 
 		displaysrv_update_time(displaysrv, ticks * 10, active_trains, active_train_states);
 	}
 }
-void ptid(void) { printf("Displayserver tid: %d"EOL, tid()); }
+void ptid(void) {
+	printf("Displayserver tid: %d"EOL, tid());
+}
 void displaysrv_start(void) {
 	register_as(DISPLAYSRV_NAME);
 	ptid();
@@ -524,16 +541,16 @@ void displaysrv_start(void) {
 	int tid;
 
 	for (;;) {
-		ASSERT(receive(&tid, &req, sizeof(req)) > 0);
+		receive(&tid, &req, sizeof(req));
 		// requests are fire and forget, and provide no feedback
-		ASSERT(reply(tid, NULL, 0) == REPLY_SUCCESSFUL);
+		reply(tid, NULL, 0);
 
 		switch (req.type) {
 		case UPDATE_SWITCH:
 			update_switch(&req.data.sw.state, &old_switches);
 			break;
 		case UPDATE_SENSOR:
-			update_sensor(&req.data.sensor.state, &old_sensors, &sensor_reads);
+			update_sensor(&req.data.sensor.state, &old_sensors, &sensor_reads, req.data.sensor.avg_delay);
 			break;
 		case UPDATE_TIME:
 			update_time(req.data.time.millis);
@@ -564,14 +581,14 @@ void displaysrv_start(void) {
 void displaysrv(void) {
 	int tid = create(HIGHER(PRIORITY_MIN, 1), displaysrv_start);
 	// block until displaysrv has registered itself with the nameserver
-	ASSERT(signal_send(tid) == 0);
+	signal_send(tid);
 }
 
 // external interface to displaysrv
 
 static void displaysrv_send(int displaysrv, enum displaysrv_req_type type, struct displaysrv_req *req) {
 	req->type = type;
-	ASSERTOK(send(displaysrv, req, sizeof(*req), NULL, 0));
+	send(displaysrv, req, sizeof(*req), NULL, 0);
 }
 
 void displaysrv_console_input(int displaysrv, char c) {
@@ -597,9 +614,10 @@ void displaysrv_console_feedback(int displaysrv, char *fb) {
 	displaysrv_send(displaysrv, CONSOLE_FEEDBACK, &req);
 }
 
-void displaysrv_update_sensor(int displaysrv, struct sensor_state *state) {
+void displaysrv_update_sensor(int displaysrv, struct sensor_state *state, unsigned avg_delay) {
 	struct displaysrv_req req;
 	req.data.sensor.state = *state;
+	req.data.sensor.avg_delay = avg_delay;
 	displaysrv_send(displaysrv, UPDATE_SENSOR, &req);
 }
 

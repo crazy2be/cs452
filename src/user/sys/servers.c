@@ -1,7 +1,4 @@
-#include "servers.h"
-#include "nameserver.h"
-#include "clockserver.h"
-#include <io_server.h>
+#include "../sys.h"
 #include <kernel.h>
 
 void start_servers(void) {

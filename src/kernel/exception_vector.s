@@ -8,38 +8,39 @@ b undefined_instruction @ Undefined Instruction
 b enter_kernel          @ Software Interrupt
 b prefetch_abort        @ Prefetch abort (invalid instruction?)
 b data_abort            @ Data abort (invalid memory access?)
-b .              @ Reserved
-b enter_kernel_irq   @ IRQ
-b .              @ FRQ
+b .                     @ Reserved
+b enter_kernel_irq      @ IRQ
+b .                     @ FRQ
 
-.align 8
-press_key: @ Waits for the user to press a key
-	stmfd sp!, {lr}
-	loop1:
-		mov r0, #1 @ COM2
-		bl uart_canread
-		cmp r0, #0
-		beq loop1 @ No character
-	mov r0, #1 @ COM2
-	bl uart_read
-	ldmfd sp!, {lr}
-
-.align 8
-puts: @ Local utility "function". Put string to put in r1
+put: @ Local utility "function". Put string to put in r1
 	stmfd sp!, {lr}
 	mov r0, #2 @ COM2_DEBUG
 	bl fprintf
 	ldmfd sp!, {pc}
 
-.align 8
-undefined_instruction:
-prefetch_abort:
-data_abort:
-	stmfd sp!, {r4-r11, r14}
+.macro exception_occured_m msg
+	stmfd sp!, {r0-r12, r14, r15} @ All but sp
+	ldr r1, =\msg
+	bl put
 	ldr r1, =bsod_string
-	bl puts
-	bl press_key
-	ldmfd sp!, {r4-r11, r15} @ TODO: Should we exit here, instead?
+	bl put
+	b .
+.endm
+
+.align
+.globl undefined_instruction
+undefined_instruction: exception_occured_m undefined_instruction_msg
+.align
+.globl prefetch_abort
+prefetch_abort: exception_occured_m prefetch_abort_msg
+.align
+.globl data_abort
+data_abort: exception_occured_m data_abort_msg
+
+.data
+undefined_instruction_msg: .ascii "Undefined instruction!\0"
+prefetch_abort_msg: .ascii "Prefetch abort!\0"
+data_abort_msg: .ascii "Data abort!\0"
 
 bsod_string:
 @ TODO: This error message should be more specific, I think ARM gives us a

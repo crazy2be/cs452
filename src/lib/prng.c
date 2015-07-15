@@ -40,11 +40,8 @@ unsigned prng_gen(struct prng *g) {
 	return y;
 }
 
-void prng_gens(struct prng *g, char *buf, unsigned len) {
+void prng_gen_buf(struct prng *g, char *buf, unsigned len) {
 	if (len == 0) return;
-	buf[len--] = '\0';
-	if (len == 0) return;
-
 	for (;;) {
 		unsigned rand = prng_gen(g);
 		switch (len % 4) {

@@ -1,0 +1,83 @@
+\subsection{Installation}\label{installation}
+
+On the student cs environment, simply run
+\texttt{make ENV=ts7200 KIND=t install}. This will place the compiled
+kernel in \texttt{/u/cs452/tftp/ARM/\$(USER)/t.elf} (where
+\texttt{\$(USER)} is whatever your username is on the computer which you
+are compiling it). You can then load this kernel from redboot using
+\texttt{load -b 0x00218000 -h 10.15.167.5 "ARM/\$(USER)/t.elf"}.
+
+Note that this depends on a toolchain installed in my home directory,
+\texttt{/u1/jmcgirr/arm-toolchain}. This is curretly world-readable, so
+it should work regardless of who is trying to run the Makefile, but
+please do let us know if you encounter any issues!
+
+\subsection{Emulator}\label{emulator}
+
+You can run the OS on an emulated arm CPU via
+\texttt{make ENV=qemu KIND=t qemu-run}. In order for this to complete
+successfully, you will need:
+
+\begin{itemize}
+\itemsep1pt\parskip0pt\parsep0pt
+\item
+  A local install of QEMU
+\item
+  A local install of an arm-none-eabi toolchain
+\end{itemize}
+
+\subsection{Tests}\label{tests}
+
+The provided kernel has some basic tests, which you can run with
+\texttt{make qemu-test}. (this depends on the emulator, above).
+
+\subsection{Debugging}\label{debugging}
+
+If something goes wrong and you want to investigate deeper, you can run
+\texttt{make qemu-start} in one terminal (this starts qemu in a
+suspended state), and then \texttt{make qemu-debug} in another. You can
+then set breakpoints, step, inspect memory, etc- anything you can
+normally do with gdb.
+
+\subsection{Special Instructions}\label{special-instructions}
+
+Before running the program on the TS7200, it is necessary to reset both
+the TS7200 and the train controller, to avoid messy state left behind by
+previous runs. In particular, this has been known to cause bugs with the
+sensor reads, where garbage data left in the UART is picked up, and
+misinterpreted.
+
+\subsection{Commands}\label{commands}
+
+\begin{itemize}
+\itemsep1pt\parskip0pt\parsep0pt
+\item
+  \texttt{tr \textless{}train number\textgreater{} \textless{}speed\textgreater{}}
+  sets the speed of a train.
+\item
+  \texttt{sw \textless{}switch number\textgreater{} (c\textbar{}s)} sets
+  a the position of a switch to curved or straight.
+\item
+  \texttt{bsw (c\textbar{}s)} bulk set all switches to the given
+  configuration (curved or straight).
+\item
+  \texttt{rv \textless{}train number\textgreater{}} reverses a train.
+\item
+  \texttt{stp \textless{}train number\textgreater{} \textless{}node name\textgreater{} {[}\textless{}edge\textgreater{}{]} \textless{}displacement\textgreater{}}
+  stops the train at the given node, or offset thereof. I.e.
+  \texttt{stp 63 E8 0} would stop train 63 right on top of sensor E8. If
+  \texttt{\textless{}edge\textgreater{}} is specified, it denotes which
+  edge the offset is along (i.e.~for a branch node).
+\item
+  \texttt{bisect \textless{}train number\textgreater{}} performs
+  bisection to calibrate the stopping distance for
+  \texttt{\textless{}train number\textgreater{}}, exiting automatically
+  after 5 iterations.
+\item
+  \texttt{q} exits the program.
+\end{itemize}
+
+The positions of each switch is shown in the ASCII-art map of the train
+track. When a sensor is tripped, it is shown both on the ASCII-art map
+for as long as it is tripped, as well as to the right, on the list of
+recently-fired sensors.

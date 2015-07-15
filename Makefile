@@ -10,8 +10,11 @@ LIB_SRC_DIR=$(SRC_DIR)/lib
 
 BENCHMARK_FLAGS = -DBENCHMARK_CACHE -DBENCHMARK_SEND_FIRST -DBENCHMARK_MSG_SIZE=64
 
-CFLAGS  = -g -fPIC -Wall -Werror -Iinclude -I$(SRC_DIR)/lib -std=c99 -O2 $(BENCHMARK_FLAGS) \
-		  -fno-builtin-puts -fno-builtin-fputs -fno-builtin-fputc -fno-builtin-putc -fverbose-asm
+STACK_SEED = $(shell date +%N)
+CFLAGS  = -g -fPIC -Wall -Werror -I$(SRC_DIR)/lib -std=c99 -O2 \
+	$(BENCHMARK_FLAGS) \
+	-fno-builtin-puts -fno-builtin-fputs -fno-builtin-fputc -fno-builtin-putc \
+	-fverbose-asm -DSTACK_SEED=$(STACK_SEED)
 ARCH_CFLAGS = -mcpu=arm920t -msoft-float
 # -g: include hooks for gdb
 # -mcpu=arm920t: generate code for the 920t architecture
@@ -26,6 +29,12 @@ KERNEL_BIN = $(BUILD_DIR)/kernel.bin
 
 TEST_ELF = $(BUILD_DIR)/test_kernel.elf
 TEST_BIN = $(BUILD_DIR)/test_kernel.bin
+
+CFLAGS += -DTRACKA
+
+ifeq ($(TYPE),c)
+CFLAGS += -DCALIBRATE
+endif
 
 # try to autodetect environment
 ifeq ($(ENV),)
@@ -110,6 +119,26 @@ UNITY_SOURCE = $(BUILD_DIR)/unity.c
 UNITY_OBJ = $(UNITY_SOURCE:.c=.o)
 UNITY_DEPEND = $(UNITY_SOURCE:.c=.d)
 
+# whenever we change these flags, we want to rebuild
+FLAGS = $(ENV) $(TYPE)
+# we write the last flags we had to the file, and make that file a dependency
+# of everything else. whenever we write to the file, it will cause everything else
+# to need to be rebuilt
+FLAGFILE = $(BUILD_DIR)/flags
+$(shell mkdir -p $(DIRS))
+
+ifeq ($(wildcard $(FLAGFILE)), )
+# create the file if it doesn't exist (which will cause a rebuild)
+# don't use the file command, since it apparently doesn't work in the student environment
+$(shell echo $(FLAGS) > $(FLAGFILE))
+else
+ifneq ($(strip $(shell cat $(FLAGFILE))), $(strip $(FLAGS))) # check if the file doesn't match
+# if the contents of the file doesn't match our current flags, write to the
+# file, which will cause a rebuild
+$(shell echo $(FLAGS) > $(FLAGFILE))
+endif
+endif
+
 $(KERNEL_BIN) $(TEST_BIN): %.bin : %.elf
 	arm-none-eabi-objcopy -O binary $< $@
 
@@ -138,11 +167,8 @@ $(GENERATED_ASSEMBLY): $(BUILD_DIR)/%.s : $(SRC_DIR)/%.c
 	$(CC) $(CFLAGS) $(ARCH_CFLAGS) -S -MD -MT $@ -o $@ $<
 
 # assemble the generated assembly
-$(C_OBJECTS): $(BUILD_DIR)/%.o : $(BUILD_DIR)/%.s
+$(OBJECTS): $(BUILD_DIR)/%.o : $(BUILD_DIR)/%.s
 	$(AS) $(ASFLAGS) -o $@ $<
-
-# generate build directories before starting build
-$(C_OBJECTS) $(GENERATED_ASSEMBLY) $(UNITY_SOURCE): | $(DIRS)
 
 $(GENERATED_ASSEMBLY): $(GENERATED_SOURCES)
 
@@ -150,11 +176,8 @@ $(GENERATED_SOURCES): $(KERNEL_SRC_DIR)/syscall.py
 	mkdir -p $(GEN_SRC_DIR)
 	python $< $(GEN_SRC_DIR)
 
-$(DIRS):
-	@mkdir -p $@
-
-# regenerate everything after the makefile changes
-$(ASM_OBJECTS) $(GENERATED_ASSEMBLY): $(MAKEFILE_NAME)
+# regenerate everything after the makefile or flags change
+$(GENERATED_ASSEMBLY) $(ASM_OBJECTS) $(UNITY_SOURCE): $(MAKEFILE_NAME) $(FLAGFILE)
 
 # this generates a "unity compile" for the main kernel/user program
 # this is admittedly pretty gross, but helps the compiler optimize things better
@@ -169,7 +192,7 @@ $(UNITY_OBJ): $(UNITY_SOURCE) $(GENERATED_SOURCES)
 clean:
 	rm -rf $(BUILD_DIR) $(GEN_SRC_DIR)
 
-ELF_DESTINATION = /u/cs452/tftp/ARM/$(USER)/k.elf
+ELF_DESTINATION = /u/cs452/tftp/ARM/$(USER)/$(TYPE).elf
 install: $(KERNEL_ELF)
 	cp $< $(ELF_DESTINATION)
 	chmod a+r $(ELF_DESTINATION)
@@ -198,8 +221,13 @@ sync-clean:
 	ssh uw "rm -rf cs452-kernel"
 
 sync:
-	rsync -avzd --exclude /build --exclude /.git --exclude /writeup . uw:cs452-kernel/
-	ssh uw "bash -c 'cd cs452-kernel && make -j4 ENV=arm920t install'"
+	rsync -avzd --exclude /build --exclude vid --exclude vid2 --exclude vid3 --exclude /.git --exclude /writeup . uw:cs452-kernel/
+
+rt: sync
+	ssh uw "bash -c 'cd cs452-kernel && make -j4 ENV=arm920t TYPE=t install'"
+
+rc: sync
+	ssh uw "bash -c 'cd cs452-kernel && make -j4 ENV=arm920t TYPE=c install'"
 
 all: $(KERNEL_ELF)
 
@@ -210,13 +238,12 @@ TEST_COM2_EXPECTED=scripts/test_com2_expected
 
 test: $(TEST_BIN)
 	./scripts/qemu_capture $(TEST_BIN) $(TEST_ELF) $(TEST_COM1_OUTPUT) $(TEST_COM2_OUTPUT)
-	diff -y $(TEST_COM1_EXPECTED) $(TEST_COM1_OUTPUT)
-	diff -y $(TEST_COM2_EXPECTED) $(TEST_COM2_OUTPUT)
+	diff --text -y $(TEST_COM1_EXPECTED) $(TEST_COM1_OUTPUT)
+	diff --text -y $(TEST_COM2_EXPECTED) $(TEST_COM2_OUTPUT)
 
 format:
 	astyle -R --style=java --keep-one-line-statements --suffix=none \
-		--indent=tab \
-		'kernel/*.c' 'kernel/*.h' 'user/*.c' 'user/*.h' 'test/*.c'
+		--indent=tab 'src/*.c' 'src/*.h'
 
 .PHONY: clean qemu-run qemu-debug default install format
 

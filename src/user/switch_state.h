@@ -11,13 +11,13 @@ struct switch_state {
 // simplify dealing with the tri-state switches on the track
 enum sw_direction { STRAIGHT, CURVED };
 
-#define SWITCH_COUNT 22
+#define SWITCH_COUNT ((18 - 1 + 1) + (156 - 145 + 1))
 
 static inline int switch_packed_num(int num) {
 	if (1 <= num && num <= 18) {
 		return num;
-	} else if (153 <= num && num <= 156) {
-		return num - 153 + 18 + 1;
+	} else if (145 <= num && num <= 156) {
+		return num - 145 + 18 + 1;
 	} else {
 		ASSERT(0 && "Unknown switch number");
 		return -1;

@@ -1,5 +1,4 @@
 #include "irq.h"
-#include <io_server.h>
 
 // TS7200 has 64 possible interrupts, where as we only support the first 32
 // on versatile PB. Depending on which specific interrupts we need to listen
@@ -17,17 +16,6 @@
 #define SOFTINT_OFFSET 0x18
 #define SOFTINT_CLEAR_OFFSET 0x1c
 #endif
-
-void dump_irq(void) {
-#ifdef QEMU
-#else
-	volatile unsigned* data = (unsigned*) VIC1_BASE;
-	for (unsigned i = 0; i < 32; i++) {
-		kprintf("%x ", data[i]);
-	}
-	kprintf(EOL);
-#endif
-}
 
 void irq_setup(void) {
 	// TODO: see A.2.6.8 in the arm manual
@@ -61,12 +49,12 @@ void irq_setup(void) {
 // intended to be called after the shutdown of the kernel, so as not to mess with redboot
 void irq_cleanup(void) {
 #ifndef QEMU
-    VWRITE(VIC1_BASE + ENABLE_OFFSET, 0);
-    VWRITE(VIC2_BASE + ENABLE_OFFSET, 0);
+	VWRITE(VIC1_BASE + ENABLE_OFFSET, 0);
+	VWRITE(VIC2_BASE + ENABLE_OFFSET, 0);
 #else
-    VWRITE(0x10140010, 0);
+	VWRITE(0x10140010, 0);
 #endif
-    __asm__ __volatile__ ("msr cpsr_c, #0x13");
+	__asm__ __volatile__ ("msr cpsr_c, #0x13");
 }
 
 unsigned long long irq_get_interrupt(void) {

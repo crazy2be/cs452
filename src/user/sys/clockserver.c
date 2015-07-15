@@ -1,7 +1,7 @@
 #include "clockserver.h"
 #include "nameserver.h"
-#include "request_type.h"
-#include "min_heap.h"
+#include "../request_type.h"
+#include "../min_heap.h"
 
 #include <kernel.h>
 #include <assert.h>
@@ -53,9 +53,11 @@ void clockserver(void) {
 			break;
 		case DELAY:
 			//printf("Clockserver got delay %d"EOL, req.ticks);
+			ASSERTF(req.ticks >= 0, "%d", req.ticks);
 			min_heap_push(&delayed, num_ticks + req.ticks, tid);
 			break;
 		case DELAY_UNTIL:
+			ASSERTF(req.ticks >= 0, "%d", req.ticks);
 			min_heap_push(&delayed, req.ticks, tid);
 			break;
 		case TIME:
@@ -74,38 +76,28 @@ void clockserver(void) {
 
 static int clockserver_tid(void) {
 	static int cs_tid = -1;
-	if (cs_tid < 0) {
-		cs_tid = whois("clockserver");
-	}
+	if (cs_tid < 0) cs_tid = whois("clockserver");
 	return cs_tid;
 }
-
-static int clockserver_send(struct clockserver_request *req) {
-	int rpy, l;
-	ASSERTOK(l = send(clockserver_tid(), req, sizeof(*req), &rpy, sizeof(rpy)));
-	if (l != sizeof(rpy)) return l;
+static int csend(struct clockserver_request req) {
+	int rpy = -1;
+	send(clockserver_tid(), &req, sizeof(req), &rpy, sizeof(rpy));
 	return rpy;
 }
-
 int delay(int ticks) {
-	struct clockserver_request req = (struct clockserver_request) {
+	return csend((struct clockserver_request) {
 		.type = DELAY,
 		 .ticks = ticks,
-	};
-	return clockserver_send(&req);
+	});
 }
-
 int time() {
-	struct clockserver_request req = (struct clockserver_request) {
+	return csend((struct clockserver_request) {
 		.type = TIME,
-	};
-	return clockserver_send(&req);
+	});
 }
-
 int delay_until(int ticks) {
-	struct clockserver_request req = (struct clockserver_request) {
+	return csend((struct clockserver_request) {
 		.type = DELAY_UNTIL,
 		 .ticks = ticks,
-	};
-	return clockserver_send(&req);
+	});
 }

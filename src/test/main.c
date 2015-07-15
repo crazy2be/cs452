@@ -7,7 +7,9 @@
 #include <util.h>
 
 #include "min_heap.h"
-#include "../user/servers.h"
+#include "track_test.h"
+
+#include "../user/sys.h"
 #include "../user/signal.h"
 #include "../user/trainsrv.h"
 
@@ -36,7 +38,36 @@ void memcpy_tests(void) {
 			}
 		}
 	}
+}
 
+void memset_tests(void) {
+	const unsigned bufsz = 80;
+	unsigned char buf[bufsz];
+	const char init = '\0';
+	const char filler = '@';
+
+	for (int lo = 0; lo < bufsz; lo++) {
+		for (int hi = lo; hi < bufsz; hi++) {
+			int len = hi - lo + 1;
+
+			// naive memset to clear out the memory
+			for (int i = 0; i < bufsz; i++) buf[i] = init;
+
+			memset(buf + lo, filler, len);
+			for (int i = 0; i < bufsz; i++) {
+				const char expected = (lo <= i && i <= hi) ? filler : init;
+				ASSERTF(buf[i] == expected, "buf[%d] = %d != %d", i, buf[i], expected);
+			}
+		}
+	}
+}
+
+void sqrti_tests(void) {
+	for (unsigned n = 0; n < 1000; n++) {
+		unsigned m = sqrti(n);
+		ASSERT(m * m <= n);
+		ASSERT((m+1) * (m+1) > n);
+	}
 }
 
 void lssb_tests(void) {
@@ -72,7 +103,7 @@ void sending_task(void) {
 		msg.a = i * 4;
 		msg.b = i * 17 + 128;
 
-		ASSERT(send(receiving_tid, &msg, sizeof(msg), &rep, sizeof(rep)) == sizeof(rep));
+		ASSERT(try_send(receiving_tid, &msg, sizeof(msg), &rep, sizeof(rep)) == sizeof(rep));
 		ASSERT(rep.sum == msg.a + msg.b);
 		ASSERT(rep.prod == msg.a * msg.b);
 	}
@@ -85,12 +116,12 @@ void receiving_task(void) {
 		struct Reply rep;
 		int tid;
 
-		ASSERT(receive(&tid, &msg, sizeof(msg)) == sizeof(msg));
+		ASSERT(try_receive(&tid, &msg, sizeof(msg)) == sizeof(msg));
 
 		rep.sum = msg.a + msg.b;
 		rep.prod = msg.a * msg.b;
 
-		ASSERT(reply(tid, &rep, sizeof(rep)) == REPLY_SUCCESSFUL);
+		reply(tid, &rep, sizeof(rep));
 	}
 	printf("Receive done" EOL);
 	signal_send(parent_tid());
@@ -100,21 +131,21 @@ void misbehaving_sending_task(void) {
 	struct Msg msg;
 	struct Reply rep;
 
-	// check sending to impossible tasks
-	ASSERT(send(-6, &msg, sizeof(msg), &rep, sizeof(rep)) == SEND_IMPOSSIBLE_TID);
-	ASSERT(send(267, &msg, sizeof(msg), &rep, sizeof(rep)) == SEND_INVALID_TID);
-	ASSERT(send(254, &msg, sizeof(msg), &rep, sizeof(rep)) == SEND_INVALID_TID);
-	ASSERT(send(tid(), &msg, sizeof(msg), &rep, sizeof(rep)) == SEND_INVALID_TID);
+	// check try_sending to impossible tasks
+	ASSERT(try_send(-6, &msg, sizeof(msg), &rep, sizeof(rep)) == SEND_IMPOSSIBLE_TID);
+	ASSERT(try_send(267, &msg, sizeof(msg), &rep, sizeof(rep)) == SEND_INVALID_TID);
+	ASSERT(try_send(254, &msg, sizeof(msg), &rep, sizeof(rep)) == SEND_INVALID_TID);
+	ASSERT(try_send(tid(), &msg, sizeof(msg), &rep, sizeof(rep)) == SEND_INVALID_TID);
 
 	int child = create(PRIORITY_MAX, nop);
-	// the child should exit immediately, so we shouldn't be able to send to it
-	ASSERT(send(child, &msg, sizeof(msg), &rep, sizeof(rep)) == SEND_INVALID_TID);
+	// the child should exit immediately, so we shouldn't be able to try_send to it
+	ASSERT(try_send(child, &msg, sizeof(msg), &rep, sizeof(rep)) == SEND_INVALID_TID);
 
-	ASSERT(send(misbehaving_receiving_tid, &msg, sizeof(msg), &rep, sizeof(rep)) == sizeof(rep));
+	ASSERT(try_send(misbehaving_receiving_tid, &msg, sizeof(msg), &rep, sizeof(rep)) == sizeof(rep));
 
-	// the other task should exit before we have a chance to send
-	ASSERT(send(misbehaving_receiving_tid, &msg, sizeof(msg), &rep, sizeof(rep)) == SEND_INCOMPLETE);
-	printf("Misbehaving send done" EOL);
+	// the other task should exit before we have a chance to try_send
+	ASSERT(try_send(misbehaving_receiving_tid, &msg, sizeof(msg), &rep, sizeof(rep)) == SEND_INCOMPLETE);
+	printf("Misbehaving try_send done" EOL);
 
 	signal_send(parent_tid());
 }
@@ -123,25 +154,25 @@ void misbehaving_receiving_task(void) {
 	struct Msg msg;
 	struct Reply rep;
 
-	ASSERT(reply(-6, &rep, sizeof(rep)) == REPLY_IMPOSSIBLE_TID);
-	ASSERT(reply(267, &rep, sizeof(rep)) == REPLY_INVALID_TID);
-	ASSERT(reply(254, &rep, sizeof(rep)) == REPLY_INVALID_TID);
-	ASSERT(reply(tid(), &rep, sizeof(rep)) == REPLY_INVALID_TID);
+	ASSERT(try_reply(-6, &rep, sizeof(rep)) == REPLY_IMPOSSIBLE_TID);
+	ASSERT(try_reply(267, &rep, sizeof(rep)) == REPLY_INVALID_TID);
+	ASSERT(try_reply(254, &rep, sizeof(rep)) == REPLY_INVALID_TID);
+	ASSERT(try_reply(tid(), &rep, sizeof(rep)) == REPLY_INVALID_TID);
 
-	int child = create(PRIORITY_MAX, nop);
-	// the child should exit immediately, so we shouldn't be able to reply to it
-	ASSERT(reply(child, &rep, sizeof(rep)) == REPLY_INVALID_TID);
+	int child = try_create(PRIORITY_MAX, nop);
+	// the child should exit immediately, so we shouldn't be able to try_reply to it
+	ASSERT(try_reply(child, &rep, sizeof(rep)) == REPLY_INVALID_TID);
 
-	child = create(PRIORITY_MIN, nop);
-	// we shouldn't be able to reply to somebody that hasn't sent a message to us
+	child = try_create(PRIORITY_MIN, nop);
+	// we shouldn't be able to try_reply to somebody that hasn't sent a message to us
 	// to do this test, we rely on the child not scheduling before us
-	ASSERT(reply(child, &rep, sizeof(rep)) == REPLY_UNSOLICITED);
+	ASSERT(try_reply(child, &rep, sizeof(rep)) == REPLY_UNSOLICITED);
 
 	int tid;
-	ASSERT(receive(&tid, &msg, sizeof(msg)) == sizeof(msg));
-	ASSERT(reply(tid, &rep, sizeof(rep) + 1) == REPLY_TOO_LONG);
-	ASSERT(reply(tid, &rep, sizeof(rep)) == REPLY_SUCCESSFUL);
-	printf("Misbehaving receive done" EOL);
+	ASSERT(try_receive(&tid, &msg, sizeof(msg)) == sizeof(msg));
+	ASSERT(try_reply(tid, &rep, sizeof(rep) + 1) == REPLY_TOO_LONG);
+	ASSERT(try_reply(tid, &rep, sizeof(rep)) == REPLY_SUCCESSFUL);
+	printf("Misbehaving try_receive done" EOL);
 
 	signal_send(parent_tid());
 }
@@ -163,7 +194,8 @@ void hashtable_tests(void) {
 	const unsigned seed = 0xab32719c;
 	prng_init(&gen, seed);
 	for (i = 0; i < reps; i++) {
-		prng_gens(&gen, buf, MAX_KEYLEN + 1);
+		prng_gen_buf(&gen, buf, sizeof(buf));
+		buf[sizeof(buf) - 1] = '\0';
 
 		// assert that there are no collisions with our key generation
 		ASSERT(HASHTABLE_KEY_NOT_FOUND == hashtable_get(&ht, buf, &val));
@@ -173,7 +205,8 @@ void hashtable_tests(void) {
 
 	prng_init(&gen, seed);
 	for (i = 0; i < reps; i++) {
-		prng_gens(&gen, buf, MAX_KEYLEN + 1);
+		prng_gen_buf(&gen, buf, sizeof(buf));
+		buf[sizeof(buf) - 1] = '\0';
 
 		ASSERT(HASHTABLE_SUCCESS == hashtable_get(&ht, buf, &val));
 		ASSERT(i == val);
@@ -186,12 +219,15 @@ void init_task(void) {
 	lssb_tests();
 	hashtable_tests();
 	memcpy_tests();
+	memset_tests();
+	sqrti_tests();
 	min_heap_tests();
+	track_tests();
 	ASSERT(1);
-	ASSERT(create(-1, child) == CREATE_INVALID_PRIORITY);
-	ASSERT(create(32, child) == CREATE_INVALID_PRIORITY);
+	ASSERT(try_create(-1, child) == CREATE_INVALID_PRIORITY);
+	ASSERT(try_create(32, child) == CREATE_INVALID_PRIORITY);
 
-	while (create(PRIORITY_MIN, &nop) < 255);
+	while (try_create(PRIORITY_MIN, &nop) < 255);
 
 	stop_servers();
 }
@@ -214,12 +250,12 @@ void message_suite(void) {
 void io_suite(void) {
 	char buf[120];
 	start_servers();
-	fputs(COM1, "Hello COM1" EOL);
+	fputs("Hello COM1" EOL, COM1);
 	fprintf(COM1, "Hello COM1 9000 = %d, 0 = %d, -1 = %d or %u, 117 = %d, 0x7f = 0x%x, hello = %s" EOL,
-			9000, 0, -1, -1, 117, 0x7f, "hello");
+	        9000, 0, -1, -1, 117, 0x7f, "hello");
 	ASSERT(87 == snprintf(buf, sizeof(buf), "Hello COM1 9 = %d, 0 = %d, -1 = %d or %u, 117 = %d, 0x7f = 0x%x, hello = %s" EOL,
-		9, 0, -1, -1, 117, 0x7f, "hello"));
-	fputs(COM1, buf);
+	                      9, 0, -1, -1, 117, 0x7f, "hello"));
+	fputs(buf, COM1);
 
 	ASSERT(4 == snprintf(buf, sizeof(buf), "1234"));
 
@@ -229,18 +265,18 @@ void io_suite(void) {
 	ASSERT(16 == snprintf(buf, 8, "123%d56%d890ABCDEF", 4, 7));
 	ASSERT(strcmp(buf, "1234567") == 0);
 
-	fputs(COM2, "Hello COM2" EOL);
+	fputs("Hello COM2" EOL, COM2);
 	stop_servers();
 }
 
 void destroy_worker(void) {
 	int r, tid2;
 
-	ASSERT(receive(&tid2, &r, sizeof(r)) == sizeof(r));
-	ASSERT(reply(tid2, NULL, 0) == REPLY_SUCCESSFUL);
+	ASSERT(try_receive(&tid2, &r, sizeof(r)) == sizeof(r));
+	reply(tid2, NULL, 0);
 
-	ASSERT(receive(&tid2, NULL, 0) == 0);
-	ASSERT(reply(tid2, &r, sizeof(r)) == REPLY_SUCCESSFUL);
+	ASSERT(try_receive(&tid2, NULL, 0) == 0);
+	reply(tid2, &r, sizeof(r));
 }
 
 void destroy_init(void) {
@@ -252,7 +288,7 @@ void destroy_init(void) {
 		int n = 0;
 		// make tasks until we run out
 		for (;;) {
-			int tid = create(HIGHER(PRIORITY_MIN, 2), destroy_worker);
+			int tid = try_create(HIGHER(PRIORITY_MIN, 2), destroy_worker);
 			ASSERT(tid >= 0 || tid == CREATE_INSUFFICIENT_RESOURCES);
 			if (tid < 0) break;
 			tids[n++] = tid;
@@ -265,12 +301,12 @@ void destroy_init(void) {
 
 		for (int i = 0; i < n; i++) {
 			rands[i] = rand();
-			ASSERT(send(tids[i], &rands[i], sizeof(rands[i]), NULL, 0) == 0);
+			ASSERT(try_send(tids[i], &rands[i], sizeof(rands[i]), NULL, 0) == 0);
 		}
 
 		for (int i = n - 1; i >= 0; i--) {
 			int resp;
-			ASSERT(send(tids[i], NULL, 0, &resp, sizeof(resp)) == 4);
+			ASSERT(try_send(tids[i], NULL, 0, &resp, sizeof(resp)) == 4);
 			ASSERT(resp == rands[i]);
 		}
 	}
@@ -280,7 +316,7 @@ void destroy_init(void) {
 
 void trains_init(void) {
 	start_servers();
-	start_trains();
+	trains_start();
 	trains_set_speed(14, 6);
 	trains_reverse(14);
 	printf("Done trains test" EOL);
@@ -294,4 +330,7 @@ int main(int argc, char *argv[]) {
 	boot(message_suite, PRIORITY_MIN, 0);
 	boot(io_suite, PRIORITY_MIN, 0);
 	boot(destroy_init, HIGHER(PRIORITY_MIN, 1), 0);
+	boot(test_train_alert_srv, HIGHER(PRIORITY_MIN, 1), 0);
+	// TODO: get this test working
+	/* boot(int_test_train_alert_srv, HIGHER(PRIORITY_MIN, 1), 0); */
 }

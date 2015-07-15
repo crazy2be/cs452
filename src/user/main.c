@@ -1,17 +1,13 @@
 #include <kernel.h>
 #include <assert.h>
-#include <io_server.h>
-#include "clockserver.h"
-#include "rps.h"
+#include "sys.h"
 #include "signal.h"
 #include <util.h>
-#include "servers.h"
 #include "commandsrv.h"
 #include "displaysrv.h"
 #include "sensorsrv.h"
 #include "trainsrv.h"
-#include "calibrate/calibrate.h"
-#include "../kernel/drivers/timer.h"
+#include "calibrate.h"
 #include "track.h"
 
 struct init_reply {
@@ -45,9 +41,6 @@ void init(void) {
 	stop_servers();
 }
 
-struct track_node track[TRACK_MAX];
-
-
 void fuck_the_police(void) {
 	delay(1000);
 	stop_servers();
@@ -56,17 +49,24 @@ void fuck_the_police(void) {
 void test_init(void) {
 	// initialize the track
 
+#ifdef TRACKA
 	init_tracka(track);
+#else
+	init_trackb(track);
+#endif
 
 	start_servers();
 
-	//ASSERTOK(create(PRIORITY_MAX, fuck_the_police));
+	//ASSERTOK(try_create(PRIORITY_MAX, fuck_the_police));
 
+#if CALIBRATE
+	calibratesrv();
+#else
 	displaysrv();
 	commandsrv();
-	//calibratesrv();
+	trains_start();
+#endif
 	sensorsrv();
-	start_trains();
 
 	/* printf("Hello world" EOL); */
 	/* char buf[] = {0xE2, 0x94, 0x90}; */

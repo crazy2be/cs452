@@ -2,6 +2,7 @@
 
 /** @file */
 #include <util.h>
+#include <assert.h>
 
 /**
  * Main entrypoint into the kernel
@@ -19,8 +20,9 @@ int boot(void (*init_task)(void), int init_task_priority, int debug);
  * is invalid, or CREATE_INSUFFICIENT_RESOURCES if there are no more task descriptors
  * to be allocated.
  */
-#define Create create
-int create(int priority, void *code);
+#define Create try_create
+#define create(...) ASSERTOK(try_create(__VA_ARGS__))
+int try_create(int priority, void *code);
 #define CREATE_INVALID_PRIORITY -1
 #define CREATE_INSUFFICIENT_RESOURCES -2
 
@@ -64,36 +66,44 @@ int parent_tid(void);
 #define HIGHER(priority, amount) ((priority) - (amount))
 #define LOWER(priority, amount) ((priority) + (amount))
 
-#define Send send
-int send(int tid, const void *msg, int msglen, void *reply, int replylen);
+#define Send try_send
+#define send(...) ASSERTOK(try_send(__VA_ARGS__))
+// Returns the size of the message supplied by the replying task (or error)
+int try_send(int tid, const void *msg, int msglen, void *reply, int replylen);
 #define SEND_IMPOSSIBLE_TID -1
 #define SEND_INVALID_TID -2
 #define SEND_INCOMPLETE -3
 
-#define Receive receive
-int receive(int *tid, void *msg, int msglen);
+#define Receive try_receive
+#define receive(...) ASSERTOK(try_receive(__VA_ARGS__))
+#define recv receive
+int try_receive(int *tid, void *msg, int msglen);
 
-#define Reply reply
-int reply(int tid, const void *reply, int replylen);
+#define Reply try_reply
+#define reply(...) ASSERTOK(try_reply(__VA_ARGS__))
+int try_reply(int tid, const void *reply, int replylen);
 #define REPLY_SUCCESSFUL 0
 #define REPLY_IMPOSSIBLE_TID -1
 #define REPLY_INVALID_TID -2
 #define REPLY_UNSOLICITED -3
 #define REPLY_TOO_LONG -4
 
-#define AwaitEvent await
 #define EID_TIMER_TICK 0
 #define EID_COM1_READ 1
 #define EID_COM1_WRITE 2
 #define EID_COM2_READ 3
 #define EID_COM2_WRITE 4
 #define EID_NUM_EVENTS 5
-int await(unsigned eid, char *buf, unsigned buflen);
+#define AwaitEvent try_await
+#define await(...) ASSERTOK(try_await(__VA_ARGS__));
+int try_await(unsigned eid, char *buf, unsigned buflen);
 #define AWAIT_UNKNOWN_EVENT -1
 #define AWAIT_MULTIPLE_WAITERS -2
 
 unsigned rand(void);
 
 int should_idle(void); // Just for the idle task.
+int idle_permille(void); // debug info about how much we're idling
 
 void halt(void) __attribute__((noreturn)); // stop the kernel immediately, does not return
+

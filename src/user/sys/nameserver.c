@@ -2,7 +2,7 @@
 
 #include <hashtable.h>
 #include <util.h>
-#include "request_type.h"
+#include "../request_type.h"
 
 #include <kernel.h>
 
@@ -15,74 +15,50 @@ struct nameserver_request {
 
 void nameserver(void) {
 	struct hashtable name_map;
-
 	hashtable_init(&name_map);
 
 	for (;;) {
-		int tid, resp, err;
+		int tid = -1, resp = 0, err = -10;
 		struct nameserver_request req;
 		receive(&tid, &req, sizeof(req));
 
 		switch (req.type) {
 		case WHOIS:
 			err = hashtable_get(&name_map, req.name, &resp);
-			if (err != HASHTABLE_SUCCESS) {
-				resp = -1;
-			}
 			break;
 		case REGISTER_AS:
 			err = hashtable_set(&name_map, req.name, tid);
-			if (err != HASHTABLE_SUCCESS) {
-				resp = -1;
-			}
 			break;
 		default:
-			resp = -1;
+			WTF("Nameserver got unknown request %d"EOL, req.type);
 			break;
 		}
-
+		if (err < 0) resp = err;
 		reply(tid, &resp, sizeof(resp));
 	}
 }
 
-int whois(const char *name) {
-	int tid, resp, name_len;
+int try_whois(const char *name) {
 	struct nameserver_request req;
-
-	name_len = strlen(name);
-	if (name_len > MAX_KEYLEN) {
-		return -2;
-	}
-
 	req.type = WHOIS;
+	ASSERT(strlen(name) <= MAX_KEYLEN);
 	strcpy(req.name, name);
 
+	int tid = -5;
 	// could optimize to only send the used part of the req
-	resp = send(NAMESERVER_TID, &req, sizeof(req), &tid, sizeof(tid));
-
-	if (resp != sizeof(tid)) {
-		return resp;
-	}
-
+	send(NAMESERVER_TID, &req, sizeof(req), &tid, sizeof(tid));
 	return tid;
 }
 
-int register_as(const char *name) {
-	int success, resp, name_len;
+void register_as(const char *name) {
+	int rpy = -1, name_len = -1;
 	struct nameserver_request req;
 
 	name_len = strlen(name);
-	if (name_len > MAX_KEYLEN) {
-		return -2;
-	}
+	ASSERT(name_len <= MAX_KEYLEN);
 
 	req.type = REGISTER_AS;
 	strcpy(req.name, name);
-	resp = send(NAMESERVER_TID, &req, sizeof(req), &success, sizeof(success));
-
-	if (resp != sizeof(success)) {
-		return resp;
-	}
-
-	return success;
+	send(NAMESERVER_TID, &req, sizeof(req), &rpy, sizeof(rpy));
+	ASSERTOK(rpy);
 }

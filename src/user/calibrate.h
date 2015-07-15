@@ -1,6 +1,6 @@
 #pragma once
-#include "../sensorsrv.h"
-#include "../switch_state.h"
+#include "sensorsrv.h"
+#include "switch_state.h"
 
 #define CALIBRATESRV_NAME "calibratesrv"
 

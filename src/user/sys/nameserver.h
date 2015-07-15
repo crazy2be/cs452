@@ -5,7 +5,8 @@
 void nameserver(void);
 
 #define WhoIs whois
-int whois(const char *name);
+#define whois(...) ASSERTOK(try_whois(__VA_ARGS__))
+int try_whois(const char *name);
 
 #define RegisterAs
-int register_as(const char *name);
+void register_as(const char *name);
