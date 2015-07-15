@@ -8,6 +8,7 @@
 
 #include "min_heap.h"
 #include "track_test.h"
+#include "sensor_attribution_test.h"
 
 #include "../user/sys.h"
 #include "../user/signal.h"
@@ -223,6 +224,7 @@ void init_task(void) {
 	sqrti_tests();
 	min_heap_tests();
 	track_tests();
+	sensor_attribution_tests();
 	ASSERT(1);
 	ASSERT(try_create(-1, child) == CREATE_INVALID_PRIORITY);
 	ASSERT(try_create(32, child) == CREATE_INVALID_PRIORITY);

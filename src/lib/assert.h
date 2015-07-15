@@ -27,3 +27,7 @@
 		});
 
 #define WTF(fmt, ...) ASSERTF(false, fmt, ##__VA_ARGS__);
+
+// easily switchable debug statements
+#define DEBUG_ON false
+#define DEBUG(fmt, ...) { if (DEBUG_ON) printf(fmt, ##__VA_ARGS__); };
