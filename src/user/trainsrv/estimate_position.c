@@ -7,8 +7,8 @@
 #include "../sys.h"
 
 int train_speed_index(const struct internal_train_state *train_state) {
-	int cur_speed = train_state->current_speed_setting;
-	int prev_speed = train_state->previous_speed_setting;
+	int cur_speed = speed_historical_get_current(&train_state->speed_history);
+	int prev_speed = train_state->speed_history.len > 1 ? speed_historical_get_by_index(&train_state->speed_history, 1) : 0;
 	int i = cur_speed*2 + (prev_speed >= cur_speed) - 1;
 	ASSERTF(0 <= i && i < sizeof(train_state->est_velocities) / sizeof(train_state->est_velocities[0]),
 			"i = %d, cur_speed = %d, prev_speed = %d", i, cur_speed, prev_speed);
@@ -152,30 +152,31 @@ int update_train_speed(struct trainsrv_state *state, int train_id, int speed) {
 	}
 	// Just don't allow this so that we don't have to think about what the train
 	// controller does in this case in terms of actual train speed.
-	if (train_state->current_speed_setting == speed) return 0;
+	// NOTE: we don't currently do this, since it caused more problems that it fixed
+	// (the trains moving when the program starts, and then it refuses to stop them,
+	// since it thinks they're already stopped.) 
+	/* if (train_state->current_speed_setting == speed) return 0; */
 	reanchor(state, train_state); // TODO: Deacceration model.
-	train_state->previous_speed_setting = train_state->current_speed_setting;
-	train_state->current_speed_setting = speed;
-	train_state->constant_speed_starts = time() + 400;
+	speed_historical_set(&train_state->speed_history, speed, time());
 	return 1;
 }
 
-static bool position_unknown(struct trainsrv_state *state, int train_id) {
-	ASSERT(train_id > 0);
-	return state->unknown_train_id == train_id;
-}
+/* static bool position_unknown(struct trainsrv_state *state, int train_id) { */
+/* 	ASSERT(train_id > 0); */
+/* 	return state->unknown_train_id == train_id; */
+/* } */
 
-int update_train_direction(struct trainsrv_state *state, int train_id) {
-	struct internal_train_state *train_state = get_train_state(state, train_id);
-	if ((train_state != NULL) && (!position_unknown(state, train_id))) {
-		position_reverse(&train_state->last_known_position);
-	}
-	// TODO: This is basically wrong.
-	// We want to reanchor whenever we actually change speed, which happens
-	// twice when we are reversing.
-	reanchor(state, train_state);
-	return train_state->current_speed_setting;
-}
+/* int update_train_direction(struct trainsrv_state *state, int train_id) { */
+/* 	struct internal_train_state *train_state = get_train_state(state, train_id); */
+/* 	if ((train_state != NULL) && (!position_unknown(state, train_id))) { */
+/* 		position_reverse(&train_state->last_known_position); */
+/* 	} */
+/* 	// TODO: This is basically wrong. */
+/* 	// We want to reanchor whenever we actually change speed, which happens */
+/* 	// twice when we are reversing. */
+/* 	reanchor(state, train_state); */
+/* 	return train_state->current_speed_setting; */
+/* } */
 
 // called each time we hit a sensor
 // prints out how far away we thought we were from the sensor at the time
@@ -224,7 +225,8 @@ static void log_position_estimation_error(const struct trainsrv_state *state,
 int calculate_actual_velocity(struct internal_train_state *train_state,
 		const struct track_node *sensor_node, const struct switch_state *switches, int ticks) {
 	// we think we're still accelerating, so we don't know how fast we are
-	if (ticks < train_state->constant_speed_starts) return SILENT_ERROR;
+	// allow 4s after the last speed change to adjust to the new speed
+	if (ticks < speed_historical_get_last_mod_time(&train_state->speed_history) + 400) return SILENT_ERROR;
 	ASSERT(sensor_node != NULL);
 
 	// we don't know where the train was last

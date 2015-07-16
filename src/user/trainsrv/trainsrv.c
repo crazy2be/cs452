@@ -45,7 +45,7 @@ static struct train_state handle_query_spatials(struct trainsrv_state *state, in
 	} else {
 		out.position = get_estimated_train_position(state, train_state);
 		out.velocity = train_velocity_from_state(train_state);
-		out.speed_setting = train_state->current_speed_setting;
+		out.speed_setting = speed_historical_get_current(&train_state->speed_history);
 	}
 	return out;
 }

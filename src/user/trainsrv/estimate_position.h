@@ -2,6 +2,7 @@
 
 #include "../trainsrv.h"
 #include "trainsrv_internal.h"
+#include"speed_history.h"
 
 // state about what we know about this train
 // (previous_speed_was_bigger, current)
@@ -23,10 +24,8 @@ struct internal_train_state {
 	int est_velocities[NUM_SPEED_SETTINGS];
 	int est_stopping_distances[NUM_SPEED_SETTINGS];
 
-	//  3. Its current speed setting
-	int current_speed_setting;
-	int previous_speed_setting;
-	int constant_speed_starts;
+	//  3. Its current and historical speed
+	struct speed_historical_state speed_history;
 
 	//  4. Later, we'll have information about if (and at what rate) it is currently
 	//     accelerating

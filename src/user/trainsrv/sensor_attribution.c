@@ -3,6 +3,7 @@
 #include "../sys.h"
 #include "../track.h"
 #include "../displaysrv.h"
+#include "../trainsrv.h"
 
 // evaluate which train is more likely to be responsible for a given sensor hit
 static bool guess_improved(const struct trainsrv_state *state, int now,
@@ -37,6 +38,17 @@ static bool guess_improved(const struct trainsrv_state *state, int now,
 // this is the maximum number of branches we can hit when traversing from
 // one sensor to another, while hitting at most one sensor on the way
 #define MAX_BRANCHES_IN_SEARCH 5
+
+/* #define MAX_REVERSED_POSITIONS (MAX_ACTIVE_TRAINS * MAX_BRANCHES_IN_SEARCH) */
+
+/* struct reversed_train_position { */
+/* 	int train_id; */
+/* 	struct position position; */
+/* 	int errors_assumed; */
+/* 	int failed_switch; */
+/* } */
+
+/* static int build_reversed_positions(const struct trainsrv_state *state, int now, */ 
 
 struct search_context {
 	const struct track_edge *edge;

@@ -16,6 +16,12 @@ typedef int bool;
 #define STRINGIFY2(STR) #STR
 #define STRINGIFY1(STR) STRINGIFY2(STR)
 
+/* we require a second level of indirection here in order to have the
+ * parameters expanded before concatenating - see
+ * https://stackoverflow.com/questions/1489932/c-preprocessor-and-concatenation */
+#define PASTER2(x, y) x##_##y
+#define PASTER(x, y) PASTER2(x, y)
+
 #define offsetof(type, member) __builtin_offsetof(type, member)
 #define ARRAY_LENGTH(x) (sizeof(x)/sizeof(*x))
 
