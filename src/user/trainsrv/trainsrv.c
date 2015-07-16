@@ -58,13 +58,16 @@ static int handle_query_error(struct trainsrv_state *state, int train) {
 	return train_state->measurement_error;
 }
 
-static void handle_query_active(struct trainsrv_state *state, int *trains) {
-	memset(trains, 0, MAX_ACTIVE_TRAINS*sizeof(*trains));
+static int handle_query_active(struct trainsrv_state *state, int * const trains) {
+	int *p = trains;
 	for (int i = 0; i < NUM_TRAIN; i++) {
 		if (state->state_for_train[i] != NULL) {
-			*trains = i + 1; //
+			*p++ = i + 1; //
 		}
 	}
+	const int len = p - trains;
+	ASSERT_INTEQ(len, state->num_active_trains);
+	return len;
 }
 
 static void handle_switch(struct trainsrv_state *state, int sw, enum sw_direction dir) {
@@ -79,7 +82,7 @@ static void trains_server(void) {
 
 	trainsrv_state_init(&state);
 
-	train_alert_start(state.switches, true);
+	train_alert_start(switch_historical_get_current(&state.switch_history), true);
 
 	// TODO: we should block the creating task from continuing until init is done
 
@@ -92,8 +95,8 @@ static void trains_server(void) {
 		switch (req.type) {
 		case QUERY_ACTIVE: {
 			int active_trains[MAX_ACTIVE_TRAINS];
-			handle_query_active(&state, active_trains);
-			reply(tid, &active_trains, sizeof(active_trains));
+			int num_active_trains = handle_query_active(&state, active_trains);
+			reply(tid, &active_trains, num_active_trains * sizeof(active_trains[0]));
 			break;
 		}
 		case QUERY_SPATIALS: {
@@ -130,9 +133,11 @@ static void trains_server(void) {
 			/* displaysrv_update_switch(displaysrv, &switches); */
 			reply(tid, NULL, 0);
 			break;
-		case SWITCH_GET:
-			reply(tid, &state.switches, sizeof(state.switches));
+		case SWITCH_GET: {
+			struct switch_state switches = switch_historical_get_current(&state.switch_history);
+			reply(tid, &switches, sizeof(switches));
 			break;
+		}
 		case GET_STOPPING_DISTANCE: {
 			struct internal_train_state *ts = get_train_state(&state, req.train_number);
 			int distance = ts->est_stopping_distances[train_speed_index(ts)];
@@ -176,13 +181,9 @@ static void trains_send(struct trains_request req, void *rpy, int rpyl) {
 #define TSEND2(req, rpy) trains_send(req, rpy, sizeof(*(rpy)))
 
 int trains_query_active(int *trains_out) {
-	trains_send((struct trains_request) {
-		.type = QUERY_ACTIVE,
-	}, trains_out, sizeof(int)*MAX_ACTIVE_TRAINS);
-	for (int i = 0; i < MAX_ACTIVE_TRAINS; i++) {
-		if (trains_out[i] == 0) return i;
-	}
-	return MAX_ACTIVE_TRAINS;
+	struct trains_request req = { .type = QUERY_ACTIVE };
+	int resp_size = send(trains_tid(), &req, sizeof(req), trains_out, MAX_ACTIVE_TRAINS * sizeof(int));
+	return resp_size / sizeof(int);
 }
 void trains_query_spatials(int train, struct train_state *state_out) {
 	TSEND2(((struct trains_request) {

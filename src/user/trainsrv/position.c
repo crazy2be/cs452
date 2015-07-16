@@ -31,6 +31,7 @@ static bool break_after_distance(const struct track_edge *e, void *ctx) {
 	}
 }
 
+// TODO: this should really pass the switches by value
 void position_travel_forwards(struct position *position, int distance, const struct switch_state *switches) {
 	ASSERT(distance >= 0);
 	// Note that this violates the usual invariant of displacement < edge->dist
