@@ -198,6 +198,9 @@ static void log_position_estimation_error(const struct trainsrv_state *state,
 			/*          delta_d, sens_name, train_state->mm_to_next_sensor); */
 			/* displaysrv_console_feedback(state->displaysrv_tid, feedback); */
 		} else {
+			// TODO: this doesn't quite do what we want, since we don't recalculate next sensor
+			// when we reanchor
+			// I'm not going to fix this for now, since this is just for debugging purposes
 			char exp_sens_name[4];
 			sensor_repr(train_state->next_sensor->num, exp_sens_name);
 			snprintf(feedback, sizeof(feedback), "Train was expected to hit sensor %s, actually hit %s",
@@ -217,10 +220,13 @@ static void log_position_estimation_error(const struct trainsrv_state *state,
 
 #define SILENT_ERROR -1
 #define TELEPORT_ERROR -2
-int calculate_actual_velocity(struct internal_train_state *train_state,
-                              const struct track_node *sensor_node, const struct switch_state *switches, int ticks) {
+static int calculate_actual_velocity(struct internal_train_state *train_state,
+		const struct track_node *sensor_node, const struct switch_state *switches, int ticks) {
+	// we think we're still accelerating, so we don't know how fast we are
 	if (ticks < train_state->constant_speed_starts) return SILENT_ERROR;
 	ASSERT(sensor_node != NULL);
+
+	// we don't know where the train was last
 	if (position_is_uninitialized(&train_state->last_known_position)) return SILENT_ERROR;
 
 	struct position sensor_position = { &sensor_node->edge[0], 0 };
@@ -248,10 +254,6 @@ static void update_train_velocity_estimate(const struct trainsrv_state *state, s
 	// empirically chosen to give a good update
 	const int alpha = 100;
 	const int divisor = 1000;
-
-	/* char buf[80]; */
-	/* snprintf(buf, sizeof(buf), "Updated velocity estimate is %d", actual_velocity); */
-	/* displaysrv_console_feedback(state->displaysrv_tid, buf); */
 
 	int *velocity_entry = &train_state->est_velocities[train_speed_index(train_state)];
 	*velocity_entry = ((divisor - alpha) * *velocity_entry + alpha * actual_velocity) / divisor;
