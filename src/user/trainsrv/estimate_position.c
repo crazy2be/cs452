@@ -298,16 +298,23 @@ static void sensor_cb(int sensor, void *ctx) {
 	int bad_switch;
 	const struct internal_train_state *train = attribute_sensor_to_train(context->state, sensor, context->time, &bad_switch);
 
+	// spurious sensor signal
 	if (train == NULL) return;
 
 	const int index = (train->train_id - 1) / 32;
 	const int offset = (train->train_id - 1) % 32;
 	const unsigned mask = 1 << offset;
 
-
-	// TODO: use bad switch to update turnout state
-
+	// we never attribute multiple sensor hits to the same train in the same cycle
+	// we essentially assume that this must be a spurious signal
 	if (context->train_already_hit[index] & mask) return;
+
+	if (bad_switch != -1) {
+		struct switch_state switches = switch_historical_get_current(&context->state->switch_history);
+		enum sw_direction dir = switch_get(&switches, bad_switch);
+		update_switch(context->state, bad_switch, (dir == CURVED) ? STRAIGHT : CURVED);
+	}
+
 
 	context->train_already_hit[index] |= mask;
 
@@ -337,6 +344,7 @@ void update_switch(struct trainsrv_state *state, int sw, enum sw_direction dir) 
 	struct switch_state switches = switch_historical_get_current(&state->switch_history);
 	switch_set(&switches, sw, dir);
 	switch_historical_set(&state->switch_history, switches, time());
+	displaysrv_update_switch(state->displaysrv_tid, &switches);
 }
 
 void trainsrv_state_init(struct trainsrv_state *state) {
