@@ -2,11 +2,12 @@
 
 #include "../sys.h"
 #include "../track.h"
+#include "../displaysrv.h"
 
 // evaluate which train is more likely to be responsible for a given sensor hit
-static bool guess_improved(struct trainsrv_state *state, int now,
-		struct internal_train_state *old, int old_errors, int old_dist,
-		struct internal_train_state *candidate, int candidate_errors, int candidate_dist) {
+static bool guess_improved(const struct trainsrv_state *state, int now,
+		const struct internal_train_state *old, int old_errors, int old_dist,
+		const struct internal_train_state *candidate, int candidate_errors, int candidate_dist) {
 	if (old == NULL) {
 		// no previous guess
 		return true;
@@ -49,7 +50,8 @@ struct search_context {
 	} merges_hit[MAX_BRANCHES_IN_SEARCH];
 };
 
-static struct internal_train_state* attribute_sensor_to_known_train(struct trainsrv_state *state, const struct track_node *sensor, int now) {
+static const struct internal_train_state* attribute_sensor_to_known_train(const struct trainsrv_state *state,
+		const struct track_node *sensor, int now, int *changed_switch) {
 	// this is much bigger than it needs to be - we should only need enough entries
 	// so that we can merge in every possible way without hitting a sensor.
 	const int queue_size = MAX_BRANCHES_IN_SEARCH;
@@ -66,8 +68,9 @@ static struct internal_train_state* attribute_sensor_to_known_train(struct train
 
 	queue[0] = (struct search_context){ &sensor->reverse->edge[DIR_STRAIGHT], 0, 0 };
 
-	struct internal_train_state *train_candidate = NULL;
+	const struct internal_train_state *train_candidate = NULL;
 	int train_candidate_errors_assumed = 0, train_candidate_distance = 0;
+	int train_candidate_switch_to_adjust = -1;
 	DEBUG("STARTING RUN" EOL);
 
 	// TODO: should write this to eliminate copying context back and forth repeatedly
@@ -91,10 +94,11 @@ static struct internal_train_state* attribute_sensor_to_known_train(struct train
 			for (int i = 0; i < state->num_active_trains; i++) {
 				if (state->train_states[i].last_sensor_hit == node->reverse->num) {
 					// there is a train here
-					struct internal_train_state *train_state = &state->train_states[i];
+					const struct internal_train_state *train_state = &state->train_states[i];
 
 					// check if the train going up this path would have required going the wrong way over a switch
 					int errors_assumed = context.errors_assumed;
+					int switch_to_adjust = -1;
 					DEBUG("Found train %d at sensor %s, assuming %d errors" EOL, train_state->train_id, node->name, errors_assumed);
 					for (int m = 0; errors_assumed < errors_assumed_threshold && m < context.merges_hit_count; m++) {
 						const struct track_edge *expected_branch_edge = context.merges_hit[m].branch_edge;
@@ -113,6 +117,14 @@ static struct internal_train_state* attribute_sensor_to_known_train(struct train
 									branch->edge[!direction].src->name, branch->edge[!direction].dest->name);
 							DEBUG("Train would have needed to go the wrong way at %s, switch direction was %d" EOL, branch->name, direction);
 							errors_assumed++;
+							// we think a switch is currently in the wrong position - we should
+							// log this info to correct our internal model later
+							// don't bother if the switch has changed state since the time in question
+							int last_modified = switch_historical_get_last_mod_time(&state->switch_history);
+							DEBUG("Train estimated_time was %d, last_modified %d" EOL, estimated_time, last_modified);
+							if (last_modified <= estimated_time) {
+								switch_to_adjust = branch->num;
+							}
 						}
 					}
 
@@ -130,6 +142,7 @@ static struct internal_train_state* attribute_sensor_to_known_train(struct train
 						train_candidate = train_state;
 						train_candidate_errors_assumed = errors_assumed;
 						train_candidate_distance = context.distance;
+						train_candidate_switch_to_adjust = switch_to_adjust;
 					}
 				}
 			}
@@ -171,12 +184,14 @@ static struct internal_train_state* attribute_sensor_to_known_train(struct train
 
 		ASSERT(0 <= queue_len && queue_len <= queue_size);
 	}
+
+	*changed_switch = train_candidate_switch_to_adjust;
 	return train_candidate;
 }
 
-struct internal_train_state* attribute_sensor_to_train(struct trainsrv_state *state, int sensor, int now) {
+const struct internal_train_state* attribute_sensor_to_train(struct trainsrv_state *state, int sensor, int now, int *changed_switch) {
 	const struct track_node *sensor_node = track_node_from_sensor(sensor);
-	struct internal_train_state *train = attribute_sensor_to_known_train(state, sensor_node, now);
+	const struct internal_train_state *train = attribute_sensor_to_known_train(state, sensor_node, now, changed_switch);
 	if (train == NULL && state->unknown_train_id > 0) {
 		train = get_train_state(state, state->unknown_train_id);
 		state->unknown_train_id = 0;

@@ -41,29 +41,30 @@ void sensor_attribution_tests() {
 
 		struct internal_train_state *train_a = init_train(&state, 63, 36, 200, 5000); // C5
 		struct internal_train_state *train_b = init_train(&state, 58, 70, 200, 5000); // E7
+		int bad_switch;
 
 		// we expect train A to hit this (travelling 300mm in ~ 60 ticks, and actually takes 50)
-		ASSERT(train_a == attribute_sensor_to_train(&state, 46, 250)); // C15
+		ASSERT(train_a == attribute_sensor_to_train(&state, 46, 250, &bad_switch)); // C15
 
 		// shouldn't attribute a totally random value to a sensor
-		ASSERT(NULL == attribute_sensor_to_train(&state, 10, 250)); // A11
+		ASSERT(NULL == attribute_sensor_to_train(&state, 10, 250, &bad_switch)); // A11
 
 		// shouldn't attribute to a train that just hit that sensor
-		ASSERT(NULL == attribute_sensor_to_train(&state, 36, 250)); // C6
+		ASSERT(NULL == attribute_sensor_to_train(&state, 36, 250, &bad_switch)); // C6
 
 		// should attribute a train, while assuming we've missed a single sensor
 		// (went from E7 to D9, skipping D7)
-		ASSERT(train_b == attribute_sensor_to_train(&state, 56, 500)); // D9
+		ASSERT(train_b == attribute_sensor_to_train(&state, 56, 500, &bad_switch)); // D9
 
 		// shouldn't attribute sensor too far ahead of a train (can't go from E7 to E12,
 		// skipping both D7 and D9)
-		ASSERT(NULL == attribute_sensor_to_train(&state, 75, 250)); // E12
+		ASSERT(NULL == attribute_sensor_to_train(&state, 75, 250, &bad_switch)); // E12
 
 		// allow getting one turnout wrong
-		ASSERT(train_a == attribute_sensor_to_train(&state, 34, 250)); // C3
+		ASSERT(train_a == attribute_sensor_to_train(&state, 34, 250, &bad_switch)); // C3
 
 		// don't allow getting one turnout wrong (this particular case is also equivalent to getting 2 wrong)
-		ASSERT(NULL == attribute_sensor_to_train(&state, 74, 250)); // E11
+		ASSERT(NULL == attribute_sensor_to_train(&state, 74, 250, &bad_switch)); // E11
 	}
 
 	{
@@ -79,21 +80,24 @@ void sensor_attribution_tests() {
 		switch_set(&switches, 16, CURVED);
 		switch_historical_set(&state.switch_history, switches, 51);
 
+		int bad_switch;
+
 		// 1 bad sensor
-		ASSERT(train_a == attribute_sensor_to_train(&state, 18, 250)); // B3
+		ASSERT(train_a == attribute_sensor_to_train(&state, 18, 250, &bad_switch)); // B3
 		// 1 bad sensor & 1 bad turnout
-		ASSERT(NULL ==  attribute_sensor_to_train(&state, 16, 250)); // B1
+		ASSERT(NULL ==  attribute_sensor_to_train(&state, 16, 250, &bad_switch)); // B1
 
 		// 0 bad turnouts
-		ASSERT(train_b == attribute_sensor_to_train(&state, 1, 250)); // A2
+		ASSERT(train_b == attribute_sensor_to_train(&state, 1, 250, &bad_switch)); // A2
+		ASSERT_INTEQ(bad_switch, -1);
 
 		// 1 bad turnout
-		ASSERT(train_b == attribute_sensor_to_train(&state, 13, 250)); // A14
+		ASSERT(train_b == attribute_sensor_to_train(&state, 13, 250, &bad_switch)); // A14
+		ASSERT_INTEQ(bad_switch, 12);
 
 		// 2 bad turnouts
-		ASSERT(NULL == attribute_sensor_to_train(&state, 14, 250)); // A15
-
-
+		ASSERT(NULL == attribute_sensor_to_train(&state, 14, 250, &bad_switch)); // A15
+		ASSERT_INTEQ(bad_switch, -1);
 	}
 
 	{
@@ -105,6 +109,8 @@ void sensor_attribution_tests() {
 		struct internal_train_state *train_b = init_train(&state, 58, 3, 300, 5000); // A4
 		(void) train_b;
 
-		ASSERT(train_a == attribute_sensor_to_train(&state, 31, 250)); // B16
+		int bad_switch;
+
+		ASSERT(train_a == attribute_sensor_to_train(&state, 31, 250, &bad_switch)); // B16
 	}
 }

@@ -6,7 +6,7 @@
 #include "../displaysrv.h"
 #include "../sys.h"
 
-int train_speed_index(struct internal_train_state *train_state) {
+int train_speed_index(const struct internal_train_state *train_state) {
 	int cur_speed = train_state->current_speed_setting;
 	int prev_speed = train_state->previous_speed_setting;
 	int i = cur_speed*2 + (prev_speed >= cur_speed) - 1;
@@ -15,11 +15,11 @@ int train_speed_index(struct internal_train_state *train_state) {
 	return i;
 }
 
-int train_velocity_from_state(struct internal_train_state *train_state) {
+int train_velocity_from_state(const struct internal_train_state *train_state) {
 	return train_state->est_velocities[train_speed_index(train_state)];
 }
 
-int train_eta_from_state(struct trainsrv_state *state, struct internal_train_state *train_state, int distance) {
+int train_eta_from_state(const struct trainsrv_state *state, const struct internal_train_state *train_state, int distance) {
 	ASSERT(train_state != NULL);
 	int velocity = train_velocity_from_state(train_state);
 	int time = (velocity > 0) ? distance * 1000 / velocity : -1;
@@ -220,7 +220,8 @@ static void log_position_estimation_error(const struct trainsrv_state *state,
 
 #define SILENT_ERROR -1
 #define TELEPORT_ERROR -2
-static int calculate_actual_velocity(struct internal_train_state *train_state,
+// not static for tests
+int calculate_actual_velocity(struct internal_train_state *train_state,
 		const struct track_node *sensor_node, const struct switch_state *switches, int ticks) {
 	// we think we're still accelerating, so we don't know how fast we are
 	if (ticks < train_state->constant_speed_starts) return SILENT_ERROR;
@@ -294,7 +295,8 @@ struct sensor_context {
 
 static void sensor_cb(int sensor, void *ctx) {
 	struct sensor_context *context = (struct sensor_context*) ctx;
-	struct internal_train_state *train = attribute_sensor_to_train(context->state, sensor, context->time);
+	int bad_switch;
+	const struct internal_train_state *train = attribute_sensor_to_train(context->state, sensor, context->time, &bad_switch);
 
 	if (train == NULL) return;
 
@@ -302,10 +304,18 @@ static void sensor_cb(int sensor, void *ctx) {
 	const int offset = (train->train_id - 1) % 32;
 	const unsigned mask = 1 << offset;
 
+
+	// TODO: use bad switch to update turnout state
+
 	if (context->train_already_hit[index] & mask) return;
 
 	context->train_already_hit[index] |= mask;
-	update_train_position_from_sensor(context->state, train, sensor, context->time);
+
+	// we need to get a mutable version of train - this is a bit silly though
+	struct internal_train_state *train_m = get_train_state(context->state, train->train_id);
+	ASSERT(train_m == train);
+
+	update_train_position_from_sensor(context->state, train_m, sensor, context->time);
 }
 
 void update_sensors(struct trainsrv_state *state, struct sensor_state sens) {

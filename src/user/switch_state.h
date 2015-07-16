@@ -54,3 +54,4 @@ void switch_historical_init(struct switch_historical_state *s);
 struct switch_state switch_historical_get_current(const struct switch_historical_state *s);
 struct switch_state switch_historical_get(const struct switch_historical_state *s, int time);
 void switch_historical_set(struct switch_historical_state *s, struct switch_state current, int time);
+int switch_historical_get_last_mod_time(const struct switch_historical_state *s);
