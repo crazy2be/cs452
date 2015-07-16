@@ -20,10 +20,12 @@ class TrackEdge():
 
 class TrackNode():
   name = "no name"
-  switch_direction = 0
   typ = -1
   num = -1
   reverse = None # TrackNode in the same location, but opposite direction.
+  switch_direction = 0 # Current switch direction
+  coord_x = 0.
+  coord_y = 0.
   def __init__(self):
     self.edge = [TrackEdge(), TrackEdge()]
 
@@ -182,6 +184,8 @@ def init_tracka():
   track[0].edge[DIR_AHEAD].src = track[0]
   track[0].edge[DIR_AHEAD].dest = track[103]
   track[0].edge[DIR_AHEAD].dist = 218
+  track[0].coord_x = 939;
+  track[0].coord_y = 244;
   track[1].name = "A2"
   track[1].typ = NODE_SENSOR
   track[1].num = 1
@@ -190,6 +194,8 @@ def init_tracka():
   track[1].edge[DIR_AHEAD].src = track[1]
   track[1].edge[DIR_AHEAD].dest = track[133]
   track[1].edge[DIR_AHEAD].dist = 500
+  track[1].coord_x = 939;
+  track[1].coord_y = 244;
   track[2].name = "A3"
   track[2].typ = NODE_SENSOR
   track[2].num = 2
@@ -198,6 +204,8 @@ def init_tracka():
   track[2].edge[DIR_AHEAD].src = track[2]
   track[2].edge[DIR_AHEAD].dest = track[106]
   track[2].edge[DIR_AHEAD].dist = 62
+  track[2].coord_x = 954;
+  track[2].coord_y = 629;
   track[3].name = "A4"
   track[3].typ = NODE_SENSOR
   track[3].num = 3
@@ -206,6 +214,8 @@ def init_tracka():
   track[3].edge[DIR_AHEAD].src = track[3]
   track[3].edge[DIR_AHEAD].dest = track[31]
   track[3].edge[DIR_AHEAD].dist = 440
+  track[3].coord_x = 954;
+  track[3].coord_y = 629;
   track[4].name = "A5"
   track[4].typ = NODE_SENSOR
   track[4].num = 4
@@ -214,6 +224,8 @@ def init_tracka():
   track[4].edge[DIR_AHEAD].src = track[4]
   track[4].edge[DIR_AHEAD].dest = track[85]
   track[4].edge[DIR_AHEAD].dist = 216
+  track[4].coord_x = 1163;
+  track[4].coord_y = 1670;
   track[5].name = "A6"
   track[5].typ = NODE_SENSOR
   track[5].num = 5
@@ -222,6 +234,8 @@ def init_tracka():
   track[5].edge[DIR_AHEAD].src = track[5]
   track[5].edge[DIR_AHEAD].dest = track[25]
   track[5].edge[DIR_AHEAD].dist = 649
+  track[5].coord_x = 1163;
+  track[5].coord_y = 1670;
   track[6].name = "A7"
   track[6].typ = NODE_SENSOR
   track[6].num = 6
@@ -230,6 +244,8 @@ def init_tracka():
   track[6].edge[DIR_AHEAD].src = track[6]
   track[6].edge[DIR_AHEAD].dest = track[27]
   track[6].edge[DIR_AHEAD].dist = 473
+  track[6].coord_x = 945;
+  track[6].coord_y = 1572;
   track[7].name = "A8"
   track[7].typ = NODE_SENSOR
   track[7].num = 7
@@ -238,6 +254,8 @@ def init_tracka():
   track[7].edge[DIR_AHEAD].src = track[7]
   track[7].edge[DIR_AHEAD].dest = track[83]
   track[7].edge[DIR_AHEAD].dist = 211
+  track[7].coord_x = 945;
+  track[7].coord_y = 1572;
   track[8].name = "A9"
   track[8].typ = NODE_SENSOR
   track[8].num = 8
@@ -246,6 +264,8 @@ def init_tracka():
   track[8].edge[DIR_AHEAD].src = track[8]
   track[8].edge[DIR_AHEAD].dest = track[23]
   track[8].edge[DIR_AHEAD].dist = 289
+  track[8].coord_x = 723;
+  track[8].coord_y = 1477;
   track[9].name = "A10"
   track[9].typ = NODE_SENSOR
   track[9].num = 9
@@ -254,6 +274,8 @@ def init_tracka():
   track[9].edge[DIR_AHEAD].src = track[9]
   track[9].edge[DIR_AHEAD].dest = track[81]
   track[9].edge[DIR_AHEAD].dist = 210
+  track[9].coord_x = 723;
+  track[9].coord_y = 1477;
   track[10].name = "A11"
   track[10].typ = NODE_SENSOR
   track[10].num = 10
@@ -262,6 +284,8 @@ def init_tracka():
   track[10].edge[DIR_AHEAD].src = track[10]
   track[10].edge[DIR_AHEAD].dest = track[81]
   track[10].edge[DIR_AHEAD].dist = 410
+  track[10].coord_x = 367;
+  track[10].coord_y = 1374;
   track[11].name = "A12"
   track[11].typ = NODE_SENSOR
   track[11].num = 11
@@ -270,6 +294,8 @@ def init_tracka():
   track[11].edge[DIR_AHEAD].src = track[11]
   track[11].edge[DIR_AHEAD].dest = track[139]
   track[11].edge[DIR_AHEAD].dist = 60
+  track[11].coord_x = 367;
+  track[11].coord_y = 1374;
   track[12].name = "A13"
   track[12].typ = NODE_SENSOR
   track[12].num = 12
@@ -278,6 +304,8 @@ def init_tracka():
   track[12].edge[DIR_AHEAD].src = track[12]
   track[12].edge[DIR_AHEAD].dest = track[87]
   track[12].edge[DIR_AHEAD].dist = 215
+  track[12].coord_x = 706;
+  track[12].coord_y = 343;
   track[13].name = "A14"
   track[13].typ = NODE_SENSOR
   track[13].num = 13
@@ -286,6 +314,8 @@ def init_tracka():
   track[13].edge[DIR_AHEAD].src = track[13]
   track[13].edge[DIR_AHEAD].dest = track[131]
   track[13].edge[DIR_AHEAD].dist = 320
+  track[13].coord_x = 706;
+  track[13].coord_y = 343;
   track[14].name = "A15"
   track[14].typ = NODE_SENSOR
   track[14].num = 14
@@ -294,6 +324,8 @@ def init_tracka():
   track[14].edge[DIR_AHEAD].src = track[14]
   track[14].edge[DIR_AHEAD].dest = track[135]
   track[14].edge[DIR_AHEAD].dist = 145
+  track[14].coord_x = 491;
+  track[14].coord_y = 444;
   track[15].name = "A16"
   track[15].typ = NODE_SENSOR
   track[15].num = 15
@@ -302,6 +334,8 @@ def init_tracka():
   track[15].edge[DIR_AHEAD].src = track[15]
   track[15].edge[DIR_AHEAD].dest = track[87]
   track[15].edge[DIR_AHEAD].dist = 394
+  track[15].coord_x = 491;
+  track[15].coord_y = 444;
   track[16].name = "B1"
   track[16].typ = NODE_SENSOR
   track[16].num = 16
@@ -310,6 +344,8 @@ def init_tracka():
   track[16].edge[DIR_AHEAD].src = track[16]
   track[16].edge[DIR_AHEAD].dest = track[61]
   track[16].edge[DIR_AHEAD].dist = 398
+  track[16].coord_x = 1749;
+  track[16].coord_y = 1477;
   track[17].name = "B2"
   track[17].typ = NODE_SENSOR
   track[17].num = 17
@@ -318,6 +354,8 @@ def init_tracka():
   track[17].edge[DIR_AHEAD].src = track[17]
   track[17].edge[DIR_AHEAD].dest = track[111]
   track[17].edge[DIR_AHEAD].dist = 225
+  track[17].coord_x = 1749;
+  track[17].coord_y = 1477;
   track[18].name = "B3"
   track[18].typ = NODE_SENSOR
   track[18].num = 18
@@ -326,6 +364,8 @@ def init_tracka():
   track[18].edge[DIR_AHEAD].src = track[18]
   track[18].edge[DIR_AHEAD].dest = track[33]
   track[18].edge[DIR_AHEAD].dist = 230
+  track[18].coord_x = 1745;
+  track[18].coord_y = 1396;
   track[19].name = "B4"
   track[19].typ = NODE_SENSOR
   track[19].num = 19
@@ -334,6 +374,8 @@ def init_tracka():
   track[19].edge[DIR_AHEAD].src = track[19]
   track[19].edge[DIR_AHEAD].dest = track[111]
   track[19].edge[DIR_AHEAD].dist = 220
+  track[19].coord_x = 1745;
+  track[19].coord_y = 1396;
   track[20].name = "B5"
   track[20].typ = NODE_SENSOR
   track[20].num = 20
@@ -342,6 +384,8 @@ def init_tracka():
   track[20].edge[DIR_AHEAD].src = track[20]
   track[20].edge[DIR_AHEAD].dest = track[50]
   track[20].edge[DIR_AHEAD].dist = 405
+  track[20].coord_x = 1780;
+  track[20].coord_y = 367;
   track[21].name = "B6"
   track[21].typ = NODE_SENSOR
   track[21].num = 21
@@ -350,6 +394,8 @@ def init_tracka():
   track[21].edge[DIR_AHEAD].src = track[21]
   track[21].edge[DIR_AHEAD].dest = track[105]
   track[21].edge[DIR_AHEAD].dist = 214
+  track[21].coord_x = 1780;
+  track[21].coord_y = 367;
   track[22].name = "B7"
   track[22].typ = NODE_SENSOR
   track[22].num = 22
@@ -358,6 +404,8 @@ def init_tracka():
   track[22].edge[DIR_AHEAD].src = track[22]
   track[22].edge[DIR_AHEAD].dest = track[9]
   track[22].edge[DIR_AHEAD].dist = 289
+  track[22].coord_x = 346;
+  track[22].coord_y = 1473;
   track[23].name = "B8"
   track[23].typ = NODE_SENSOR
   track[23].num = 23
@@ -366,6 +414,8 @@ def init_tracka():
   track[23].edge[DIR_AHEAD].src = track[23]
   track[23].edge[DIR_AHEAD].dest = track[137]
   track[23].edge[DIR_AHEAD].dist = 60
+  track[23].coord_x = 346;
+  track[23].coord_y = 1473;
   track[24].name = "B9"
   track[24].typ = NODE_SENSOR
   track[24].num = 24
@@ -374,6 +424,8 @@ def init_tracka():
   track[24].edge[DIR_AHEAD].src = track[24]
   track[24].edge[DIR_AHEAD].dest = track[4]
   track[24].edge[DIR_AHEAD].dist = 649
+  track[24].coord_x = 333;
+  track[24].coord_y = 1665;
   track[25].name = "B10"
   track[25].typ = NODE_SENSOR
   track[25].num = 25
@@ -382,6 +434,8 @@ def init_tracka():
   track[25].edge[DIR_AHEAD].src = track[25]
   track[25].edge[DIR_AHEAD].dest = track[141]
   track[25].edge[DIR_AHEAD].dist = 70
+  track[25].coord_x = 333;
+  track[25].coord_y = 1665;
   track[26].name = "B11"
   track[26].typ = NODE_SENSOR
   track[26].num = 26
@@ -390,6 +444,8 @@ def init_tracka():
   track[26].edge[DIR_AHEAD].src = track[26]
   track[26].edge[DIR_AHEAD].dest = track[7]
   track[26].edge[DIR_AHEAD].dist = 473
+  track[26].coord_x = 333;
+  track[26].coord_y = 1562;
   track[27].name = "B12"
   track[27].typ = NODE_SENSOR
   track[27].num = 27
@@ -398,6 +454,8 @@ def init_tracka():
   track[27].edge[DIR_AHEAD].src = track[27]
   track[27].edge[DIR_AHEAD].dest = track[143]
   track[27].edge[DIR_AHEAD].dist = 70
+  track[27].coord_x = 333;
+  track[27].coord_y = 1562;
   track[28].name = "B13"
   track[28].typ = NODE_SENSOR
   track[28].num = 28
@@ -406,6 +464,8 @@ def init_tracka():
   track[28].edge[DIR_AHEAD].src = track[28]
   track[28].edge[DIR_AHEAD].dest = track[119]
   track[28].edge[DIR_AHEAD].dist = 224
+  track[28].coord_x = 2092;
+  track[28].coord_y = 1222;
   track[29].name = "B14"
   track[29].typ = NODE_SENSOR
   track[29].num = 29
@@ -414,6 +474,8 @@ def init_tracka():
   track[29].edge[DIR_AHEAD].src = track[29]
   track[29].edge[DIR_AHEAD].dest = track[63]
   track[29].edge[DIR_AHEAD].dist = 202
+  track[29].coord_x = 2092;
+  track[29].coord_y = 1222;
   track[30].name = "B15"
   track[30].typ = NODE_SENSOR
   track[30].num = 30
@@ -422,6 +484,8 @@ def init_tracka():
   track[30].edge[DIR_AHEAD].src = track[30]
   track[30].edge[DIR_AHEAD].dest = track[2]
   track[30].edge[DIR_AHEAD].dist = 440
+  track[30].coord_x = 941;
+  track[30].coord_y = 1182;
   track[31].name = "B16"
   track[31].typ = NODE_SENSOR
   track[31].num = 31
@@ -430,6 +494,8 @@ def init_tracka():
   track[31].edge[DIR_AHEAD].src = track[31]
   track[31].edge[DIR_AHEAD].dest = track[108]
   track[31].edge[DIR_AHEAD].dist = 70
+  track[31].coord_x = 941;
+  track[31].coord_y = 1182;
   track[32].name = "C1"
   track[32].typ = NODE_SENSOR
   track[32].num = 32
@@ -438,6 +504,8 @@ def init_tracka():
   track[32].edge[DIR_AHEAD].src = track[32]
   track[32].edge[DIR_AHEAD].dest = track[19]
   track[32].edge[DIR_AHEAD].dist = 230
+  track[32].coord_x = 1928;
+  track[32].coord_y = 1226;
   track[33].name = "C2"
   track[33].typ = NODE_SENSOR
   track[33].num = 33
@@ -446,6 +514,8 @@ def init_tracka():
   track[33].edge[DIR_AHEAD].src = track[33]
   track[33].edge[DIR_AHEAD].dest = track[117]
   track[33].edge[DIR_AHEAD].dist = 228
+  track[33].coord_x = 1928;
+  track[33].coord_y = 1226;
   track[34].name = "C3"
   track[34].typ = NODE_SENSOR
   track[34].num = 34
@@ -454,6 +524,8 @@ def init_tracka():
   track[34].edge[DIR_AHEAD].src = track[34]
   track[34].edge[DIR_AHEAD].dest = track[129]
   track[34].edge[DIR_AHEAD].dist = 410
+  track[34].coord_x = 2391;
+  track[34].coord_y = 1676;
   track[35].name = "C4"
   track[35].typ = NODE_SENSOR
   track[35].num = 35
@@ -462,6 +534,8 @@ def init_tracka():
   track[35].edge[DIR_AHEAD].src = track[35]
   track[35].edge[DIR_AHEAD].dest = track[89]
   track[35].edge[DIR_AHEAD].dist = 226
+  track[35].coord_x = 2391;
+  track[35].coord_y = 1676;
   track[36].name = "C5"
   track[36].typ = NODE_SENSOR
   track[36].num = 36
@@ -470,6 +544,8 @@ def init_tracka():
   track[36].edge[DIR_AHEAD].src = track[36]
   track[36].edge[DIR_AHEAD].dest = track[90]
   track[36].edge[DIR_AHEAD].dist = 79
+  track[36].coord_x = 1382;
+  track[36].coord_y = 1562;
   track[37].name = "C6"
   track[37].typ = NODE_SENSOR
   track[37].num = 37
@@ -478,6 +554,8 @@ def init_tracka():
   track[37].edge[DIR_AHEAD].src = track[37]
   track[37].edge[DIR_AHEAD].dest = track[109]
   track[37].edge[DIR_AHEAD].dist = 411
+  track[37].coord_x = 1382;
+  track[37].coord_y = 1562;
   track[38].name = "C7"
   track[38].typ = NODE_SENSOR
   track[38].num = 38
@@ -486,6 +564,8 @@ def init_tracka():
   track[38].edge[DIR_AHEAD].src = track[38]
   track[38].edge[DIR_AHEAD].dest = track[115]
   track[38].edge[DIR_AHEAD].dist = 215
+  track[38].coord_x = 1615;
+  track[38].coord_y = 1669;
   track[39].name = "C8"
   track[39].typ = NODE_SENSOR
   track[39].num = 39
@@ -494,6 +574,8 @@ def init_tracka():
   track[39].edge[DIR_AHEAD].src = track[39]
   track[39].edge[DIR_AHEAD].dest = track[84]
   track[39].edge[DIR_AHEAD].dist = 145
+  track[39].coord_x = 1615;
+  track[39].coord_y = 1669;
   track[40].name = "C9"
   track[40].typ = NODE_SENSOR
   track[40].num = 40
@@ -502,6 +584,8 @@ def init_tracka():
   track[40].edge[DIR_AHEAD].src = track[40]
   track[40].edge[DIR_AHEAD].dest = track[109]
   track[40].edge[DIR_AHEAD].dist = 305
+  track[40].coord_x = 1299;
+  track[40].coord_y = 1464;
   track[41].name = "C10"
   track[41].typ = NODE_SENSOR
   track[41].num = 41
@@ -510,6 +594,8 @@ def init_tracka():
   track[41].edge[DIR_AHEAD].src = track[41]
   track[41].edge[DIR_AHEAD].dest = track[110]
   track[41].edge[DIR_AHEAD].dist = 146
+  track[41].coord_x = 1299;
+  track[41].coord_y = 1464;
   track[42].name = "C11"
   track[42].typ = NODE_SENSOR
   track[42].num = 42
@@ -518,6 +604,8 @@ def init_tracka():
   track[42].edge[DIR_AHEAD].src = track[42]
   track[42].edge[DIR_AHEAD].dest = track[104]
   track[42].edge[DIR_AHEAD].dist = 140
+  track[42].coord_x = 1326;
+  track[42].coord_y = 352;
   track[43].name = "C12"
   track[43].typ = NODE_SENSOR
   track[43].num = 43
@@ -526,6 +614,8 @@ def init_tracka():
   track[43].edge[DIR_AHEAD].src = track[43]
   track[43].edge[DIR_AHEAD].dest = track[107]
   track[43].edge[DIR_AHEAD].dist = 314
+  track[43].coord_x = 1326;
+  track[43].coord_y = 352;
   track[44].name = "C13"
   track[44].typ = NODE_SENSOR
   track[44].num = 44
@@ -534,6 +624,8 @@ def init_tracka():
   track[44].edge[DIR_AHEAD].src = track[44]
   track[44].edge[DIR_AHEAD].dest = track[70]
   track[44].edge[DIR_AHEAD].dist = 877
+  track[44].coord_x = 1540;
+  track[44].coord_y = 255;
   track[45].name = "C14"
   track[45].typ = NODE_SENSOR
   track[45].num = 45
@@ -542,6 +634,8 @@ def init_tracka():
   track[45].edge[DIR_AHEAD].src = track[45]
   track[45].edge[DIR_AHEAD].dest = track[100]
   track[45].edge[DIR_AHEAD].dist = 60
+  track[45].coord_x = 1540;
+  track[45].coord_y = 255;
   track[46].name = "C15"
   track[46].typ = NODE_SENSOR
   track[46].num = 46
@@ -550,6 +644,8 @@ def init_tracka():
   track[46].edge[DIR_AHEAD].src = track[46]
   track[46].edge[DIR_AHEAD].dest = track[59]
   track[46].edge[DIR_AHEAD].dist = 405
+  track[46].coord_x = 1747;
+  track[46].coord_y = 1573;
   track[47].name = "C16"
   track[47].typ = NODE_SENSOR
   track[47].num = 47
@@ -558,6 +654,8 @@ def init_tracka():
   track[47].edge[DIR_AHEAD].src = track[47]
   track[47].edge[DIR_AHEAD].dest = track[91]
   track[47].edge[DIR_AHEAD].dist = 223
+  track[47].coord_x = 1747;
+  track[47].coord_y = 1573;
   track[48].name = "D1"
   track[48].typ = NODE_SENSOR
   track[48].num = 48
@@ -566,6 +664,8 @@ def init_tracka():
   track[48].edge[DIR_AHEAD].src = track[48]
   track[48].edge[DIR_AHEAD].dest = track[121]
   track[48].edge[DIR_AHEAD].dist = 227
+  track[48].coord_x = 2119;
+  track[48].coord_y = 641;
   track[49].name = "D2"
   track[49].typ = NODE_SENSOR
   track[49].num = 49
@@ -574,6 +674,8 @@ def init_tracka():
   track[49].edge[DIR_AHEAD].src = track[49]
   track[49].edge[DIR_AHEAD].dest = track[67]
   track[49].edge[DIR_AHEAD].dist = 200
+  track[49].coord_x = 2119;
+  track[49].coord_y = 641;
   track[50].name = "D3"
   track[50].typ = NODE_SENSOR
   track[50].num = 50
@@ -582,6 +684,8 @@ def init_tracka():
   track[50].edge[DIR_AHEAD].src = track[50]
   track[50].edge[DIR_AHEAD].dest = track[99]
   track[50].edge[DIR_AHEAD].dist = 223
+  track[50].coord_x = 2296;
+  track[50].coord_y = 378;
   track[51].name = "D4"
   track[51].typ = NODE_SENSOR
   track[51].num = 51
@@ -590,6 +694,8 @@ def init_tracka():
   track[51].edge[DIR_AHEAD].src = track[51]
   track[51].edge[DIR_AHEAD].dest = track[21]
   track[51].edge[DIR_AHEAD].dist = 405
+  track[51].coord_x = 2296;
+  track[51].coord_y = 378;
   track[52].name = "D5"
   track[52].typ = NODE_SENSOR
   track[52].num = 52
@@ -598,6 +704,8 @@ def init_tracka():
   track[52].edge[DIR_AHEAD].src = track[52]
   track[52].edge[DIR_AHEAD].dest = track[69]
   track[52].edge[DIR_AHEAD].dist = 375
+  track[52].coord_x = 3076;
+  track[52].coord_y = 578;
   track[53].name = "D6"
   track[53].typ = NODE_SENSOR
   track[53].num = 53
@@ -606,6 +714,8 @@ def init_tracka():
   track[53].edge[DIR_AHEAD].src = track[53]
   track[53].edge[DIR_AHEAD].dest = track[97]
   track[53].edge[DIR_AHEAD].dist = 213
+  track[53].coord_x = 3076;
+  track[53].coord_y = 578;
   track[54].name = "D7"
   track[54].typ = NODE_SENSOR
   track[54].num = 54
@@ -614,6 +724,8 @@ def init_tracka():
   track[54].edge[DIR_AHEAD].src = track[54]
   track[54].edge[DIR_AHEAD].dest = track[97]
   track[54].edge[DIR_AHEAD].dist = 290
+  track[54].coord_x = 3080;
+  track[54].coord_y = 477;
   track[55].name = "D8"
   track[55].typ = NODE_SENSOR
   track[55].num = 55
@@ -622,6 +734,8 @@ def init_tracka():
   track[55].edge[DIR_AHEAD].src = track[55]
   track[55].edge[DIR_AHEAD].dest = track[71]
   track[55].edge[DIR_AHEAD].dist = 375
+  track[55].coord_x = 3080;
+  track[55].coord_y = 477;
   track[56].name = "D9"
   track[56].typ = NODE_SENSOR
   track[56].num = 56
@@ -630,6 +744,8 @@ def init_tracka():
   track[56].edge[DIR_AHEAD].src = track[56]
   track[56].edge[DIR_AHEAD].dest = track[75]
   track[56].edge[DIR_AHEAD].dist = 361
+  track[56].coord_x = 3029;
+  track[56].coord_y = 1425;
   track[57].name = "D10"
   track[57].typ = NODE_SENSOR
   track[57].num = 57
@@ -638,6 +754,8 @@ def init_tracka():
   track[57].edge[DIR_AHEAD].src = track[57]
   track[57].edge[DIR_AHEAD].dest = track[95]
   track[57].edge[DIR_AHEAD].dist = 291
+  track[57].coord_x = 3029;
+  track[57].coord_y = 1425;
   track[58].name = "D11"
   track[58].typ = NODE_SENSOR
   track[58].num = 58
@@ -646,6 +764,8 @@ def init_tracka():
   track[58].edge[DIR_AHEAD].src = track[58]
   track[58].edge[DIR_AHEAD].dest = track[47]
   track[58].edge[DIR_AHEAD].dist = 405
+  track[58].coord_x = 2256;
+  track[58].coord_y = 1578;
   track[59].name = "D12"
   track[59].typ = NODE_SENSOR
   track[59].num = 59
@@ -654,6 +774,8 @@ def init_tracka():
   track[59].edge[DIR_AHEAD].src = track[59]
   track[59].edge[DIR_AHEAD].dest = track[93]
   track[59].edge[DIR_AHEAD].dist = 220
+  track[59].coord_x = 2256;
+  track[59].coord_y = 1578;
   track[60].name = "D13"
   track[60].typ = NODE_SENSOR
   track[60].num = 60
@@ -662,6 +784,8 @@ def init_tracka():
   track[60].edge[DIR_AHEAD].src = track[60]
   track[60].edge[DIR_AHEAD].dest = track[17]
   track[60].edge[DIR_AHEAD].dist = 398
+  track[60].coord_x = 2252;
+  track[60].coord_y = 1487;
   track[61].name = "D14"
   track[61].typ = NODE_SENSOR
   track[61].num = 61
@@ -670,6 +794,8 @@ def init_tracka():
   track[61].edge[DIR_AHEAD].src = track[61]
   track[61].edge[DIR_AHEAD].dest = track[113]
   track[61].edge[DIR_AHEAD].dist = 225
+  track[61].coord_x = 2252;
+  track[61].coord_y = 1487;
   track[62].name = "D15"
   track[62].typ = NODE_SENSOR
   track[62].num = 62
@@ -678,6 +804,8 @@ def init_tracka():
   track[62].edge[DIR_AHEAD].src = track[62]
   track[62].edge[DIR_AHEAD].dest = track[28]
   track[62].edge[DIR_AHEAD].dist = 202
+  track[62].coord_x = 2262;
+  track[62].coord_y = 1404;
   track[63].name = "D16"
   track[63].typ = NODE_SENSOR
   track[63].num = 63
@@ -686,6 +814,8 @@ def init_tracka():
   track[63].edge[DIR_AHEAD].src = track[63]
   track[63].edge[DIR_AHEAD].dest = track[113]
   track[63].edge[DIR_AHEAD].dist = 230
+  track[63].coord_x = 2262;
+  track[63].coord_y = 1404;
   track[64].name = "E1"
   track[64].typ = NODE_SENSOR
   track[64].num = 64
@@ -694,6 +824,8 @@ def init_tracka():
   track[64].edge[DIR_AHEAD].src = track[64]
   track[64].edge[DIR_AHEAD].dest = track[123]
   track[64].edge[DIR_AHEAD].dist = 222
+  track[64].coord_x = 1952;
+  track[64].coord_y = 642;
   track[65].name = "E2"
   track[65].typ = NODE_SENSOR
   track[65].num = 65
@@ -702,6 +834,8 @@ def init_tracka():
   track[65].edge[DIR_AHEAD].src = track[65]
   track[65].edge[DIR_AHEAD].dest = track[78]
   track[65].edge[DIR_AHEAD].dist = 203
+  track[65].coord_x = 1952;
+  track[65].coord_y = 642;
   track[66].name = "E3"
   track[66].typ = NODE_SENSOR
   track[66].num = 66
@@ -710,6 +844,8 @@ def init_tracka():
   track[66].edge[DIR_AHEAD].src = track[66]
   track[66].edge[DIR_AHEAD].dest = track[48]
   track[66].edge[DIR_AHEAD].dist = 200
+  track[66].coord_x = 2307;
+  track[66].coord_y = 462;
   track[67].name = "E4"
   track[67].typ = NODE_SENSOR
   track[67].num = 67
@@ -718,6 +854,8 @@ def init_tracka():
   track[67].edge[DIR_AHEAD].src = track[67]
   track[67].edge[DIR_AHEAD].dest = track[99]
   track[67].edge[DIR_AHEAD].dist = 220
+  track[67].coord_x = 2307;
+  track[67].coord_y = 462;
   track[68].name = "E5"
   track[68].typ = NODE_SENSOR
   track[68].num = 68
@@ -726,6 +864,8 @@ def init_tracka():
   track[68].edge[DIR_AHEAD].src = track[68]
   track[68].edge[DIR_AHEAD].dest = track[53]
   track[68].edge[DIR_AHEAD].dist = 375
+  track[68].coord_x = 2667;
+  track[68].coord_y = 384;
   track[69].name = "E6"
   track[69].typ = NODE_SENSOR
   track[69].num = 69
@@ -734,6 +874,8 @@ def init_tracka():
   track[69].edge[DIR_AHEAD].src = track[69]
   track[69].edge[DIR_AHEAD].dest = track[98]
   track[69].edge[DIR_AHEAD].dist = 74
+  track[69].coord_x = 2667;
+  track[69].coord_y = 384;
   track[70].name = "E7"
   track[70].typ = NODE_SENSOR
   track[70].num = 70
@@ -742,6 +884,8 @@ def init_tracka():
   track[70].edge[DIR_AHEAD].src = track[70]
   track[70].edge[DIR_AHEAD].dest = track[54]
   track[70].edge[DIR_AHEAD].dist = 375
+  track[70].coord_x = 2660;
+  track[70].coord_y = 281;
   track[71].name = "E8"
   track[71].typ = NODE_SENSOR
   track[71].num = 71
@@ -750,6 +894,8 @@ def init_tracka():
   track[71].edge[DIR_AHEAD].src = track[71]
   track[71].edge[DIR_AHEAD].dest = track[45]
   track[71].edge[DIR_AHEAD].dist = 877
+  track[71].coord_x = 2660;
+  track[71].coord_y = 281;
   track[72].name = "E9"
   track[72].typ = NODE_SENSOR
   track[72].num = 72
@@ -758,6 +904,8 @@ def init_tracka():
   track[72].edge[DIR_AHEAD].src = track[72]
   track[72].edge[DIR_AHEAD].dest = track[95]
   track[72].edge[DIR_AHEAD].dist = 215
+  track[72].coord_x = 3033;
+  track[72].coord_y = 1328;
   track[73].name = "E10"
   track[73].typ = NODE_SENSOR
   track[73].num = 73
@@ -766,6 +914,8 @@ def init_tracka():
   track[73].edge[DIR_AHEAD].src = track[73]
   track[73].edge[DIR_AHEAD].dest = track[76]
   track[73].edge[DIR_AHEAD].dist = 375
+  track[73].coord_x = 3033;
+  track[73].coord_y = 1328;
   track[74].name = "E11"
   track[74].typ = NODE_SENSOR
   track[74].num = 74
@@ -774,6 +924,8 @@ def init_tracka():
   track[74].edge[DIR_AHEAD].src = track[74]
   track[74].edge[DIR_AHEAD].dest = track[57]
   track[74].edge[DIR_AHEAD].dist = 361
+  track[74].coord_x = 2609;
+  track[74].coord_y = 1585;
   track[75].name = "E12"
   track[75].typ = NODE_SENSOR
   track[75].num = 75
@@ -782,6 +934,8 @@ def init_tracka():
   track[75].edge[DIR_AHEAD].src = track[75]
   track[75].edge[DIR_AHEAD].dest = track[92]
   track[75].edge[DIR_AHEAD].dist = 65
+  track[75].coord_x = 2609;
+  track[75].coord_y = 1585;
   track[76].name = "E13"
   track[76].typ = NODE_SENSOR
   track[76].num = 76
@@ -790,6 +944,8 @@ def init_tracka():
   track[76].edge[DIR_AHEAD].src = track[76]
   track[76].edge[DIR_AHEAD].dest = track[112]
   track[76].edge[DIR_AHEAD].dist = 62
+  track[76].coord_x = 2605;
+  track[76].coord_y = 1493;
   track[77].name = "E14"
   track[77].typ = NODE_SENSOR
   track[77].num = 77
@@ -798,6 +954,8 @@ def init_tracka():
   track[77].edge[DIR_AHEAD].src = track[77]
   track[77].edge[DIR_AHEAD].dest = track[72]
   track[77].edge[DIR_AHEAD].dist = 375
+  track[77].coord_x = 2605;
+  track[77].coord_y = 1493;
   track[78].name = "E15"
   track[78].typ = NODE_SENSOR
   track[78].num = 78
@@ -806,6 +964,8 @@ def init_tracka():
   track[78].edge[DIR_AHEAD].src = track[78]
   track[78].edge[DIR_AHEAD].dest = track[105]
   track[78].edge[DIR_AHEAD].dist = 230
+  track[78].coord_x = 1779;
+  track[78].coord_y = 456;
   track[79].name = "E16"
   track[79].typ = NODE_SENSOR
   track[79].num = 79
@@ -814,6 +974,8 @@ def init_tracka():
   track[79].edge[DIR_AHEAD].src = track[79]
   track[79].edge[DIR_AHEAD].dest = track[64]
   track[79].edge[DIR_AHEAD].dist = 203
+  track[79].coord_x = 1779;
+  track[79].coord_y = 456;
   track[80].name = "BR1"
   track[80].typ = NODE_BRANCH
   track[80].num = 1
@@ -822,10 +984,14 @@ def init_tracka():
   track[80].edge[DIR_STRAIGHT].src = track[80]
   track[80].edge[DIR_STRAIGHT].dest = track[11]
   track[80].edge[DIR_STRAIGHT].dist = 410
+  track[80].coord_x = 991;
+  track[80].coord_y = 1516;
   track[80].edge[DIR_CURVED].reverse = track[9].edge[DIR_AHEAD]
   track[80].edge[DIR_CURVED].src = track[80]
   track[80].edge[DIR_CURVED].dest = track[8]
   track[80].edge[DIR_CURVED].dist = 210
+  track[80].coord_x = 991;
+  track[80].coord_y = 1516;
   track[81].name = "MR1"
   track[81].typ = NODE_MERGE
   track[81].num = 1
@@ -834,6 +1000,8 @@ def init_tracka():
   track[81].edge[DIR_AHEAD].src = track[81]
   track[81].edge[DIR_AHEAD].dest = track[83]
   track[81].edge[DIR_AHEAD].dist = 191
+  track[81].coord_x = 991;
+  track[81].coord_y = 1516;
   track[82].name = "BR2"
   track[82].typ = NODE_BRANCH
   track[82].num = 2
@@ -842,10 +1010,14 @@ def init_tracka():
   track[82].edge[DIR_STRAIGHT].src = track[82]
   track[82].edge[DIR_STRAIGHT].dest = track[80]
   track[82].edge[DIR_STRAIGHT].dist = 191
+  track[82].coord_x = 905;
+  track[82].coord_y = 1209;
   track[82].edge[DIR_CURVED].reverse = track[7].edge[DIR_AHEAD]
   track[82].edge[DIR_CURVED].src = track[82]
   track[82].edge[DIR_CURVED].dest = track[6]
   track[82].edge[DIR_CURVED].dist = 211
+  track[82].coord_x = 905;
+  track[82].coord_y = 1209;
   track[83].name = "MR2"
   track[83].typ = NODE_MERGE
   track[83].num = 2
@@ -854,6 +1026,8 @@ def init_tracka():
   track[83].edge[DIR_AHEAD].src = track[83]
   track[83].edge[DIR_AHEAD].dest = track[85]
   track[83].edge[DIR_AHEAD].dist = 182
+  track[83].coord_x = 905;
+  track[83].coord_y = 1209;
   track[84].name = "BR3"
   track[84].typ = NODE_BRANCH
   track[84].num = 3
@@ -862,10 +1036,14 @@ def init_tracka():
   track[84].edge[DIR_STRAIGHT].src = track[84]
   track[84].edge[DIR_STRAIGHT].dest = track[5]
   track[84].edge[DIR_STRAIGHT].dist = 216
+  track[84].coord_x = 1435;
+  track[84].coord_y = 1668;
   track[84].edge[DIR_CURVED].reverse = track[83].edge[DIR_AHEAD]
   track[84].edge[DIR_CURVED].src = track[84]
   track[84].edge[DIR_CURVED].dest = track[82]
   track[84].edge[DIR_CURVED].dist = 182
+  track[84].coord_x = 1435;
+  track[84].coord_y = 1668;
   track[85].name = "MR3"
   track[85].typ = NODE_MERGE
   track[85].num = 3
@@ -874,6 +1052,8 @@ def init_tracka():
   track[85].edge[DIR_AHEAD].src = track[85]
   track[85].edge[DIR_AHEAD].dest = track[38]
   track[85].edge[DIR_AHEAD].dist = 145
+  track[85].coord_x = 1435;
+  track[85].coord_y = 1668;
   track[86].name = "BR4"
   track[86].typ = NODE_BRANCH
   track[86].num = 4
@@ -882,10 +1062,14 @@ def init_tracka():
   track[86].edge[DIR_STRAIGHT].src = track[86]
   track[86].edge[DIR_STRAIGHT].dest = track[14]
   track[86].edge[DIR_STRAIGHT].dist = 394
+  track[86].coord_x = 986;
+  track[86].coord_y = 304;
   track[86].edge[DIR_CURVED].reverse = track[12].edge[DIR_AHEAD]
   track[86].edge[DIR_CURVED].src = track[86]
   track[86].edge[DIR_CURVED].dest = track[13]
   track[86].edge[DIR_CURVED].dist = 215
+  track[86].coord_x = 986;
+  track[86].coord_y = 304;
   track[87].name = "MR4"
   track[87].typ = NODE_MERGE
   track[87].num = 4
@@ -894,6 +1078,8 @@ def init_tracka():
   track[87].edge[DIR_AHEAD].src = track[87]
   track[87].edge[DIR_AHEAD].dest = track[103]
   track[87].edge[DIR_AHEAD].dist = 185
+  track[87].coord_x = 986;
+  track[87].coord_y = 304;
   track[88].name = "BR5"
   track[88].typ = NODE_BRANCH
   track[88].num = 5
@@ -902,10 +1088,14 @@ def init_tracka():
   track[88].edge[DIR_STRAIGHT].src = track[88]
   track[88].edge[DIR_STRAIGHT].dest = track[34]
   track[88].edge[DIR_STRAIGHT].dist = 226
+  track[88].coord_x = 2116;
+  track[88].coord_y = 1671;
   track[88].edge[DIR_CURVED].reverse = track[92].edge[DIR_CURVED]
   track[88].edge[DIR_CURVED].src = track[88]
   track[88].edge[DIR_CURVED].dest = track[93]
   track[88].edge[DIR_CURVED].dist = 334
+  track[88].coord_x = 2116;
+  track[88].coord_y = 1671;
   track[89].name = "MR5"
   track[89].typ = NODE_MERGE
   track[89].num = 5
@@ -914,6 +1104,8 @@ def init_tracka():
   track[89].edge[DIR_AHEAD].src = track[89]
   track[89].edge[DIR_AHEAD].dest = track[114]
   track[89].edge[DIR_AHEAD].dist = 187
+  track[89].coord_x = 2116;
+  track[89].coord_y = 1671;
   track[90].name = "BR6"
   track[90].typ = NODE_BRANCH
   track[90].num = 6
@@ -922,10 +1114,14 @@ def init_tracka():
   track[90].edge[DIR_STRAIGHT].src = track[90]
   track[90].edge[DIR_STRAIGHT].dest = track[46]
   track[90].edge[DIR_STRAIGHT].dist = 223
+  track[90].coord_x = 1478;
+  track[90].coord_y = 1570;
   track[90].edge[DIR_CURVED].reverse = track[114].edge[DIR_CURVED]
   track[90].edge[DIR_CURVED].src = track[90]
   track[90].edge[DIR_CURVED].dest = track[115]
   track[90].edge[DIR_CURVED].dist = 338
+  track[90].coord_x = 1478;
+  track[90].coord_y = 1570;
   track[91].name = "MR6"
   track[91].typ = NODE_MERGE
   track[91].num = 6
@@ -934,6 +1130,8 @@ def init_tracka():
   track[91].edge[DIR_AHEAD].src = track[91]
   track[91].edge[DIR_AHEAD].dest = track[37]
   track[91].edge[DIR_AHEAD].dist = 79
+  track[91].coord_x = 1478;
+  track[91].coord_y = 1570;
   track[92].name = "BR7"
   track[92].typ = NODE_BRANCH
   track[92].num = 7
@@ -942,10 +1140,14 @@ def init_tracka():
   track[92].edge[DIR_STRAIGHT].src = track[92]
   track[92].edge[DIR_STRAIGHT].dest = track[58]
   track[92].edge[DIR_STRAIGHT].dist = 220
+  track[92].coord_x = 2525;
+  track[92].coord_y = 1585;
   track[92].edge[DIR_CURVED].reverse = track[88].edge[DIR_CURVED]
   track[92].edge[DIR_CURVED].src = track[92]
   track[92].edge[DIR_CURVED].dest = track[89]
   track[92].edge[DIR_CURVED].dist = 334
+  track[92].coord_x = 2525;
+  track[92].coord_y = 1585;
   track[93].name = "MR7"
   track[93].typ = NODE_MERGE
   track[93].num = 7
@@ -954,6 +1156,8 @@ def init_tracka():
   track[93].edge[DIR_AHEAD].src = track[93]
   track[93].edge[DIR_AHEAD].dest = track[74]
   track[93].edge[DIR_AHEAD].dist = 65
+  track[93].coord_x = 2525;
+  track[93].coord_y = 1585;
   track[94].name = "BR8"
   track[94].typ = NODE_BRANCH
   track[94].num = 8
@@ -962,10 +1166,14 @@ def init_tracka():
   track[94].edge[DIR_STRAIGHT].src = track[94]
   track[94].edge[DIR_STRAIGHT].dest = track[56]
   track[94].edge[DIR_STRAIGHT].dist = 291
+  track[94].coord_x = 3139;
+  track[94].coord_y = 1068;
   track[94].edge[DIR_CURVED].reverse = track[72].edge[DIR_AHEAD]
   track[94].edge[DIR_CURVED].src = track[94]
   track[94].edge[DIR_CURVED].dest = track[73]
   track[94].edge[DIR_CURVED].dist = 215
+  track[94].coord_x = 3139;
+  track[94].coord_y = 1068;
   track[95].name = "MR8"
   track[95].typ = NODE_MERGE
   track[95].num = 8
@@ -974,6 +1182,8 @@ def init_tracka():
   track[95].edge[DIR_AHEAD].src = track[95]
   track[95].edge[DIR_AHEAD].dest = track[96]
   track[95].edge[DIR_AHEAD].dist = 193
+  track[95].coord_x = 3139;
+  track[95].coord_y = 1068;
   track[96].name = "BR9"
   track[96].typ = NODE_BRANCH
   track[96].num = 9
@@ -982,10 +1192,14 @@ def init_tracka():
   track[96].edge[DIR_STRAIGHT].src = track[96]
   track[96].edge[DIR_STRAIGHT].dest = track[55]
   track[96].edge[DIR_STRAIGHT].dist = 290
+  track[96].coord_x = 3152;
+  track[96].coord_y = 839;
   track[96].edge[DIR_CURVED].reverse = track[53].edge[DIR_AHEAD]
   track[96].edge[DIR_CURVED].src = track[96]
   track[96].edge[DIR_CURVED].dest = track[52]
   track[96].edge[DIR_CURVED].dist = 213
+  track[96].coord_x = 3152;
+  track[96].coord_y = 839;
   track[97].name = "MR9"
   track[97].typ = NODE_MERGE
   track[97].num = 9
@@ -994,6 +1208,8 @@ def init_tracka():
   track[97].edge[DIR_AHEAD].src = track[97]
   track[97].edge[DIR_AHEAD].dest = track[94]
   track[97].edge[DIR_AHEAD].dist = 193
+  track[97].coord_x = 3152;
+  track[97].coord_y = 839;
   track[98].name = "BR10"
   track[98].typ = NODE_BRANCH
   track[98].num = 10
@@ -1002,10 +1218,14 @@ def init_tracka():
   track[98].edge[DIR_STRAIGHT].src = track[98]
   track[98].edge[DIR_STRAIGHT].dest = track[51]
   track[98].edge[DIR_STRAIGHT].dist = 223
+  track[98].coord_x = 2577;
+  track[98].coord_y = 383;
   track[98].edge[DIR_CURVED].reverse = track[67].edge[DIR_AHEAD]
   track[98].edge[DIR_CURVED].src = track[98]
   track[98].edge[DIR_CURVED].dest = track[66]
   track[98].edge[DIR_CURVED].dist = 220
+  track[98].coord_x = 2577;
+  track[98].coord_y = 383;
   track[99].name = "MR10"
   track[99].typ = NODE_MERGE
   track[99].num = 10
@@ -1014,6 +1234,8 @@ def init_tracka():
   track[99].edge[DIR_AHEAD].src = track[99]
   track[99].edge[DIR_AHEAD].dest = track[68]
   track[99].edge[DIR_AHEAD].dist = 74
+  track[99].coord_x = 2577;
+  track[99].coord_y = 383;
   track[100].name = "BR11"
   track[100].typ = NODE_BRANCH
   track[100].num = 11
@@ -1022,10 +1244,14 @@ def init_tracka():
   track[100].edge[DIR_STRAIGHT].src = track[100]
   track[100].edge[DIR_STRAIGHT].dest = track[102]
   track[100].edge[DIR_STRAIGHT].dist = 190
+  track[100].coord_x = 1469;
+  track[100].coord_y = 254;
   track[100].edge[DIR_CURVED].reverse = track[106].edge[DIR_STRAIGHT]
   track[100].edge[DIR_CURVED].src = track[100]
   track[100].edge[DIR_CURVED].dest = track[107]
   track[100].edge[DIR_CURVED].dist = 445
+  track[100].coord_x = 1469;
+  track[100].coord_y = 254;
   track[101].name = "MR11"
   track[101].typ = NODE_MERGE
   track[101].num = 11
@@ -1034,6 +1260,8 @@ def init_tracka():
   track[101].edge[DIR_AHEAD].src = track[101]
   track[101].edge[DIR_AHEAD].dest = track[44]
   track[101].edge[DIR_AHEAD].dist = 60
+  track[101].coord_x = 1469;
+  track[101].coord_y = 254;
   track[102].name = "BR12"
   track[102].typ = NODE_BRANCH
   track[102].num = 12
@@ -1042,10 +1270,14 @@ def init_tracka():
   track[102].edge[DIR_STRAIGHT].src = track[102]
   track[102].edge[DIR_STRAIGHT].dest = track[1]
   track[102].edge[DIR_STRAIGHT].dist = 218
+  track[102].coord_x = 1219;
+  track[102].coord_y = 250;
   track[102].edge[DIR_CURVED].reverse = track[87].edge[DIR_AHEAD]
   track[102].edge[DIR_CURVED].src = track[102]
   track[102].edge[DIR_CURVED].dest = track[86]
   track[102].edge[DIR_CURVED].dist = 185
+  track[102].coord_x = 1219;
+  track[102].coord_y = 250;
   track[103].name = "MR12"
   track[103].typ = NODE_MERGE
   track[103].num = 12
@@ -1054,6 +1286,8 @@ def init_tracka():
   track[103].edge[DIR_AHEAD].src = track[103]
   track[103].edge[DIR_AHEAD].dest = track[101]
   track[103].edge[DIR_AHEAD].dist = 190
+  track[103].coord_x = 1219;
+  track[103].coord_y = 250;
   track[104].name = "BR13"
   track[104].typ = NODE_BRANCH
   track[104].num = 13
@@ -1062,10 +1296,14 @@ def init_tracka():
   track[104].edge[DIR_STRAIGHT].src = track[104]
   track[104].edge[DIR_STRAIGHT].dest = track[20]
   track[104].edge[DIR_STRAIGHT].dist = 214
+  track[104].coord_x = 1501;
+  track[104].coord_y = 359;
   track[104].edge[DIR_CURVED].reverse = track[78].edge[DIR_AHEAD]
   track[104].edge[DIR_CURVED].src = track[104]
   track[104].edge[DIR_CURVED].dest = track[79]
   track[104].edge[DIR_CURVED].dist = 230
+  track[104].coord_x = 1501;
+  track[104].coord_y = 359;
   track[105].name = "MR13"
   track[105].typ = NODE_MERGE
   track[105].num = 13
@@ -1074,6 +1312,8 @@ def init_tracka():
   track[105].edge[DIR_AHEAD].src = track[105]
   track[105].edge[DIR_AHEAD].dest = track[43]
   track[105].edge[DIR_AHEAD].dist = 140
+  track[105].coord_x = 1501;
+  track[105].coord_y = 359;
   track[106].name = "BR14"
   track[106].typ = NODE_BRANCH
   track[106].num = 14
@@ -1082,10 +1322,14 @@ def init_tracka():
   track[106].edge[DIR_STRAIGHT].src = track[106]
   track[106].edge[DIR_STRAIGHT].dest = track[101]
   track[106].edge[DIR_STRAIGHT].dist = 445
+  track[106].coord_x = 989;
+  track[106].coord_y = 558;
   track[106].edge[DIR_CURVED].reverse = track[43].edge[DIR_AHEAD]
   track[106].edge[DIR_CURVED].src = track[106]
   track[106].edge[DIR_CURVED].dest = track[42]
   track[106].edge[DIR_CURVED].dist = 314
+  track[106].coord_x = 989;
+  track[106].coord_y = 558;
   track[107].name = "MR14"
   track[107].typ = NODE_MERGE
   track[107].num = 14
@@ -1094,6 +1338,8 @@ def init_tracka():
   track[107].edge[DIR_AHEAD].src = track[107]
   track[107].edge[DIR_AHEAD].dest = track[3]
   track[107].edge[DIR_AHEAD].dist = 62
+  track[107].coord_x = 989;
+  track[107].coord_y = 558;
   track[108].name = "BR15"
   track[108].typ = NODE_BRANCH
   track[108].num = 15
@@ -1102,10 +1348,14 @@ def init_tracka():
   track[108].edge[DIR_STRAIGHT].src = track[108]
   track[108].edge[DIR_STRAIGHT].dest = track[36]
   track[108].edge[DIR_STRAIGHT].dist = 411
+  track[108].coord_x = 978;
+  track[108].coord_y = 1252;
   track[108].edge[DIR_CURVED].reverse = track[40].edge[DIR_AHEAD]
   track[108].edge[DIR_CURVED].src = track[108]
   track[108].edge[DIR_CURVED].dest = track[41]
   track[108].edge[DIR_CURVED].dist = 305
+  track[108].coord_x = 978;
+  track[108].coord_y = 1252;
   track[109].name = "MR15"
   track[109].typ = NODE_MERGE
   track[109].num = 15
@@ -1114,6 +1364,8 @@ def init_tracka():
   track[109].edge[DIR_AHEAD].src = track[109]
   track[109].edge[DIR_AHEAD].dest = track[30]
   track[109].edge[DIR_AHEAD].dist = 70
+  track[109].coord_x = 978;
+  track[109].coord_y = 1252;
   track[110].name = "BR16"
   track[110].typ = NODE_BRANCH
   track[110].num = 16
@@ -1122,10 +1374,14 @@ def init_tracka():
   track[110].edge[DIR_STRAIGHT].src = track[110]
   track[110].edge[DIR_STRAIGHT].dest = track[16]
   track[110].edge[DIR_STRAIGHT].dist = 225
+  track[110].coord_x = 1482;
+  track[110].coord_y = 1470;
   track[110].edge[DIR_CURVED].reverse = track[19].edge[DIR_AHEAD]
   track[110].edge[DIR_CURVED].src = track[110]
   track[110].edge[DIR_CURVED].dest = track[18]
   track[110].edge[DIR_CURVED].dist = 220
+  track[110].coord_x = 1482;
+  track[110].coord_y = 1470;
   track[111].name = "MR16"
   track[111].typ = NODE_MERGE
   track[111].num = 16
@@ -1134,6 +1390,8 @@ def init_tracka():
   track[111].edge[DIR_AHEAD].src = track[111]
   track[111].edge[DIR_AHEAD].dest = track[40]
   track[111].edge[DIR_AHEAD].dist = 146
+  track[111].coord_x = 1482;
+  track[111].coord_y = 1470;
   track[112].name = "BR17"
   track[112].typ = NODE_BRANCH
   track[112].num = 17
@@ -1142,10 +1400,14 @@ def init_tracka():
   track[112].edge[DIR_STRAIGHT].src = track[112]
   track[112].edge[DIR_STRAIGHT].dest = track[60]
   track[112].edge[DIR_STRAIGHT].dist = 225
+  track[112].coord_x = 2528;
+  track[112].coord_y = 1491;
   track[112].edge[DIR_CURVED].reverse = track[63].edge[DIR_AHEAD]
   track[112].edge[DIR_CURVED].src = track[112]
   track[112].edge[DIR_CURVED].dest = track[62]
   track[112].edge[DIR_CURVED].dist = 230
+  track[112].coord_x = 2528;
+  track[112].coord_y = 1491;
   track[113].name = "MR17"
   track[113].typ = NODE_MERGE
   track[113].num = 17
@@ -1154,6 +1416,8 @@ def init_tracka():
   track[113].edge[DIR_AHEAD].src = track[113]
   track[113].edge[DIR_AHEAD].dest = track[77]
   track[113].edge[DIR_AHEAD].dist = 62
+  track[113].coord_x = 2528;
+  track[113].coord_y = 1491;
   track[114].name = "BR18"
   track[114].typ = NODE_BRANCH
   track[114].num = 18
@@ -1162,10 +1426,14 @@ def init_tracka():
   track[114].edge[DIR_STRAIGHT].src = track[114]
   track[114].edge[DIR_STRAIGHT].dest = track[39]
   track[114].edge[DIR_STRAIGHT].dist = 215
+  track[114].coord_x = 1882;
+  track[114].coord_y = 1669;
   track[114].edge[DIR_CURVED].reverse = track[90].edge[DIR_CURVED]
   track[114].edge[DIR_CURVED].src = track[114]
   track[114].edge[DIR_CURVED].dest = track[91]
   track[114].edge[DIR_CURVED].dist = 338
+  track[114].coord_x = 1882;
+  track[114].coord_y = 1669;
   track[115].name = "MR18"
   track[115].typ = NODE_MERGE
   track[115].num = 18
@@ -1174,6 +1442,8 @@ def init_tracka():
   track[115].edge[DIR_AHEAD].src = track[115]
   track[115].edge[DIR_AHEAD].dest = track[88]
   track[115].edge[DIR_AHEAD].dist = 187
+  track[115].coord_x = 1882;
+  track[115].coord_y = 1669;
   track[116].name = "BR153"
   track[116].typ = NODE_BRANCH
   track[116].num = 153
@@ -1182,10 +1452,14 @@ def init_tracka():
   track[116].edge[DIR_STRAIGHT].src = track[116]
   track[116].edge[DIR_STRAIGHT].dest = track[125]
   track[116].edge[DIR_STRAIGHT].dist = 230
+  track[116].coord_x = 2023;
+  track[116].coord_y = 934;
   track[116].edge[DIR_CURVED].reverse = track[33].edge[DIR_AHEAD]
   track[116].edge[DIR_CURVED].src = track[116]
   track[116].edge[DIR_CURVED].dest = track[32]
   track[116].edge[DIR_CURVED].dist = 228
+  track[116].coord_x = 2023;
+  track[116].coord_y = 934;
   track[117].name = "MR153"
   track[117].typ = NODE_MERGE
   track[117].num = 153
@@ -1194,6 +1468,8 @@ def init_tracka():
   track[117].edge[DIR_AHEAD].src = track[117]
   track[117].edge[DIR_AHEAD].dest = track[119]
   track[117].edge[DIR_AHEAD].dist = 24
+  track[117].coord_x = 2023;
+  track[117].coord_y = 934;
   track[118].name = "BR154"
   track[118].typ = NODE_BRANCH
   track[118].num = 154
@@ -1202,10 +1478,14 @@ def init_tracka():
   track[118].edge[DIR_STRAIGHT].src = track[118]
   track[118].edge[DIR_STRAIGHT].dest = track[116]
   track[118].edge[DIR_STRAIGHT].dist = 24
+  track[118].coord_x = 2023;
+  track[118].coord_y = 934;
   track[118].edge[DIR_CURVED].reverse = track[28].edge[DIR_AHEAD]
   track[118].edge[DIR_CURVED].src = track[118]
   track[118].edge[DIR_CURVED].dest = track[29]
   track[118].edge[DIR_CURVED].dist = 224
+  track[118].coord_x = 2023;
+  track[118].coord_y = 934;
   track[119].name = "MR154"
   track[119].typ = NODE_MERGE
   track[119].num = 154
@@ -1214,6 +1494,8 @@ def init_tracka():
   track[119].edge[DIR_AHEAD].src = track[119]
   track[119].edge[DIR_AHEAD].dest = track[122]
   track[119].edge[DIR_AHEAD].dist = 32
+  track[119].coord_x = 2023;
+  track[119].coord_y = 934;
   track[120].name = "BR155"
   track[120].typ = NODE_BRANCH
   track[120].num = 155
@@ -1222,10 +1504,14 @@ def init_tracka():
   track[120].edge[DIR_STRAIGHT].src = track[120]
   track[120].edge[DIR_STRAIGHT].dest = track[127]
   track[120].edge[DIR_STRAIGHT].dist = 247
+  track[120].coord_x = 2023;
+  track[120].coord_y = 934;
   track[120].edge[DIR_CURVED].reverse = track[48].edge[DIR_AHEAD]
   track[120].edge[DIR_CURVED].src = track[120]
   track[120].edge[DIR_CURVED].dest = track[49]
   track[120].edge[DIR_CURVED].dist = 227
+  track[120].coord_x = 2023;
+  track[120].coord_y = 934;
   track[121].name = "MR155"
   track[121].typ = NODE_MERGE
   track[121].num = 155
@@ -1234,6 +1520,8 @@ def init_tracka():
   track[121].edge[DIR_AHEAD].src = track[121]
   track[121].edge[DIR_AHEAD].dest = track[123]
   track[121].edge[DIR_AHEAD].dist = 24
+  track[121].coord_x = 2023;
+  track[121].coord_y = 934;
   track[122].name = "BR156"
   track[122].typ = NODE_BRANCH
   track[122].num = 156
@@ -1242,10 +1530,14 @@ def init_tracka():
   track[122].edge[DIR_STRAIGHT].src = track[122]
   track[122].edge[DIR_STRAIGHT].dest = track[120]
   track[122].edge[DIR_STRAIGHT].dist = 24
+  track[122].coord_x = 2023;
+  track[122].coord_y = 934;
   track[122].edge[DIR_CURVED].reverse = track[64].edge[DIR_AHEAD]
   track[122].edge[DIR_CURVED].src = track[122]
   track[122].edge[DIR_CURVED].dest = track[65]
   track[122].edge[DIR_CURVED].dist = 222
+  track[122].coord_x = 2023;
+  track[122].coord_y = 934;
   track[123].name = "MR156"
   track[123].typ = NODE_MERGE
   track[123].num = 156
@@ -1254,6 +1546,8 @@ def init_tracka():
   track[123].edge[DIR_AHEAD].src = track[123]
   track[123].edge[DIR_AHEAD].dest = track[118]
   track[123].edge[DIR_AHEAD].dist = 32
+  track[123].coord_x = 2023;
+  track[123].coord_y = 934;
   track[124].name = "EN1"
   track[124].typ = NODE_ENTER
   track[124].reverse = track[125]
@@ -1261,6 +1555,8 @@ def init_tracka():
   track[124].edge[DIR_AHEAD].src = track[124]
   track[124].edge[DIR_AHEAD].dest = track[117]
   track[124].edge[DIR_AHEAD].dist = 230
+  track[124].coord_x = 2009;
+  track[124].coord_y = 1288;
   track[125].name = "EX1"
   track[125].typ = NODE_EXIT
   track[125].reverse = track[124]
@@ -1271,6 +1567,8 @@ def init_tracka():
   track[126].edge[DIR_AHEAD].src = track[126]
   track[126].edge[DIR_AHEAD].dest = track[121]
   track[126].edge[DIR_AHEAD].dist = 247
+  track[126].coord_x = 2036;
+  track[126].coord_y = 578;
   track[127].name = "EX2"
   track[127].typ = NODE_EXIT
   track[127].reverse = track[126]
@@ -1281,6 +1579,8 @@ def init_tracka():
   track[128].edge[DIR_AHEAD].src = track[128]
   track[128].edge[DIR_AHEAD].dest = track[35]
   track[128].edge[DIR_AHEAD].dist = 410
+  track[128].coord_x = 3071;
+  track[128].coord_y = 1693;
   track[129].name = "EX3"
   track[129].typ = NODE_EXIT
   track[129].reverse = track[128]
@@ -1291,6 +1591,8 @@ def init_tracka():
   track[130].edge[DIR_AHEAD].src = track[130]
   track[130].edge[DIR_AHEAD].dest = track[12]
   track[130].edge[DIR_AHEAD].dist = 320
+  track[130].coord_x = 261;
+  track[130].coord_y = 339;
   track[131].name = "EX4"
   track[131].typ = NODE_EXIT
   track[131].reverse = track[130]
@@ -1301,6 +1603,8 @@ def init_tracka():
   track[132].edge[DIR_AHEAD].src = track[132]
   track[132].edge[DIR_AHEAD].dest = track[0]
   track[132].edge[DIR_AHEAD].dist = 500
+  track[132].coord_x = 258;
+  track[132].coord_y = 240;
   track[133].name = "EX5"
   track[133].typ = NODE_EXIT
   track[133].reverse = track[132]
@@ -1311,6 +1615,8 @@ def init_tracka():
   track[134].edge[DIR_AHEAD].src = track[134]
   track[134].edge[DIR_AHEAD].dest = track[15]
   track[134].edge[DIR_AHEAD].dist = 145
+  track[134].coord_x = 285;
+  track[134].coord_y = 437;
   track[135].name = "EX6"
   track[135].typ = NODE_EXIT
   track[135].reverse = track[134]
@@ -1321,6 +1627,8 @@ def init_tracka():
   track[136].edge[DIR_AHEAD].src = track[136]
   track[136].edge[DIR_AHEAD].dest = track[22]
   track[136].edge[DIR_AHEAD].dist = 60
+  track[136].coord_x = 284;
+  track[136].coord_y = 1469;
   track[137].name = "EX7"
   track[137].typ = NODE_EXIT
   track[137].reverse = track[136]
@@ -1331,6 +1639,8 @@ def init_tracka():
   track[138].edge[DIR_AHEAD].src = track[138]
   track[138].edge[DIR_AHEAD].dest = track[10]
   track[138].edge[DIR_AHEAD].dist = 60
+  track[138].coord_x = 287;
+  track[138].coord_y = 1372;
   track[139].name = "EX8"
   track[139].typ = NODE_EXIT
   track[139].reverse = track[138]
@@ -1341,6 +1651,8 @@ def init_tracka():
   track[140].edge[DIR_AHEAD].src = track[140]
   track[140].edge[DIR_AHEAD].dest = track[24]
   track[140].edge[DIR_AHEAD].dist = 70
+  track[140].coord_x = 259;
+  track[140].coord_y = 1663;
   track[141].name = "EX9"
   track[141].typ = NODE_EXIT
   track[141].reverse = track[140]
@@ -1351,6 +1663,8 @@ def init_tracka():
   track[142].edge[DIR_AHEAD].src = track[142]
   track[142].edge[DIR_AHEAD].dest = track[26]
   track[142].edge[DIR_AHEAD].dist = 70
+  track[142].coord_x = 257;
+  track[142].coord_y = 1599;
   track[143].name = "EX10"
   track[143].typ = NODE_EXIT
   track[143].reverse = track[142]
@@ -1506,6 +1820,8 @@ def init_trackb():
   track[0].edge[DIR_AHEAD].src = track[0]
   track[0].edge[DIR_AHEAD].dest = track[103]
   track[0].edge[DIR_AHEAD].dist = 218
+  track[0].coord_x = 2317;
+  track[0].coord_y = 1635;
   track[1].name = "A2"
   track[1].typ = NODE_SENSOR
   track[1].num = 1
@@ -1514,6 +1830,8 @@ def init_trackb():
   track[1].edge[DIR_AHEAD].src = track[1]
   track[1].edge[DIR_AHEAD].dest = track[133]
   track[1].edge[DIR_AHEAD].dist = 500
+  track[1].coord_x = 2317;
+  track[1].coord_y = 1635;
   track[2].name = "A3"
   track[2].typ = NODE_SENSOR
   track[2].num = 2
@@ -1522,6 +1840,8 @@ def init_trackb():
   track[2].edge[DIR_AHEAD].src = track[2]
   track[2].edge[DIR_AHEAD].dest = track[106]
   track[2].edge[DIR_AHEAD].dist = 62
+  track[2].coord_x = 2295;
+  track[2].coord_y = 1271;
   track[3].name = "A4"
   track[3].typ = NODE_SENSOR
   track[3].num = 3
@@ -1530,6 +1850,8 @@ def init_trackb():
   track[3].edge[DIR_AHEAD].src = track[3]
   track[3].edge[DIR_AHEAD].dest = track[31]
   track[3].edge[DIR_AHEAD].dist = 440
+  track[3].coord_x = 2295;
+  track[3].coord_y = 1271;
   track[4].name = "A5"
   track[4].typ = NODE_SENSOR
   track[4].num = 4
@@ -1538,6 +1860,8 @@ def init_trackb():
   track[4].edge[DIR_AHEAD].src = track[4]
   track[4].edge[DIR_AHEAD].dest = track[85]
   track[4].edge[DIR_AHEAD].dist = 216
+  track[4].coord_x = 2048;
+  track[4].coord_y = 238;
   track[5].name = "A6"
   track[5].typ = NODE_SENSOR
   track[5].num = 5
@@ -1546,6 +1870,8 @@ def init_trackb():
   track[5].edge[DIR_AHEAD].src = track[5]
   track[5].edge[DIR_AHEAD].dest = track[25]
   track[5].edge[DIR_AHEAD].dist = 649
+  track[5].coord_x = 2048;
+  track[5].coord_y = 238;
   track[6].name = "A7"
   track[6].typ = NODE_SENSOR
   track[6].num = 6
@@ -1554,6 +1880,8 @@ def init_trackb():
   track[6].edge[DIR_AHEAD].src = track[6]
   track[6].edge[DIR_AHEAD].dest = track[27]
   track[6].edge[DIR_AHEAD].dist = 473
+  track[6].coord_x = 2281;
+  track[6].coord_y = 331;
   track[7].name = "A8"
   track[7].typ = NODE_SENSOR
   track[7].num = 7
@@ -1562,6 +1890,8 @@ def init_trackb():
   track[7].edge[DIR_AHEAD].src = track[7]
   track[7].edge[DIR_AHEAD].dest = track[83]
   track[7].edge[DIR_AHEAD].dist = 211
+  track[7].coord_x = 2281;
+  track[7].coord_y = 331;
   track[8].name = "A9"
   track[8].typ = NODE_SENSOR
   track[8].num = 8
@@ -1570,6 +1900,8 @@ def init_trackb():
   track[8].edge[DIR_AHEAD].src = track[8]
   track[8].edge[DIR_AHEAD].dest = track[23]
   track[8].edge[DIR_AHEAD].dist = 289
+  track[8].coord_x = 2504;
+  track[8].coord_y = 421;
   track[9].name = "A10"
   track[9].typ = NODE_SENSOR
   track[9].num = 9
@@ -1578,6 +1910,8 @@ def init_trackb():
   track[9].edge[DIR_AHEAD].src = track[9]
   track[9].edge[DIR_AHEAD].dest = track[81]
   track[9].edge[DIR_AHEAD].dist = 210
+  track[9].coord_x = 2504;
+  track[9].coord_y = 421;
   track[10].name = "A11"
   track[10].typ = NODE_SENSOR
   track[10].num = 10
@@ -1586,6 +1920,8 @@ def init_trackb():
   track[10].edge[DIR_AHEAD].src = track[10]
   track[10].edge[DIR_AHEAD].dest = track[81]
   track[10].edge[DIR_AHEAD].dist = 265
+  track[10].coord_x = 2537;
+  track[10].coord_y = 531;
   track[11].name = "A12"
   track[11].typ = NODE_SENSOR
   track[11].num = 11
@@ -1594,6 +1930,8 @@ def init_trackb():
   track[11].edge[DIR_AHEAD].src = track[11]
   track[11].edge[DIR_AHEAD].dest = track[15]
   track[11].edge[DIR_AHEAD].dist = 774
+  track[11].coord_x = 2537;
+  track[11].coord_y = 531;
   track[12].name = "A13"
   track[12].typ = NODE_SENSOR
   track[12].num = 12
@@ -1602,6 +1940,8 @@ def init_trackb():
   track[12].edge[DIR_AHEAD].src = track[12]
   track[12].edge[DIR_AHEAD].dest = track[87]
   track[12].edge[DIR_AHEAD].dist = 215
+  track[12].coord_x = 2532;
+  track[12].coord_y = 1529;
   track[13].name = "A14"
   track[13].typ = NODE_SENSOR
   track[13].num = 13
@@ -1610,6 +1950,8 @@ def init_trackb():
   track[13].edge[DIR_AHEAD].src = track[13]
   track[13].edge[DIR_AHEAD].dest = track[131]
   track[13].edge[DIR_AHEAD].dist = 320
+  track[13].coord_x = 2532;
+  track[13].coord_y = 1529;
   track[14].name = "A15"
   track[14].typ = NODE_SENSOR
   track[14].num = 14
@@ -1618,6 +1960,8 @@ def init_trackb():
   track[14].edge[DIR_AHEAD].src = track[14]
   track[14].edge[DIR_AHEAD].dest = track[10]
   track[14].edge[DIR_AHEAD].dist = 774
+  track[14].coord_x = 2557;
+  track[14].coord_y = 1426;
   track[15].name = "A16"
   track[15].typ = NODE_SENSOR
   track[15].num = 15
@@ -1626,6 +1970,8 @@ def init_trackb():
   track[15].edge[DIR_AHEAD].src = track[15]
   track[15].edge[DIR_AHEAD].dest = track[87]
   track[15].edge[DIR_AHEAD].dist = 260
+  track[15].coord_x = 2557;
+  track[15].coord_y = 1426;
   track[16].name = "B1"
   track[16].typ = NODE_SENSOR
   track[16].num = 16
@@ -1634,6 +1980,8 @@ def init_trackb():
   track[16].edge[DIR_AHEAD].src = track[16]
   track[16].edge[DIR_AHEAD].dest = track[61]
   track[16].edge[DIR_AHEAD].dist = 398
+  track[16].coord_x = 1451;
+  track[16].coord_y = 474;
   track[17].name = "B2"
   track[17].typ = NODE_SENSOR
   track[17].num = 17
@@ -1642,6 +1990,8 @@ def init_trackb():
   track[17].edge[DIR_AHEAD].src = track[17]
   track[17].edge[DIR_AHEAD].dest = track[111]
   track[17].edge[DIR_AHEAD].dist = 225
+  track[17].coord_x = 1451;
+  track[17].coord_y = 474;
   track[18].name = "B3"
   track[18].typ = NODE_SENSOR
   track[18].num = 18
@@ -1650,6 +2000,8 @@ def init_trackb():
   track[18].edge[DIR_AHEAD].src = track[18]
   track[18].edge[DIR_AHEAD].dest = track[33]
   track[18].edge[DIR_AHEAD].dist = 230
+  track[18].coord_x = 1471;
+  track[18].coord_y = 557;
   track[19].name = "B4"
   track[19].typ = NODE_SENSOR
   track[19].num = 19
@@ -1658,6 +2010,8 @@ def init_trackb():
   track[19].edge[DIR_AHEAD].src = track[19]
   track[19].edge[DIR_AHEAD].dest = track[111]
   track[19].edge[DIR_AHEAD].dist = 220
+  track[19].coord_x = 1471;
+  track[19].coord_y = 557;
   track[20].name = "B5"
   track[20].typ = NODE_SENSOR
   track[20].num = 20
@@ -1666,6 +2020,8 @@ def init_trackb():
   track[20].edge[DIR_AHEAD].src = track[20]
   track[20].edge[DIR_AHEAD].dest = track[50]
   track[20].edge[DIR_AHEAD].dist = 405
+  track[20].coord_x = 1500;
+  track[20].coord_y = 1575;
   track[21].name = "B6"
   track[21].typ = NODE_SENSOR
   track[21].num = 21
@@ -1674,6 +2030,8 @@ def init_trackb():
   track[21].edge[DIR_AHEAD].src = track[21]
   track[21].edge[DIR_AHEAD].dest = track[105]
   track[21].edge[DIR_AHEAD].dist = 214
+  track[21].coord_x = 1500;
+  track[21].coord_y = 1575;
   track[22].name = "B7"
   track[22].typ = NODE_SENSOR
   track[22].num = 22
@@ -1682,6 +2040,8 @@ def init_trackb():
   track[22].edge[DIR_AHEAD].src = track[22]
   track[22].edge[DIR_AHEAD].dest = track[9]
   track[22].edge[DIR_AHEAD].dist = 289
+  track[22].coord_x = 2865;
+  track[22].coord_y = 402;
   track[23].name = "B8"
   track[23].typ = NODE_SENSOR
   track[23].num = 23
@@ -1690,6 +2050,8 @@ def init_trackb():
   track[23].edge[DIR_AHEAD].src = track[23]
   track[23].edge[DIR_AHEAD].dest = track[135]
   track[23].edge[DIR_AHEAD].dist = 60
+  track[23].coord_x = 2865;
+  track[23].coord_y = 402;
   track[24].name = "B9"
   track[24].typ = NODE_SENSOR
   track[24].num = 24
@@ -1698,6 +2060,8 @@ def init_trackb():
   track[24].edge[DIR_AHEAD].src = track[24]
   track[24].edge[DIR_AHEAD].dest = track[4]
   track[24].edge[DIR_AHEAD].dist = 649
+  track[24].coord_x = 2915;
+  track[24].coord_y = 188;
   track[25].name = "B10"
   track[25].typ = NODE_SENSOR
   track[25].num = 25
@@ -1706,6 +2070,8 @@ def init_trackb():
   track[25].edge[DIR_AHEAD].src = track[25]
   track[25].edge[DIR_AHEAD].dest = track[137]
   track[25].edge[DIR_AHEAD].dist = 70
+  track[25].coord_x = 2915;
+  track[25].coord_y = 188;
   track[26].name = "B11"
   track[26].typ = NODE_SENSOR
   track[26].num = 26
@@ -1714,6 +2080,8 @@ def init_trackb():
   track[26].edge[DIR_AHEAD].src = track[26]
   track[26].edge[DIR_AHEAD].dest = track[7]
   track[26].edge[DIR_AHEAD].dist = 473
+  track[26].coord_x = 2885;
+  track[26].coord_y = 297;
   track[27].name = "B12"
   track[27].typ = NODE_SENSOR
   track[27].num = 27
@@ -1722,6 +2090,8 @@ def init_trackb():
   track[27].edge[DIR_AHEAD].src = track[27]
   track[27].edge[DIR_AHEAD].dest = track[139]
   track[27].edge[DIR_AHEAD].dist = 70
+  track[27].coord_x = 2885;
+  track[27].coord_y = 297;
   track[28].name = "B13"
   track[28].typ = NODE_SENSOR
   track[28].num = 28
@@ -1730,6 +2100,8 @@ def init_trackb():
   track[28].edge[DIR_AHEAD].src = track[28]
   track[28].edge[DIR_AHEAD].dest = track[119]
   track[28].edge[DIR_AHEAD].dist = 224
+  track[28].coord_x = 1128;
+  track[28].coord_y = 753;
   track[29].name = "B14"
   track[29].typ = NODE_SENSOR
   track[29].num = 29
@@ -1738,6 +2110,8 @@ def init_trackb():
   track[29].edge[DIR_AHEAD].src = track[29]
   track[29].edge[DIR_AHEAD].dest = track[63]
   track[29].edge[DIR_AHEAD].dist = 202
+  track[29].coord_x = 1128;
+  track[29].coord_y = 753;
   track[30].name = "B15"
   track[30].typ = NODE_SENSOR
   track[30].num = 30
@@ -1746,6 +2120,8 @@ def init_trackb():
   track[30].edge[DIR_AHEAD].src = track[30]
   track[30].edge[DIR_AHEAD].dest = track[2]
   track[30].edge[DIR_AHEAD].dist = 440
+  track[30].coord_x = 2288;
+  track[30].coord_y = 727;
   track[31].name = "B16"
   track[31].typ = NODE_SENSOR
   track[31].num = 31
@@ -1754,6 +2130,8 @@ def init_trackb():
   track[31].edge[DIR_AHEAD].src = track[31]
   track[31].edge[DIR_AHEAD].dest = track[108]
   track[31].edge[DIR_AHEAD].dist = 70
+  track[31].coord_x = 2288;
+  track[31].coord_y = 727;
   track[32].name = "C1"
   track[32].typ = NODE_SENSOR
   track[32].num = 32
@@ -1762,6 +2140,8 @@ def init_trackb():
   track[32].edge[DIR_AHEAD].src = track[32]
   track[32].edge[DIR_AHEAD].dest = track[19]
   track[32].edge[DIR_AHEAD].dist = 230
+  track[32].coord_x = 1295;
+  track[32].coord_y = 744;
   track[33].name = "C2"
   track[33].typ = NODE_SENSOR
   track[33].num = 33
@@ -1770,6 +2150,8 @@ def init_trackb():
   track[33].edge[DIR_AHEAD].src = track[33]
   track[33].edge[DIR_AHEAD].dest = track[117]
   track[33].edge[DIR_AHEAD].dist = 228
+  track[33].coord_x = 1295;
+  track[33].coord_y = 744;
   track[34].name = "C3"
   track[34].typ = NODE_SENSOR
   track[34].num = 34
@@ -1778,6 +2160,8 @@ def init_trackb():
   track[34].edge[DIR_AHEAD].src = track[34]
   track[34].edge[DIR_AHEAD].dest = track[129]
   track[34].edge[DIR_AHEAD].dist = 410
+  track[34].coord_x = 787;
+  track[34].coord_y = 293;
   track[35].name = "C4"
   track[35].typ = NODE_SENSOR
   track[35].num = 35
@@ -1786,6 +2170,8 @@ def init_trackb():
   track[35].edge[DIR_AHEAD].src = track[35]
   track[35].edge[DIR_AHEAD].dest = track[89]
   track[35].edge[DIR_AHEAD].dist = 226
+  track[35].coord_x = 787;
+  track[35].coord_y = 293;
   track[36].name = "C5"
   track[36].typ = NODE_SENSOR
   track[36].num = 36
@@ -1794,6 +2180,8 @@ def init_trackb():
   track[36].edge[DIR_AHEAD].src = track[36]
   track[36].edge[DIR_AHEAD].dest = track[90]
   track[36].edge[DIR_AHEAD].dist = 79
+  track[36].coord_x = 1830;
+  track[36].coord_y = 359;
   track[37].name = "C6"
   track[37].typ = NODE_SENSOR
   track[37].num = 37
@@ -1802,6 +2190,8 @@ def init_trackb():
   track[37].edge[DIR_AHEAD].src = track[37]
   track[37].edge[DIR_AHEAD].dest = track[109]
   track[37].edge[DIR_AHEAD].dist = 411
+  track[37].coord_x = 1830;
+  track[37].coord_y = 359;
   track[38].name = "C7"
   track[38].typ = NODE_SENSOR
   track[38].num = 38
@@ -1810,6 +2200,8 @@ def init_trackb():
   track[38].edge[DIR_AHEAD].src = track[38]
   track[38].edge[DIR_AHEAD].dest = track[115]
   track[38].edge[DIR_AHEAD].dist = 215
+  track[38].coord_x = 1584;
+  track[38].coord_y = 259;
   track[39].name = "C8"
   track[39].typ = NODE_SENSOR
   track[39].num = 39
@@ -1818,6 +2210,8 @@ def init_trackb():
   track[39].edge[DIR_AHEAD].src = track[39]
   track[39].edge[DIR_AHEAD].dest = track[84]
   track[39].edge[DIR_AHEAD].dist = 145
+  track[39].coord_x = 1584;
+  track[39].coord_y = 259;
   track[40].name = "C9"
   track[40].typ = NODE_SENSOR
   track[40].num = 40
@@ -1826,6 +2220,8 @@ def init_trackb():
   track[40].edge[DIR_AHEAD].src = track[40]
   track[40].edge[DIR_AHEAD].dest = track[109]
   track[40].edge[DIR_AHEAD].dist = 305
+  track[40].coord_x = 1919;
+  track[40].coord_y = 455;
   track[41].name = "C10"
   track[41].typ = NODE_SENSOR
   track[41].num = 41
@@ -1834,6 +2230,8 @@ def init_trackb():
   track[41].edge[DIR_AHEAD].src = track[41]
   track[41].edge[DIR_AHEAD].dest = track[110]
   track[41].edge[DIR_AHEAD].dist = 146
+  track[41].coord_x = 1919;
+  track[41].coord_y = 455;
   track[42].name = "C11"
   track[42].typ = NODE_SENSOR
   track[42].num = 42
@@ -1842,6 +2240,8 @@ def init_trackb():
   track[42].edge[DIR_AHEAD].src = track[42]
   track[42].edge[DIR_AHEAD].dest = track[104]
   track[42].edge[DIR_AHEAD].dist = 140
+  track[42].coord_x = 1939;
+  track[42].coord_y = 1552;
   track[43].name = "C12"
   track[43].typ = NODE_SENSOR
   track[43].num = 43
@@ -1850,6 +2250,8 @@ def init_trackb():
   track[43].edge[DIR_AHEAD].src = track[43]
   track[43].edge[DIR_AHEAD].dest = track[107]
   track[43].edge[DIR_AHEAD].dist = 314
+  track[43].coord_x = 1939;
+  track[43].coord_y = 1552;
   track[44].name = "C13"
   track[44].typ = NODE_SENSOR
   track[44].num = 44
@@ -1858,6 +2260,8 @@ def init_trackb():
   track[44].edge[DIR_AHEAD].src = track[44]
   track[44].edge[DIR_AHEAD].dest = track[70]
   track[44].edge[DIR_AHEAD].dist = 785
+  track[44].coord_x = 1730;
+  track[44].coord_y = 1661;
   track[45].name = "C14"
   track[45].typ = NODE_SENSOR
   track[45].num = 45
@@ -1866,6 +2270,8 @@ def init_trackb():
   track[45].edge[DIR_AHEAD].src = track[45]
   track[45].edge[DIR_AHEAD].dest = track[100]
   track[45].edge[DIR_AHEAD].dist = 60
+  track[45].coord_x = 1730;
+  track[45].coord_y = 1661;
   track[46].name = "C15"
   track[46].typ = NODE_SENSOR
   track[46].num = 46
@@ -1874,6 +2280,8 @@ def init_trackb():
   track[46].edge[DIR_AHEAD].src = track[46]
   track[46].edge[DIR_AHEAD].dest = track[59]
   track[46].edge[DIR_AHEAD].dist = 405
+  track[46].coord_x = 1456;
+  track[46].coord_y = 370;
   track[47].name = "C16"
   track[47].typ = NODE_SENSOR
   track[47].num = 47
@@ -1882,6 +2290,8 @@ def init_trackb():
   track[47].edge[DIR_AHEAD].src = track[47]
   track[47].edge[DIR_AHEAD].dest = track[91]
   track[47].edge[DIR_AHEAD].dist = 223
+  track[47].coord_x = 1456;
+  track[47].coord_y = 370;
   track[48].name = "D1"
   track[48].typ = NODE_SENSOR
   track[48].num = 48
@@ -1890,6 +2300,8 @@ def init_trackb():
   track[48].edge[DIR_AHEAD].src = track[48]
   track[48].edge[DIR_AHEAD].dest = track[121]
   track[48].edge[DIR_AHEAD].dist = 227
+  track[48].coord_x = 1149;
+  track[48].coord_y = 1339;
   track[49].name = "D2"
   track[49].typ = NODE_SENSOR
   track[49].num = 49
@@ -1898,6 +2310,8 @@ def init_trackb():
   track[49].edge[DIR_AHEAD].src = track[49]
   track[49].edge[DIR_AHEAD].dest = track[67]
   track[49].edge[DIR_AHEAD].dist = 200
+  track[49].coord_x = 1149;
+  track[49].coord_y = 1339;
   track[50].name = "D3"
   track[50].typ = NODE_SENSOR
   track[50].num = 50
@@ -1906,6 +2320,8 @@ def init_trackb():
   track[50].edge[DIR_AHEAD].src = track[50]
   track[50].edge[DIR_AHEAD].dest = track[99]
   track[50].edge[DIR_AHEAD].dist = 223
+  track[50].coord_x = 988;
+  track[50].coord_y = 1597;
   track[51].name = "D4"
   track[51].typ = NODE_SENSOR
   track[51].num = 51
@@ -1914,6 +2330,8 @@ def init_trackb():
   track[51].edge[DIR_AHEAD].src = track[51]
   track[51].edge[DIR_AHEAD].dest = track[21]
   track[51].edge[DIR_AHEAD].dist = 405
+  track[51].coord_x = 988;
+  track[51].coord_y = 1597;
   track[52].name = "D5"
   track[52].typ = NODE_SENSOR
   track[52].num = 52
@@ -1922,6 +2340,8 @@ def init_trackb():
   track[52].edge[DIR_AHEAD].src = track[52]
   track[52].edge[DIR_AHEAD].dest = track[69]
   track[52].edge[DIR_AHEAD].dist = 275
+  track[52].coord_x = 316;
+  track[52].coord_y = 1445;
   track[53].name = "D6"
   track[53].typ = NODE_SENSOR
   track[53].num = 53
@@ -1930,6 +2350,8 @@ def init_trackb():
   track[53].edge[DIR_AHEAD].src = track[53]
   track[53].edge[DIR_AHEAD].dest = track[97]
   track[53].edge[DIR_AHEAD].dist = 213
+  track[53].coord_x = 316;
+  track[53].coord_y = 1445;
   track[54].name = "D7"
   track[54].typ = NODE_SENSOR
   track[54].num = 54
@@ -1938,6 +2360,8 @@ def init_trackb():
   track[54].edge[DIR_AHEAD].src = track[54]
   track[54].edge[DIR_AHEAD].dest = track[97]
   track[54].edge[DIR_AHEAD].dist = 290
+  track[54].coord_x = 321;
+  track[54].coord_y = 1543;
   track[55].name = "D8"
   track[55].typ = NODE_SENSOR
   track[55].num = 55
@@ -1946,6 +2370,8 @@ def init_trackb():
   track[55].edge[DIR_AHEAD].src = track[55]
   track[55].edge[DIR_AHEAD].dest = track[71]
   track[55].edge[DIR_AHEAD].dist = 375
+  track[55].coord_x = 321;
+  track[55].coord_y = 1543;
   track[56].name = "D9"
   track[56].typ = NODE_SENSOR
   track[56].num = 56
@@ -1954,6 +2380,8 @@ def init_trackb():
   track[56].edge[DIR_AHEAD].src = track[56]
   track[56].edge[DIR_AHEAD].dest = track[75]
   track[56].edge[DIR_AHEAD].dist = 284
+  track[56].coord_x = 270;
+  track[56].coord_y = 589;
   track[57].name = "D10"
   track[57].typ = NODE_SENSOR
   track[57].num = 57
@@ -1962,6 +2390,8 @@ def init_trackb():
   track[57].edge[DIR_AHEAD].src = track[57]
   track[57].edge[DIR_AHEAD].dest = track[95]
   track[57].edge[DIR_AHEAD].dist = 291
+  track[57].coord_x = 270;
+  track[57].coord_y = 589;
   track[58].name = "D11"
   track[58].typ = NODE_SENSOR
   track[58].num = 58
@@ -1970,6 +2400,8 @@ def init_trackb():
   track[58].edge[DIR_AHEAD].src = track[58]
   track[58].edge[DIR_AHEAD].dest = track[47]
   track[58].edge[DIR_AHEAD].dist = 405
+  track[58].coord_x = 936;
+  track[58].coord_y = 385;
   track[59].name = "D12"
   track[59].typ = NODE_SENSOR
   track[59].num = 59
@@ -1978,6 +2410,8 @@ def init_trackb():
   track[59].edge[DIR_AHEAD].src = track[59]
   track[59].edge[DIR_AHEAD].dest = track[93]
   track[59].edge[DIR_AHEAD].dist = 220
+  track[59].coord_x = 936;
+  track[59].coord_y = 385;
   track[60].name = "D13"
   track[60].typ = NODE_SENSOR
   track[60].num = 60
@@ -1986,6 +2420,8 @@ def init_trackb():
   track[60].edge[DIR_AHEAD].src = track[60]
   track[60].edge[DIR_AHEAD].dest = track[17]
   track[60].edge[DIR_AHEAD].dist = 398
+  track[60].coord_x = 933;
+  track[60].coord_y = 491;
   track[61].name = "D14"
   track[61].typ = NODE_SENSOR
   track[61].num = 61
@@ -1994,6 +2430,8 @@ def init_trackb():
   track[61].edge[DIR_AHEAD].src = track[61]
   track[61].edge[DIR_AHEAD].dest = track[113]
   track[61].edge[DIR_AHEAD].dist = 225
+  track[61].coord_x = 933;
+  track[61].coord_y = 491;
   track[62].name = "D15"
   track[62].typ = NODE_SENSOR
   track[62].num = 62
@@ -2002,6 +2440,8 @@ def init_trackb():
   track[62].edge[DIR_AHEAD].src = track[62]
   track[62].edge[DIR_AHEAD].dest = track[28]
   track[62].edge[DIR_AHEAD].dist = 202
+  track[62].coord_x = 942;
+  track[62].coord_y = 580;
   track[63].name = "D16"
   track[63].typ = NODE_SENSOR
   track[63].num = 63
@@ -2010,6 +2450,8 @@ def init_trackb():
   track[63].edge[DIR_AHEAD].src = track[63]
   track[63].edge[DIR_AHEAD].dest = track[113]
   track[63].edge[DIR_AHEAD].dist = 230
+  track[63].coord_x = 942;
+  track[63].coord_y = 580;
   track[64].name = "E1"
   track[64].typ = NODE_SENSOR
   track[64].num = 64
@@ -2018,6 +2460,8 @@ def init_trackb():
   track[64].edge[DIR_AHEAD].src = track[64]
   track[64].edge[DIR_AHEAD].dest = track[123]
   track[64].edge[DIR_AHEAD].dist = 222
+  track[64].coord_x = 1313;
+  track[64].coord_y = 1324;
   track[65].name = "E2"
   track[65].typ = NODE_SENSOR
   track[65].num = 65
@@ -2026,6 +2470,8 @@ def init_trackb():
   track[65].edge[DIR_AHEAD].src = track[65]
   track[65].edge[DIR_AHEAD].dest = track[78]
   track[65].edge[DIR_AHEAD].dist = 203
+  track[65].coord_x = 1313;
+  track[65].coord_y = 1324;
   track[66].name = "E3"
   track[66].typ = NODE_SENSOR
   track[66].num = 66
@@ -2034,6 +2480,8 @@ def init_trackb():
   track[66].edge[DIR_AHEAD].src = track[66]
   track[66].edge[DIR_AHEAD].dest = track[48]
   track[66].edge[DIR_AHEAD].dist = 200
+  track[66].coord_x = 976;
+  track[66].coord_y = 1520;
   track[67].name = "E4"
   track[67].typ = NODE_SENSOR
   track[67].num = 67
@@ -2042,6 +2490,8 @@ def init_trackb():
   track[67].edge[DIR_AHEAD].src = track[67]
   track[67].edge[DIR_AHEAD].dest = track[99]
   track[67].edge[DIR_AHEAD].dist = 220
+  track[67].coord_x = 976;
+  track[67].coord_y = 1520;
   track[68].name = "E5"
   track[68].typ = NODE_SENSOR
   track[68].num = 68
@@ -2050,6 +2500,8 @@ def init_trackb():
   track[68].edge[DIR_AHEAD].src = track[68]
   track[68].edge[DIR_AHEAD].dest = track[53]
   track[68].edge[DIR_AHEAD].dist = 275
+  track[68].coord_x = 629;
+  track[68].coord_y = 1609;
   track[69].name = "E6"
   track[69].typ = NODE_SENSOR
   track[69].num = 69
@@ -2058,6 +2510,8 @@ def init_trackb():
   track[69].edge[DIR_AHEAD].src = track[69]
   track[69].edge[DIR_AHEAD].dest = track[98]
   track[69].edge[DIR_AHEAD].dist = 74
+  track[69].coord_x = 629;
+  track[69].coord_y = 1609;
   track[70].name = "E7"
   track[70].typ = NODE_SENSOR
   track[70].num = 70
@@ -2066,6 +2520,8 @@ def init_trackb():
   track[70].edge[DIR_AHEAD].src = track[70]
   track[70].edge[DIR_AHEAD].dest = track[54]
   track[70].edge[DIR_AHEAD].dist = 375
+  track[70].coord_x = 755;
+  track[70].coord_y = 1703;
   track[71].name = "E8"
   track[71].typ = NODE_SENSOR
   track[71].num = 71
@@ -2074,6 +2530,8 @@ def init_trackb():
   track[71].edge[DIR_AHEAD].src = track[71]
   track[71].edge[DIR_AHEAD].dest = track[45]
   track[71].edge[DIR_AHEAD].dist = 785
+  track[71].coord_x = 755;
+  track[71].coord_y = 1703;
   track[72].name = "E9"
   track[72].typ = NODE_SENSOR
   track[72].num = 72
@@ -2082,6 +2540,8 @@ def init_trackb():
   track[72].edge[DIR_AHEAD].src = track[72]
   track[72].edge[DIR_AHEAD].dest = track[95]
   track[72].edge[DIR_AHEAD].dist = 215
+  track[72].coord_x = 290;
+  track[72].coord_y = 669;
   track[73].name = "E10"
   track[73].typ = NODE_SENSOR
   track[73].num = 73
@@ -2090,6 +2550,8 @@ def init_trackb():
   track[73].edge[DIR_AHEAD].src = track[73]
   track[73].edge[DIR_AHEAD].dest = track[76]
   track[73].edge[DIR_AHEAD].dist = 275
+  track[73].coord_x = 290;
+  track[73].coord_y = 669;
   track[74].name = "E11"
   track[74].typ = NODE_SENSOR
   track[74].num = 74
@@ -2098,6 +2560,8 @@ def init_trackb():
   track[74].edge[DIR_AHEAD].src = track[74]
   track[74].edge[DIR_AHEAD].dest = track[57]
   track[74].edge[DIR_AHEAD].dist = 284
+  track[74].coord_x = 571;
+  track[74].coord_y = 402;
   track[75].name = "E12"
   track[75].typ = NODE_SENSOR
   track[75].num = 75
@@ -2106,6 +2570,8 @@ def init_trackb():
   track[75].edge[DIR_AHEAD].src = track[75]
   track[75].edge[DIR_AHEAD].dest = track[92]
   track[75].edge[DIR_AHEAD].dist = 65
+  track[75].coord_x = 571;
+  track[75].coord_y = 402;
   track[76].name = "E13"
   track[76].typ = NODE_SENSOR
   track[76].num = 76
@@ -2114,6 +2580,8 @@ def init_trackb():
   track[76].edge[DIR_AHEAD].src = track[76]
   track[76].edge[DIR_AHEAD].dest = track[112]
   track[76].edge[DIR_AHEAD].dist = 62
+  track[76].coord_x = 577;
+  track[76].coord_y = 502;
   track[77].name = "E14"
   track[77].typ = NODE_SENSOR
   track[77].num = 77
@@ -2122,6 +2590,8 @@ def init_trackb():
   track[77].edge[DIR_AHEAD].src = track[77]
   track[77].edge[DIR_AHEAD].dest = track[72]
   track[77].edge[DIR_AHEAD].dist = 275
+  track[77].coord_x = 577;
+  track[77].coord_y = 502;
   track[78].name = "E15"
   track[78].typ = NODE_SENSOR
   track[78].num = 78
@@ -2130,6 +2600,8 @@ def init_trackb():
   track[78].edge[DIR_AHEAD].src = track[78]
   track[78].edge[DIR_AHEAD].dest = track[105]
   track[78].edge[DIR_AHEAD].dist = 230
+  track[78].coord_x = 1494;
+  track[78].coord_y = 1490;
   track[79].name = "E16"
   track[79].typ = NODE_SENSOR
   track[79].num = 79
@@ -2138,6 +2610,8 @@ def init_trackb():
   track[79].edge[DIR_AHEAD].src = track[79]
   track[79].edge[DIR_AHEAD].dest = track[64]
   track[79].edge[DIR_AHEAD].dist = 203
+  track[79].coord_x = 1494;
+  track[79].coord_y = 1490;
   track[80].name = "BR1"
   track[80].typ = NODE_BRANCH
   track[80].num = 1
@@ -2146,10 +2620,14 @@ def init_trackb():
   track[80].edge[DIR_STRAIGHT].src = track[80]
   track[80].edge[DIR_STRAIGHT].dest = track[11]
   track[80].edge[DIR_STRAIGHT].dist = 265
+  track[80].coord_x = 2226;
+  track[80].coord_y = 393;
   track[80].edge[DIR_CURVED].reverse = track[9].edge[DIR_AHEAD]
   track[80].edge[DIR_CURVED].src = track[80]
   track[80].edge[DIR_CURVED].dest = track[8]
   track[80].edge[DIR_CURVED].dist = 210
+  track[80].coord_x = 2226;
+  track[80].coord_y = 393;
   track[81].name = "MR1"
   track[81].typ = NODE_MERGE
   track[81].num = 1
@@ -2158,6 +2636,8 @@ def init_trackb():
   track[81].edge[DIR_AHEAD].src = track[81]
   track[81].edge[DIR_AHEAD].dest = track[83]
   track[81].edge[DIR_AHEAD].dist = 191
+  track[81].coord_x = 2226;
+  track[81].coord_y = 393;
   track[82].name = "BR2"
   track[82].typ = NODE_BRANCH
   track[82].num = 2
@@ -2166,10 +2646,14 @@ def init_trackb():
   track[82].edge[DIR_STRAIGHT].src = track[82]
   track[82].edge[DIR_STRAIGHT].dest = track[80]
   track[82].edge[DIR_STRAIGHT].dist = 191
+  track[82].coord_x = 2002;
+  track[82].coord_y = 302;
   track[82].edge[DIR_CURVED].reverse = track[7].edge[DIR_AHEAD]
   track[82].edge[DIR_CURVED].src = track[82]
   track[82].edge[DIR_CURVED].dest = track[6]
   track[82].edge[DIR_CURVED].dist = 211
+  track[82].coord_x = 2002;
+  track[82].coord_y = 302;
   track[83].name = "MR2"
   track[83].typ = NODE_MERGE
   track[83].num = 2
@@ -2178,6 +2662,8 @@ def init_trackb():
   track[83].edge[DIR_AHEAD].src = track[83]
   track[83].edge[DIR_AHEAD].dest = track[85]
   track[83].edge[DIR_AHEAD].dist = 182
+  track[83].coord_x = 2002;
+  track[83].coord_y = 302;
   track[84].name = "BR3"
   track[84].typ = NODE_BRANCH
   track[84].num = 3
@@ -2186,10 +2672,14 @@ def init_trackb():
   track[84].edge[DIR_STRAIGHT].src = track[84]
   track[84].edge[DIR_STRAIGHT].dest = track[5]
   track[84].edge[DIR_STRAIGHT].dist = 216
+  track[84].coord_x = 1769;
+  track[84].coord_y = 251;
   track[84].edge[DIR_CURVED].reverse = track[83].edge[DIR_AHEAD]
   track[84].edge[DIR_CURVED].src = track[84]
   track[84].edge[DIR_CURVED].dest = track[82]
   track[84].edge[DIR_CURVED].dist = 182
+  track[84].coord_x = 1769;
+  track[84].coord_y = 251;
   track[85].name = "MR3"
   track[85].typ = NODE_MERGE
   track[85].num = 3
@@ -2198,6 +2688,8 @@ def init_trackb():
   track[85].edge[DIR_AHEAD].src = track[85]
   track[85].edge[DIR_AHEAD].dest = track[38]
   track[85].edge[DIR_AHEAD].dist = 145
+  track[85].coord_x = 1769;
+  track[85].coord_y = 251;
   track[86].name = "BR4"
   track[86].typ = NODE_BRANCH
   track[86].num = 4
@@ -2206,10 +2698,14 @@ def init_trackb():
   track[86].edge[DIR_STRAIGHT].src = track[86]
   track[86].edge[DIR_STRAIGHT].dest = track[14]
   track[86].edge[DIR_STRAIGHT].dist = 260
+  track[86].coord_x = 2271;
+  track[86].coord_y = 1579;
   track[86].edge[DIR_CURVED].reverse = track[12].edge[DIR_AHEAD]
   track[86].edge[DIR_CURVED].src = track[86]
   track[86].edge[DIR_CURVED].dest = track[13]
   track[86].edge[DIR_CURVED].dist = 215
+  track[86].coord_x = 2271;
+  track[86].coord_y = 1579;
   track[87].name = "MR4"
   track[87].typ = NODE_MERGE
   track[87].num = 4
@@ -2218,6 +2714,8 @@ def init_trackb():
   track[87].edge[DIR_AHEAD].src = track[87]
   track[87].edge[DIR_AHEAD].dest = track[103]
   track[87].edge[DIR_AHEAD].dist = 185
+  track[87].coord_x = 2271;
+  track[87].coord_y = 1579;
   track[88].name = "BR5"
   track[88].typ = NODE_BRANCH
   track[88].num = 5
@@ -2226,10 +2724,14 @@ def init_trackb():
   track[88].edge[DIR_STRAIGHT].src = track[88]
   track[88].edge[DIR_STRAIGHT].dest = track[34]
   track[88].edge[DIR_STRAIGHT].dist = 226
+  track[88].coord_x = 1068;
+  track[88].coord_y = 281;
   track[88].edge[DIR_CURVED].reverse = track[92].edge[DIR_CURVED]
   track[88].edge[DIR_CURVED].src = track[88]
   track[88].edge[DIR_CURVED].dest = track[93]
   track[88].edge[DIR_CURVED].dist = 334
+  track[88].coord_x = 1068;
+  track[88].coord_y = 281;
   track[89].name = "MR5"
   track[89].typ = NODE_MERGE
   track[89].num = 5
@@ -2238,6 +2740,8 @@ def init_trackb():
   track[89].edge[DIR_AHEAD].src = track[89]
   track[89].edge[DIR_AHEAD].dest = track[114]
   track[89].edge[DIR_AHEAD].dist = 187
+  track[89].coord_x = 1068;
+  track[89].coord_y = 281;
   track[90].name = "BR6"
   track[90].typ = NODE_BRANCH
   track[90].num = 6
@@ -2246,10 +2750,14 @@ def init_trackb():
   track[90].edge[DIR_STRAIGHT].src = track[90]
   track[90].edge[DIR_STRAIGHT].dest = track[46]
   track[90].edge[DIR_STRAIGHT].dist = 223
+  track[90].coord_x = 1724;
+  track[90].coord_y = 362;
   track[90].edge[DIR_CURVED].reverse = track[114].edge[DIR_CURVED]
   track[90].edge[DIR_CURVED].src = track[90]
   track[90].edge[DIR_CURVED].dest = track[115]
   track[90].edge[DIR_CURVED].dist = 338
+  track[90].coord_x = 1724;
+  track[90].coord_y = 362;
   track[91].name = "MR6"
   track[91].typ = NODE_MERGE
   track[91].num = 6
@@ -2258,6 +2766,8 @@ def init_trackb():
   track[91].edge[DIR_AHEAD].src = track[91]
   track[91].edge[DIR_AHEAD].dest = track[37]
   track[91].edge[DIR_AHEAD].dist = 79
+  track[91].coord_x = 1724;
+  track[91].coord_y = 362;
   track[92].name = "BR7"
   track[92].typ = NODE_BRANCH
   track[92].num = 7
@@ -2266,10 +2776,14 @@ def init_trackb():
   track[92].edge[DIR_STRAIGHT].src = track[92]
   track[92].edge[DIR_STRAIGHT].dest = track[58]
   track[92].edge[DIR_STRAIGHT].dist = 220
+  track[92].coord_x = 646;
+  track[92].coord_y = 396;
   track[92].edge[DIR_CURVED].reverse = track[88].edge[DIR_CURVED]
   track[92].edge[DIR_CURVED].src = track[92]
   track[92].edge[DIR_CURVED].dest = track[89]
   track[92].edge[DIR_CURVED].dist = 334
+  track[92].coord_x = 646;
+  track[92].coord_y = 396;
   track[93].name = "MR7"
   track[93].typ = NODE_MERGE
   track[93].num = 7
@@ -2278,6 +2792,8 @@ def init_trackb():
   track[93].edge[DIR_AHEAD].src = track[93]
   track[93].edge[DIR_AHEAD].dest = track[74]
   track[93].edge[DIR_AHEAD].dist = 65
+  track[93].coord_x = 646;
+  track[93].coord_y = 396;
   track[94].name = "BR8"
   track[94].typ = NODE_BRANCH
   track[94].num = 8
@@ -2286,10 +2802,14 @@ def init_trackb():
   track[94].edge[DIR_STRAIGHT].src = track[94]
   track[94].edge[DIR_STRAIGHT].dest = track[56]
   track[94].edge[DIR_STRAIGHT].dist = 291
+  track[94].coord_x = 195;
+  track[94].coord_y = 830;
   track[94].edge[DIR_CURVED].reverse = track[72].edge[DIR_AHEAD]
   track[94].edge[DIR_CURVED].src = track[94]
   track[94].edge[DIR_CURVED].dest = track[73]
   track[94].edge[DIR_CURVED].dist = 215
+  track[94].coord_x = 195;
+  track[94].coord_y = 830;
   track[95].name = "MR8"
   track[95].typ = NODE_MERGE
   track[95].num = 8
@@ -2298,6 +2818,8 @@ def init_trackb():
   track[95].edge[DIR_AHEAD].src = track[95]
   track[95].edge[DIR_AHEAD].dest = track[96]
   track[95].edge[DIR_AHEAD].dist = 193
+  track[95].coord_x = 195;
+  track[95].coord_y = 830;
   track[96].name = "BR9"
   track[96].typ = NODE_BRANCH
   track[96].num = 9
@@ -2306,10 +2828,14 @@ def init_trackb():
   track[96].edge[DIR_STRAIGHT].src = track[96]
   track[96].edge[DIR_STRAIGHT].dest = track[55]
   track[96].edge[DIR_STRAIGHT].dist = 290
+  track[96].coord_x = 206;
+  track[96].coord_y = 1195;
   track[96].edge[DIR_CURVED].reverse = track[53].edge[DIR_AHEAD]
   track[96].edge[DIR_CURVED].src = track[96]
   track[96].edge[DIR_CURVED].dest = track[52]
   track[96].edge[DIR_CURVED].dist = 213
+  track[96].coord_x = 206;
+  track[96].coord_y = 1195;
   track[97].name = "MR9"
   track[97].typ = NODE_MERGE
   track[97].num = 9
@@ -2318,6 +2844,8 @@ def init_trackb():
   track[97].edge[DIR_AHEAD].src = track[97]
   track[97].edge[DIR_AHEAD].dest = track[94]
   track[97].edge[DIR_AHEAD].dist = 193
+  track[97].coord_x = 206;
+  track[97].coord_y = 1195;
   track[98].name = "BR10"
   track[98].typ = NODE_BRANCH
   track[98].num = 10
@@ -2326,10 +2854,14 @@ def init_trackb():
   track[98].edge[DIR_STRAIGHT].src = track[98]
   track[98].edge[DIR_STRAIGHT].dest = track[51]
   track[98].edge[DIR_STRAIGHT].dist = 223
+  track[98].coord_x = 712;
+  track[98].coord_y = 1600;
   track[98].edge[DIR_CURVED].reverse = track[67].edge[DIR_AHEAD]
   track[98].edge[DIR_CURVED].src = track[98]
   track[98].edge[DIR_CURVED].dest = track[66]
   track[98].edge[DIR_CURVED].dist = 220
+  track[98].coord_x = 712;
+  track[98].coord_y = 1600;
   track[99].name = "MR10"
   track[99].typ = NODE_MERGE
   track[99].num = 10
@@ -2338,6 +2870,8 @@ def init_trackb():
   track[99].edge[DIR_AHEAD].src = track[99]
   track[99].edge[DIR_AHEAD].dest = track[68]
   track[99].edge[DIR_AHEAD].dist = 74
+  track[99].coord_x = 712;
+  track[99].coord_y = 1600;
   track[100].name = "BR11"
   track[100].typ = NODE_BRANCH
   track[100].num = 11
@@ -2346,10 +2880,14 @@ def init_trackb():
   track[100].edge[DIR_STRAIGHT].src = track[100]
   track[100].edge[DIR_STRAIGHT].dest = track[102]
   track[100].edge[DIR_STRAIGHT].dist = 190
+  track[100].coord_x = 1817;
+  track[100].coord_y = 1658;
   track[100].edge[DIR_CURVED].reverse = track[106].edge[DIR_STRAIGHT]
   track[100].edge[DIR_CURVED].src = track[100]
   track[100].edge[DIR_CURVED].dest = track[107]
   track[100].edge[DIR_CURVED].dist = 445
+  track[100].coord_x = 1817;
+  track[100].coord_y = 1658;
   track[101].name = "MR11"
   track[101].typ = NODE_MERGE
   track[101].num = 11
@@ -2358,6 +2896,8 @@ def init_trackb():
   track[101].edge[DIR_AHEAD].src = track[101]
   track[101].edge[DIR_AHEAD].dest = track[44]
   track[101].edge[DIR_AHEAD].dist = 60
+  track[101].coord_x = 1817;
+  track[101].coord_y = 1658;
   track[102].name = "BR12"
   track[102].typ = NODE_BRANCH
   track[102].num = 12
@@ -2366,10 +2906,14 @@ def init_trackb():
   track[102].edge[DIR_STRAIGHT].src = track[102]
   track[102].edge[DIR_STRAIGHT].dest = track[1]
   track[102].edge[DIR_STRAIGHT].dist = 218
+  track[102].coord_x = 2048;
+  track[102].coord_y = 1649;
   track[102].edge[DIR_CURVED].reverse = track[87].edge[DIR_AHEAD]
   track[102].edge[DIR_CURVED].src = track[102]
   track[102].edge[DIR_CURVED].dest = track[86]
   track[102].edge[DIR_CURVED].dist = 185
+  track[102].coord_x = 2048;
+  track[102].coord_y = 1649;
   track[103].name = "MR12"
   track[103].typ = NODE_MERGE
   track[103].num = 12
@@ -2378,6 +2922,8 @@ def init_trackb():
   track[103].edge[DIR_AHEAD].src = track[103]
   track[103].edge[DIR_AHEAD].dest = track[101]
   track[103].edge[DIR_AHEAD].dist = 190
+  track[103].coord_x = 2048;
+  track[103].coord_y = 1649;
   track[104].name = "BR13"
   track[104].typ = NODE_BRANCH
   track[104].num = 13
@@ -2386,10 +2932,14 @@ def init_trackb():
   track[104].edge[DIR_STRAIGHT].src = track[104]
   track[104].edge[DIR_STRAIGHT].dest = track[20]
   track[104].edge[DIR_STRAIGHT].dist = 214
+  track[104].coord_x = 1767;
+  track[104].coord_y = 1564;
   track[104].edge[DIR_CURVED].reverse = track[78].edge[DIR_AHEAD]
   track[104].edge[DIR_CURVED].src = track[104]
   track[104].edge[DIR_CURVED].dest = track[79]
   track[104].edge[DIR_CURVED].dist = 230
+  track[104].coord_x = 1767;
+  track[104].coord_y = 1564;
   track[105].name = "MR13"
   track[105].typ = NODE_MERGE
   track[105].num = 13
@@ -2398,6 +2948,8 @@ def init_trackb():
   track[105].edge[DIR_AHEAD].src = track[105]
   track[105].edge[DIR_AHEAD].dest = track[43]
   track[105].edge[DIR_AHEAD].dist = 140
+  track[105].coord_x = 1767;
+  track[105].coord_y = 1564;
   track[106].name = "BR14"
   track[106].typ = NODE_BRANCH
   track[106].num = 14
@@ -2406,10 +2958,14 @@ def init_trackb():
   track[106].edge[DIR_STRAIGHT].src = track[106]
   track[106].edge[DIR_STRAIGHT].dest = track[101]
   track[106].edge[DIR_STRAIGHT].dist = 445
+  track[106].coord_x = 2261;
+  track[106].coord_y = 1340;
   track[106].edge[DIR_CURVED].reverse = track[43].edge[DIR_AHEAD]
   track[106].edge[DIR_CURVED].src = track[106]
   track[106].edge[DIR_CURVED].dest = track[42]
   track[106].edge[DIR_CURVED].dist = 314
+  track[106].coord_x = 2261;
+  track[106].coord_y = 1340;
   track[107].name = "MR14"
   track[107].typ = NODE_MERGE
   track[107].num = 14
@@ -2418,6 +2974,8 @@ def init_trackb():
   track[107].edge[DIR_AHEAD].src = track[107]
   track[107].edge[DIR_AHEAD].dest = track[3]
   track[107].edge[DIR_AHEAD].dist = 62
+  track[107].coord_x = 2261;
+  track[107].coord_y = 1340;
   track[108].name = "BR15"
   track[108].typ = NODE_BRANCH
   track[108].num = 15
@@ -2426,10 +2984,14 @@ def init_trackb():
   track[108].edge[DIR_STRAIGHT].src = track[108]
   track[108].edge[DIR_STRAIGHT].dest = track[36]
   track[108].edge[DIR_STRAIGHT].dist = 411
+  track[108].coord_x = 2245;
+  track[108].coord_y = 649;
   track[108].edge[DIR_CURVED].reverse = track[40].edge[DIR_AHEAD]
   track[108].edge[DIR_CURVED].src = track[108]
   track[108].edge[DIR_CURVED].dest = track[41]
   track[108].edge[DIR_CURVED].dist = 305
+  track[108].coord_x = 2245;
+  track[108].coord_y = 649;
   track[109].name = "MR15"
   track[109].typ = NODE_MERGE
   track[109].num = 15
@@ -2438,6 +3000,8 @@ def init_trackb():
   track[109].edge[DIR_AHEAD].src = track[109]
   track[109].edge[DIR_AHEAD].dest = track[30]
   track[109].edge[DIR_AHEAD].dist = 70
+  track[109].coord_x = 2245;
+  track[109].coord_y = 649;
   track[110].name = "BR16"
   track[110].typ = NODE_BRANCH
   track[110].num = 16
@@ -2446,10 +3010,14 @@ def init_trackb():
   track[110].edge[DIR_STRAIGHT].src = track[110]
   track[110].edge[DIR_STRAIGHT].dest = track[16]
   track[110].edge[DIR_STRAIGHT].dist = 225
+  track[110].coord_x = 1739;
+  track[110].coord_y = 457;
   track[110].edge[DIR_CURVED].reverse = track[19].edge[DIR_AHEAD]
   track[110].edge[DIR_CURVED].src = track[110]
   track[110].edge[DIR_CURVED].dest = track[18]
   track[110].edge[DIR_CURVED].dist = 220
+  track[110].coord_x = 1739;
+  track[110].coord_y = 457;
   track[111].name = "MR16"
   track[111].typ = NODE_MERGE
   track[111].num = 16
@@ -2458,6 +3026,8 @@ def init_trackb():
   track[111].edge[DIR_AHEAD].src = track[111]
   track[111].edge[DIR_AHEAD].dest = track[40]
   track[111].edge[DIR_AHEAD].dist = 146
+  track[111].coord_x = 1739;
+  track[111].coord_y = 457;
   track[112].name = "BR17"
   track[112].typ = NODE_BRANCH
   track[112].num = 17
@@ -2466,10 +3036,14 @@ def init_trackb():
   track[112].edge[DIR_STRAIGHT].src = track[112]
   track[112].edge[DIR_STRAIGHT].dest = track[60]
   track[112].edge[DIR_STRAIGHT].dist = 225
+  track[112].coord_x = 660;
+  track[112].coord_y = 497;
   track[112].edge[DIR_CURVED].reverse = track[63].edge[DIR_AHEAD]
   track[112].edge[DIR_CURVED].src = track[112]
   track[112].edge[DIR_CURVED].dest = track[62]
   track[112].edge[DIR_CURVED].dist = 230
+  track[112].coord_x = 660;
+  track[112].coord_y = 497;
   track[113].name = "MR17"
   track[113].typ = NODE_MERGE
   track[113].num = 17
@@ -2478,6 +3052,8 @@ def init_trackb():
   track[113].edge[DIR_AHEAD].src = track[113]
   track[113].edge[DIR_AHEAD].dest = track[77]
   track[113].edge[DIR_AHEAD].dist = 62
+  track[113].coord_x = 660;
+  track[113].coord_y = 497;
   track[114].name = "BR18"
   track[114].typ = NODE_BRANCH
   track[114].num = 18
@@ -2486,10 +3062,14 @@ def init_trackb():
   track[114].edge[DIR_STRAIGHT].src = track[114]
   track[114].edge[DIR_STRAIGHT].dest = track[39]
   track[114].edge[DIR_STRAIGHT].dist = 215
+  track[114].coord_x = 1302;
+  track[114].coord_y = 267;
   track[114].edge[DIR_CURVED].reverse = track[90].edge[DIR_CURVED]
   track[114].edge[DIR_CURVED].src = track[114]
   track[114].edge[DIR_CURVED].dest = track[91]
   track[114].edge[DIR_CURVED].dist = 338
+  track[114].coord_x = 1302;
+  track[114].coord_y = 267;
   track[115].name = "MR18"
   track[115].typ = NODE_MERGE
   track[115].num = 18
@@ -2498,6 +3078,8 @@ def init_trackb():
   track[115].edge[DIR_AHEAD].src = track[115]
   track[115].edge[DIR_AHEAD].dest = track[88]
   track[115].edge[DIR_AHEAD].dist = 187
+  track[115].coord_x = 1302;
+  track[115].coord_y = 267;
   track[116].name = "BR153"
   track[116].typ = NODE_BRANCH
   track[116].num = 153
@@ -2506,10 +3088,14 @@ def init_trackb():
   track[116].edge[DIR_STRAIGHT].src = track[116]
   track[116].edge[DIR_STRAIGHT].dest = track[125]
   track[116].edge[DIR_STRAIGHT].dist = 230
+  track[116].coord_x = 1221;
+  track[116].coord_y = 1002;
   track[116].edge[DIR_CURVED].reverse = track[33].edge[DIR_AHEAD]
   track[116].edge[DIR_CURVED].src = track[116]
   track[116].edge[DIR_CURVED].dest = track[32]
   track[116].edge[DIR_CURVED].dist = 228
+  track[116].coord_x = 1221;
+  track[116].coord_y = 1002;
   track[117].name = "MR153"
   track[117].typ = NODE_MERGE
   track[117].num = 153
@@ -2518,6 +3104,8 @@ def init_trackb():
   track[117].edge[DIR_AHEAD].src = track[117]
   track[117].edge[DIR_AHEAD].dest = track[119]
   track[117].edge[DIR_AHEAD].dist = 24
+  track[117].coord_x = 1221;
+  track[117].coord_y = 1002;
   track[118].name = "BR154"
   track[118].typ = NODE_BRANCH
   track[118].num = 154
@@ -2526,10 +3114,14 @@ def init_trackb():
   track[118].edge[DIR_STRAIGHT].src = track[118]
   track[118].edge[DIR_STRAIGHT].dest = track[116]
   track[118].edge[DIR_STRAIGHT].dist = 24
+  track[118].coord_x = 1221;
+  track[118].coord_y = 1002;
   track[118].edge[DIR_CURVED].reverse = track[28].edge[DIR_AHEAD]
   track[118].edge[DIR_CURVED].src = track[118]
   track[118].edge[DIR_CURVED].dest = track[29]
   track[118].edge[DIR_CURVED].dist = 224
+  track[118].coord_x = 1221;
+  track[118].coord_y = 1002;
   track[119].name = "MR154"
   track[119].typ = NODE_MERGE
   track[119].num = 154
@@ -2538,6 +3130,8 @@ def init_trackb():
   track[119].edge[DIR_AHEAD].src = track[119]
   track[119].edge[DIR_AHEAD].dest = track[122]
   track[119].edge[DIR_AHEAD].dist = 32
+  track[119].coord_x = 1221;
+  track[119].coord_y = 1002;
   track[120].name = "BR155"
   track[120].typ = NODE_BRANCH
   track[120].num = 155
@@ -2546,10 +3140,14 @@ def init_trackb():
   track[120].edge[DIR_STRAIGHT].src = track[120]
   track[120].edge[DIR_STRAIGHT].dest = track[127]
   track[120].edge[DIR_STRAIGHT].dist = 247
+  track[120].coord_x = 1221;
+  track[120].coord_y = 1002;
   track[120].edge[DIR_CURVED].reverse = track[48].edge[DIR_AHEAD]
   track[120].edge[DIR_CURVED].src = track[120]
   track[120].edge[DIR_CURVED].dest = track[49]
   track[120].edge[DIR_CURVED].dist = 227
+  track[120].coord_x = 1221;
+  track[120].coord_y = 1002;
   track[121].name = "MR155"
   track[121].typ = NODE_MERGE
   track[121].num = 155
@@ -2558,6 +3156,8 @@ def init_trackb():
   track[121].edge[DIR_AHEAD].src = track[121]
   track[121].edge[DIR_AHEAD].dest = track[123]
   track[121].edge[DIR_AHEAD].dist = 24
+  track[121].coord_x = 1221;
+  track[121].coord_y = 1002;
   track[122].name = "BR156"
   track[122].typ = NODE_BRANCH
   track[122].num = 156
@@ -2566,10 +3166,14 @@ def init_trackb():
   track[122].edge[DIR_STRAIGHT].src = track[122]
   track[122].edge[DIR_STRAIGHT].dest = track[120]
   track[122].edge[DIR_STRAIGHT].dist = 24
+  track[122].coord_x = 1221;
+  track[122].coord_y = 1002;
   track[122].edge[DIR_CURVED].reverse = track[64].edge[DIR_AHEAD]
   track[122].edge[DIR_CURVED].src = track[122]
   track[122].edge[DIR_CURVED].dest = track[65]
   track[122].edge[DIR_CURVED].dist = 222
+  track[122].coord_x = 1221;
+  track[122].coord_y = 1002;
   track[123].name = "MR156"
   track[123].typ = NODE_MERGE
   track[123].num = 156
@@ -2578,6 +3182,8 @@ def init_trackb():
   track[123].edge[DIR_AHEAD].src = track[123]
   track[123].edge[DIR_AHEAD].dest = track[118]
   track[123].edge[DIR_AHEAD].dist = 32
+  track[123].coord_x = 1221;
+  track[123].coord_y = 1002;
   track[124].name = "EN1"
   track[124].typ = NODE_ENTER
   track[124].reverse = track[125]
@@ -2585,6 +3191,8 @@ def init_trackb():
   track[124].edge[DIR_AHEAD].src = track[124]
   track[124].edge[DIR_AHEAD].dest = track[117]
   track[124].edge[DIR_AHEAD].dist = 230
+  track[124].coord_x = 1232;
+  track[124].coord_y = 1359;
   track[125].name = "EX1"
   track[125].typ = NODE_EXIT
   track[125].reverse = track[124]
@@ -2595,6 +3203,8 @@ def init_trackb():
   track[126].edge[DIR_AHEAD].src = track[126]
   track[126].edge[DIR_AHEAD].dest = track[121]
   track[126].edge[DIR_AHEAD].dist = 247
+  track[126].coord_x = 1204;
+  track[126].coord_y = 692;
   track[127].name = "EX2"
   track[127].typ = NODE_EXIT
   track[127].reverse = track[126]
@@ -2605,6 +3215,8 @@ def init_trackb():
   track[128].edge[DIR_AHEAD].src = track[128]
   track[128].edge[DIR_AHEAD].dest = track[35]
   track[128].edge[DIR_AHEAD].dist = 410
+  track[128].coord_x = 237;
+  track[128].coord_y = 308;
   track[129].name = "EX3"
   track[129].typ = NODE_EXIT
   track[129].reverse = track[128]
@@ -2615,6 +3227,8 @@ def init_trackb():
   track[130].edge[DIR_AHEAD].src = track[130]
   track[130].edge[DIR_AHEAD].dest = track[12]
   track[130].edge[DIR_AHEAD].dist = 320
+  track[130].coord_x = 2970;
+  track[130].coord_y = 1507;
   track[131].name = "EX4"
   track[131].typ = NODE_EXIT
   track[131].reverse = track[130]
@@ -2625,6 +3239,8 @@ def init_trackb():
   track[132].edge[DIR_AHEAD].src = track[132]
   track[132].edge[DIR_AHEAD].dest = track[0]
   track[132].edge[DIR_AHEAD].dist = 500
+  track[132].coord_x = 2990;
+  track[132].coord_y = 1599;
   track[133].name = "EX5"
   track[133].typ = NODE_EXIT
   track[133].reverse = track[132]
@@ -2635,6 +3251,8 @@ def init_trackb():
   track[134].edge[DIR_AHEAD].src = track[134]
   track[134].edge[DIR_AHEAD].dest = track[22]
   track[134].edge[DIR_AHEAD].dist = 60
+  track[134].coord_x = 2934;
+  track[134].coord_y = 397;
   track[135].name = "EX7"
   track[135].typ = NODE_EXIT
   track[135].reverse = track[134]
@@ -2645,6 +3263,8 @@ def init_trackb():
   track[136].edge[DIR_AHEAD].src = track[136]
   track[136].edge[DIR_AHEAD].dest = track[24]
   track[136].edge[DIR_AHEAD].dist = 70
+  track[136].coord_x = 2962;
+  track[136].coord_y = 289;
   track[137].name = "EX9"
   track[137].typ = NODE_EXIT
   track[137].reverse = track[136]
@@ -2655,6 +3275,8 @@ def init_trackb():
   track[138].edge[DIR_AHEAD].src = track[138]
   track[138].edge[DIR_AHEAD].dest = track[26]
   track[138].edge[DIR_AHEAD].dist = 70
+  track[138].coord_x = 2974;
+  track[138].coord_y = 181;
   track[139].name = "EX10"
   track[139].typ = NODE_EXIT
   track[139].reverse = track[138]

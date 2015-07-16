@@ -2,7 +2,8 @@
 
 #include <util.h>
 
-#include "trainsrv/track_data_new.h"
+#include "trainsrv/track_node.h"
+#include "trainsrv/track_data.h"
 #include "switch_state.h"
 
 extern struct track_node track[TRACK_MAX];

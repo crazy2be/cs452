@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-import sys
+import sys, csv
 
 ########################################################################
 #### Usage and Options.
@@ -16,6 +16,10 @@ parser.add_option('-H', dest='h', default='track_data.h',
 parser.add_option('-P', dest='py', default='track.py',
   help='output .py file (default is track.py)',
   metavar='OUTPUT-PY-FILE')
+parser.add_option('-E', dest='embedding', action='append',
+  help='extra data files containing embeddings',
+  metavar='EMBEDDINGS')
+
 (options, args) = parser.parse_args()
 if len(args) == 0 or not options.c or not options.h or not options.py:
   parser.print_help()
@@ -290,6 +294,31 @@ for fname in args:
 if errors > 0:
   exit(1)
 
+# parse the embeddings
+# this is pretty much just nailed onto the side of the original script,
+# and is generally a hackjob
+
+embeddings = {}
+for fname in options.embedding:
+    with open(fname) as f:
+        # first, get the track name
+        fun = f.readline().strip()
+
+        embedding = {}
+
+        freader = csv.reader(f)
+
+        for row in freader:
+            coords = (int(row[2]), int(row[3]))
+            node_a = row[0].strip().upper()
+            node_b = row[1].strip().upper()
+            assert node_a not in embedding
+            embedding[node_a] = coords
+            assert node_b not in embedding
+            embedding[node_b] = coords
+
+        embeddings[fun] = embedding
+
 ########################################################################
 #### Output the .h code.
 # This is the right place to make changes that you want to appear in
@@ -352,6 +381,10 @@ void %s(track_node *track) {
           (idx, dir.upper(), idx2))
         fh.write("  track[%d].edge[DIR_%s].dist = %s;\n" % \
           (idx, dir.upper(), dist))
+        coord_x, coord_y = embeddings[fun][nd.name]
+        fh.write("  track[%d].coord_x = %d;\n" % (idx, coord_x))
+        fh.write("  track[%d].coord_y = %d;\n" % (idx, coord_y))
+
   fh.write("}\n")
 fh.close()
 
@@ -392,5 +425,8 @@ for fun in tracks:
           (idx, dir.upper(), idx2))
         fh.write("  track[%d].edge[DIR_%s].dist = %s\n" % \
           (idx, dir.upper(), dist))
+        coord_x, coord_y = embeddings[fun][nd.name]
+        fh.write("  track[%d].coord_x = %d;\n" % (idx, coord_x))
+        fh.write("  track[%d].coord_y = %d;\n" % (idx, coord_y))
   fh.write('  return track\n')
 fh.close()

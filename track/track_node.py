@@ -20,6 +20,9 @@ class TrackNode():
   typ = -1
   num = -1
   reverse = None # TrackNode in the same location, but opposite direction.
+  switch_direction = 0 # Current switch direction
+  coord_x = 0.
+  coord_y = 0.
   def __init__(self):
     self.edge = [TrackEdge(), TrackEdge()]
 
