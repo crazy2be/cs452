@@ -446,18 +446,18 @@ static void update_train_states(int active_trains, struct display_train_state *a
                                 const struct switch_state *switches) {
 
 	puts("\e[s");
+	ASSERT(active_trains <= 4);
 	for (int i = 0; i < active_trains; i++) {
-		const int row = i % 4;
-		const int col = i / 4;
+		const int row = i;
 
-		const int term_row = TRAIN_STATUS_X_OFFSET + col * ((SCREEN_WIDTH - 2) / 2);
-		const int term_col = TRAIN_STATUS_Y_OFFSET + row;
+		const int term_col = TRAIN_STATUS_X_OFFSET;
+		const int term_row = TRAIN_STATUS_Y_OFFSET + row;
 
 		const int train_id = active_train_states[i].train_id;
 
 		if (position_is_uninitialized(&active_train_states[i].state.position)) {
-			printf("\e[%d;%dHTrain %d, position unknown",
-			       term_col, term_row, train_id);
+			printf("\e[%d;%dH%d / %d => Train %d, position unknown",
+			       term_row, term_col, i, active_trains, train_id);
 		} else {
 			const int displacement = active_train_states[i].state.position.displacement;
 			const char *pos_name = active_train_states[i].state.position.edge->src->name;
@@ -466,8 +466,8 @@ static void update_train_states(int active_trains, struct display_train_state *a
 			const int error = active_train_states[i].error;
 
 			char buf[78];
-			int len = snprintf(buf, sizeof(buf), "\e[%d;%dHTrain %d, %d mm past %s, vel %d, %d to stop, %d error",
-			       term_col, term_row, train_id, displacement, pos_name, velocity,
+			int len = snprintf(buf, sizeof(buf), "\e[%d;%dH%d / %d => Train %d, %d mm past %s, vel %d, %d to stop, %d error",
+			       term_row, term_col, i, active_trains, train_id, displacement, pos_name, velocity,
 			       stopping_distance, error);
 			while (len < 78) {
 				buf[len] = ' ';
