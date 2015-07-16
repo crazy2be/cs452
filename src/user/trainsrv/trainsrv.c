@@ -24,13 +24,23 @@ static void handle_sensors(struct trainsrv_state *state, struct sensor_state sen
 
 static void handle_set_speed(struct trainsrv_state *state, int train_id, int speed) {
 	if (update_train_speed(state, train_id, speed)) {
+		// TODO: we should get rid of this behaviour, as it causes more problems than it solves
 		tc_set_speed(train_id, speed);
 	}
 }
 
 static void handle_reverse(struct trainsrv_state *state, int train_id) {
-	int current_speed = update_train_direction(state, train_id);
-	start_reverse(train_id, current_speed);
+	struct internal_train_state *train_state = get_train_state(state, train_id);
+	ASSERT(train_state);
+	start_reverse(train_id, train_state->current_speed_setting);
+}
+static void handle_reverse_unsafe(struct trainsrv_state *state, int train_id) {
+	struct internal_train_state *train_state = get_train_state(state, train_id);
+	ASSERT(train_state);
+	ASSERT(train_state->current_speed_setting == 0);
+
+	tc_toggle_reverse(train_id);
+	// TODO: update train state to point in opposite direction
 }
 
 static int handle_query_arrival(struct trainsrv_state *state, int train, int dist) {
@@ -125,6 +135,10 @@ static void trains_server(void) {
 			break;
 		case REVERSE:
 			handle_reverse(&state, req.train_number);
+			reply(tid, NULL, 0);
+			break;
+		case REVERSE_UNSAFE:
+			handle_reverse_unsafe(&state, req.train_number);
 			reply(tid, NULL, 0);
 			break;
 		case SWITCH_SWITCH:
@@ -229,6 +243,18 @@ void trains_set_speed(int train, int speed) {
 void trains_reverse(int train) {
 	TSEND(((struct trains_request) {
 		.type = REVERSE,
+		 .train_number = train,
+	}));
+}
+
+// Callers outside trainsrv should not call this
+// It just has trainsrv issue a reverse command immediately,
+// and does not slow down the train.
+// We have this done by the trainserver so that we can keep track
+// of the fact that the train points in the other direction
+void trains_reverse_unsafe(int train) {
+	TSEND(((struct trains_request) {
+		.type = REVERSE_UNSAFE,
 		 .train_number = train,
 	}));
 }

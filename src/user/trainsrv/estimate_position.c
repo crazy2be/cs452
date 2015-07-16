@@ -141,6 +141,7 @@ static void reanchor_all(struct trainsrv_state *state) {
 	}
 }
 
+// TODO: account for the stopping distance when we set the train to speed 0
 int update_train_speed(struct trainsrv_state *state, int train_id, int speed) {
 	struct internal_train_state *train_state = get_train_state(state, train_id);
 	if (train_state == NULL) {
@@ -165,6 +166,7 @@ static bool position_unknown(struct trainsrv_state *state, int train_id) {
 	return state->unknown_train_id == train_id;
 }
 
+// TODO: REMOVE ME
 int update_train_direction(struct trainsrv_state *state, int train_id) {
 	struct internal_train_state *train_state = get_train_state(state, train_id);
 	if ((train_state != NULL) && (!position_unknown(state, train_id))) {
