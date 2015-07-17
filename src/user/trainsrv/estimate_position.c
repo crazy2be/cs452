@@ -141,6 +141,7 @@ static void reanchor_all(struct trainsrv_state *state) {
 	}
 }
 
+// TODO: account for the stopping distance when we set the train to speed 0
 int update_train_speed(struct trainsrv_state *state, int train_id, int speed) {
 	struct internal_train_state *train_state = get_train_state(state, train_id);
 	if (train_state == NULL) {
@@ -166,6 +167,7 @@ int update_train_speed(struct trainsrv_state *state, int train_id, int speed) {
 /* 	return state->unknown_train_id == train_id; */
 /* } */
 
+/* // TODO: REMOVE ME */
 /* int update_train_direction(struct trainsrv_state *state, int train_id) { */
 /* 	struct internal_train_state *train_state = get_train_state(state, train_id); */
 /* 	if ((train_state != NULL) && (!position_unknown(state, train_id))) { */
@@ -278,8 +280,8 @@ static void update_train_position_from_sensor(const struct trainsrv_state *state
 	train_state->last_known_position.edge = &sensor_node->edge[0];
 	train_state->last_known_position.displacement = 0;
 	train_state->last_known_time = ticks;
-	train_state->last_sensor_hit = sensor;
-	train_state->last_sensor_hit_time = ticks;
+
+	sensor_historical_set(&train_state->sensor_history, sensor, ticks);
 
 	ASSERTF(position_is_wellformed(&train_state->last_known_position), "(%s, %d) is malformed",
 			train_state->last_known_position.edge->src->name, train_state->last_known_position.displacement);

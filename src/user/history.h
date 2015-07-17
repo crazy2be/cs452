@@ -20,6 +20,7 @@
 #define HISTORY_GET PASTER(HISTORY_PREFIX, get)
 #define HISTORY_SET PASTER(HISTORY_PREFIX, set)
 #define HISTORY_GET_LAST_MOD_TIME PASTER(HISTORY_PREFIX, get_last_mod_time)
+#define HISTORY_GET_MOD_BY_INDEX PASTER(HISTORY_PREFIX, get_mod_by_index)
 
 HISTORY_T {
 	// this is a ringbuffer which overwrites itself in a loop
@@ -40,6 +41,7 @@ void HISTORY_INIT(HISTORY_T *s);
 HISTORY_VAL HISTORY_GET_CURRENT(const HISTORY_T *s);
 HISTORY_VAL HISTORY_GET_BY_INDEX(const HISTORY_T *s, int index);
 int HISTORY_GET_LAST_MOD_TIME(const HISTORY_T *s);
+int HISTORY_GET_MOD_BY_INDEX(const HISTORY_T *s, int index);
 // return the most recent switch state that was set before the provided time
 HISTORY_VAL HISTORY_GET(const HISTORY_T *s, int time);
 void HISTORY_SET(HISTORY_T *s, HISTORY_VAL current, int time);

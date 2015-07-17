@@ -1,4 +1,6 @@
 #include "sensor_attribution.h"
+#include "sensor_history.h"
+#include "speed_history.h"
 
 #include "../sys.h"
 #include "../track.h"
@@ -26,8 +28,8 @@ static bool guess_improved(const struct trainsrv_state *state, int now,
 	}
 
 	// otherwise, base guess on which matches the eta better
-	int old_eta_error = abs((now - old->last_sensor_hit_time) - old_eta);
-	int candidate_eta_error = abs((now - candidate->last_sensor_hit_time) - candidate_eta);
+	int old_eta_error = abs((now - sensor_historical_get_last_mod_time(&old->sensor_history)) - old_eta);
+	int candidate_eta_error = abs((now - sensor_historical_get_last_mod_time(&candidate->sensor_history)) - candidate_eta);
 
 	DEBUG("Compared candidates: incumbent %d has eta err = %d, candidate %d has eta err = %d" EOL,
 			old->train_id, old_eta_error, candidate->train_id, candidate_eta_error);
@@ -39,16 +41,142 @@ static bool guess_improved(const struct trainsrv_state *state, int now,
 // one sensor to another, while hitting at most one sensor on the way
 #define MAX_BRANCHES_IN_SEARCH 5
 
-/* #define MAX_REVERSED_POSITIONS (MAX_ACTIVE_TRAINS * MAX_BRANCHES_IN_SEARCH) */
+#define MAX_REVERSED_POSITIONS (MAX_ACTIVE_TRAINS * MAX_BRANCHES_IN_SEARCH)
 
 /* struct reversed_train_position { */
 /* 	int train_id; */
 /* 	struct position position; */
 /* 	int errors_assumed; */
 /* 	int failed_switch; */
+/* }; */
+
+/* struct reversed_train_context { */
+/* 	const struct track_node *node; */
+/* 	int errors_assumed; */
+/* 	int failed_switch; */
+/* 	int distance_to_go; */
 /* } */
 
-/* static int build_reversed_positions(const struct trainsrv_state *state, int now, */ 
+/* static int emit_candidate_reverse_position(struct reversed_train_context *context, int train_id, */
+/* 		struct reversed_train_position *positions, int *positions_index) { */
+/* 	if (context->distance_to_go < context->node->edge[DIR_STRAIGHT].dist) { */
+/* 		// we've arrived at the destination */
+/* 		positions[(*positions_index)++] = (struct reversed_train_position) { */
+/* 			.train_id = train_id, */
+/* 			 .position = (struct position) { &context->node->edge[DIR_STRAIGHT], context->distance_to_go }, */
+/* 			  .errors_assumed = context->errors_assumed, */
+/* 			   .failed_switch = context->failed_switch, */
+/* 		}; */
+/* 		return 1; */
+/* 	} else { */
+/* 		context->distance_to_go -= context->node->edge[DIR_STRAIGHT].dist; */
+/* 		return 0; */
+/* 	} */
+/* } */
+
+/* static int build_reversed_positions_for_train(const struct trainsrv_state *state, const struct internal_train_state *train, */
+/* 		const struct track_node *start, int distance_travelled, struct reversed_train_position *positions) { */
+/* 	int positions_index = 0; */
+
+/* 	struct reversed_train_context stack[MAX_BRANCHES_IN_SEARCH]; */
+/* 	int stack_size = 1; */
+
+/* 	stack[0].node = starting_sensor_node; */
+/* 	stack[0].errors_assumed = 0; */
+/* 	stack[0].failed_switch = -1; */
+/* 	stack[0].distance_to_go = distance_travelled; */
+
+/* 	while (stack_size > 0) { */
+/* 		struct reversed_train_context context = stack[--stack_size]; */
+
+/* 		switch (context.node->type) { */
+/* 			case NODE_EXIT: */
+/* 				// drop this on the floor */
+/* 				continue; */
+/* 			case NODE_BRANCH: { */
+/* 				// this is fucked */
+/* 				if (context.errors_assumed == 0) { */
+/* 					struct reversed_train_context c2 = { */
+/* 						context.node->edges[DIR_CURVED].dest, */
+/* 						1, */
+/* 						context.node->num, */
+/* 						context.distance_to_go, */
+/* 					}; */
+/* 					if (!emit_candidate_reverse_position(&c2, train->train_id, positions, &position_index)) { */
+/* 						stack[stack_size++] = c2; */
+/* 					} */
+/* 				} */
+/* 				break; */
+/* 			} */
+/* 			case NODE_SENSOR: */
+/* 				if (context.errors_assumed != 0) continue; */
+/* 				context.errors_assumed++; */
+/* 				break; */
+/* 		} */
+/* 		context.node = context.node->edges[DIR_STRAIGHT].dest; */
+/* 		if (!emit_candidate_reverse_position(&context, train->train_id, positions, &position_index)) { */
+/* 			stack[stack_size++] = context; */
+/* 		} */
+/* 	} */
+/* 	return position_index; */
+/* } */
+
+// finds the distance between two points on the track
+// we're willing to go over one turnout the wrong way, or hit a single sensor
+// even with these constraints, for our track, there should only be one such
+// path between two sensors.
+static int distance_between_points_error_tolerant(const struct track_node *start,
+		const struct track_node *end, int start_time, int end_time) {
+}
+
+/* static int build_reversed_positions(const struct trainsrv_state *state, int now, */
+/* 		struct reversed_train_position *positions) { */
+/* 	int out_index = 0; */
+/* 	for (int i = 0; i < state->num_active_trains; i++) { */
+/* 		const struct internal_train_state *ts = &state->train_states[i]; */
+/* 		if (ts->sensor_history.len <= 0 || ts->reversed == 0) continue; */
+
+/* 		// figure out the possible locations we could have stopped at */
+
+/* 		// first, figure how far we've travelled since the last sensor */
+
+/* 		// TODO: this is an unapologetic hackjob */
+/* 		// At the time of writing, we don't have an acceleration model, so we don't support anything */
+/* 		// that would require having one. */
+/* 		// We assume that the train was going at some constant velocity, and then came to a full stop */
+/* 		bool found; */
+/* 		for (int j = 1; j <= state->speed_history.len - 1; j++) { */
+/* 			// first, look for the the time at which we set the speed to zero */
+/* 			if (speed_historical_get_by_index(&state->speed_history, j) == 0) { */
+/* 				// TODO: some of this should be factored into estimate_position */
+/* 				int speed = speed_historical_get_by_index(&state->speed_history, j + 1); */
+/* 				int prev_speed = 0; */
+/* 				if (j + 2 < speed->speed_history.len) { */
+/* 					prev_speed = speed_historical_get_by_index(&state->speed_history, j + 2); */
+/* 				} */
+/* 				int velocity_index = speed*2 + (prev_speed >= speed) - 1; */
+/* 				int velocity = train_state->est_velocities[velocity_index]; */
+
+/* 				int speed_time = speed_historical_get_mod_by_index(&state->speed_history, j + 1); */
+/* 				int stop_time = speed_historical_get_mod_by_index(&state->speed_history, j); */
+
+/* 				int stopping_distance = train_state->est_stopping_distances[velocity_index]; */
+/* 				int distance_travelled = velocity * (speed_time - stop_time) + stopping_distance; */
+
+/* 				out_index += build_reversed_positions_for_train(state, ts, stop_time, distance_travelled, positions + out_index); */
+/* 				ASSERT(out_index < MAX_REVERSED_POSITIONS); */
+
+/* 				found = true; */
+
+/* 				break; */
+/* 			} */
+/* 		} */
+/* 		ASSERT(found); */
+
+/* 		// now, figure out the places the train could have ended up by travelling that distance */
+/* 		// from the last sensor hit */
+/* 	} */
+/* } */
 
 struct search_context {
 	const struct track_edge *edge;
@@ -62,8 +190,9 @@ struct search_context {
 	} merges_hit[MAX_BRANCHES_IN_SEARCH];
 };
 
-static const struct internal_train_state* attribute_sensor_to_known_train(const struct trainsrv_state *state,
-		const struct track_node *sensor, int now, int *changed_switch) {
+struct attribution attribute_sensor_to_known_train(const struct trainsrv_state *state,
+		const struct track_node *sensor, int now) {
+
 	// this is much bigger than it needs to be - we should only need enough entries
 	// so that we can merge in every possible way without hitting a sensor.
 	const int queue_size = MAX_BRANCHES_IN_SEARCH;
@@ -104,13 +233,16 @@ static const struct internal_train_state* attribute_sensor_to_known_train(const 
 		DEBUG("Traversing through node %s" EOL, node->name);
 		if (node->type == NODE_SENSOR) {
 			for (int i = 0; i < state->num_active_trains; i++) {
-				if (state->train_states[i].last_sensor_hit == node->reverse->num) {
+				// note that this also excludes the unknown position train, since last_sensor_hit = -1 
+				const struct internal_train_state *train_state = &state->train_states[i];
+				int last_sensor_hit = sensor_historical_get_current(&train_state->sensor_history);
+				if (last_sensor_hit == node->reverse->num) {
 					// there is a train here
-					const struct internal_train_state *train_state = &state->train_states[i];
 
 					// check if the train going up this path would have required going the wrong way over a switch
 					int errors_assumed = context.errors_assumed;
 					int switch_to_adjust = -1;
+					const int last_sensor_hit_time = sensor_historical_get_last_mod_time(&train_state->sensor_history);
 					DEBUG("Found train %d at sensor %s, assuming %d errors" EOL, train_state->train_id, node->name, errors_assumed);
 					for (int m = 0; errors_assumed < errors_assumed_threshold && m < context.merges_hit_count; m++) {
 						const struct track_edge *expected_branch_edge = context.merges_hit[m].branch_edge;
@@ -118,7 +250,9 @@ static const struct internal_train_state* attribute_sensor_to_known_train(const 
 						ASSERT(branch->type == NODE_BRANCH);
 
 						const int distance_from_train = context.distance - context.merges_hit[m].distance;
-						const int estimated_time = train_state->last_sensor_hit_time + train_eta_from_state(state, train_state, distance_from_train);
+						// TODO: this doesn't work correctly while the train is stopping, or under
+						// acceleration, because train_eta_from_state doesn't do that
+						const int estimated_time = last_sensor_hit_time + train_eta_from_state(state, train_state, distance_from_train);
 						const struct switch_state switches = switch_historical_get(&state->switch_history, estimated_time);
 						const int direction = switch_get(&switches, branch->num);
 
@@ -197,16 +331,24 @@ static const struct internal_train_state* attribute_sensor_to_known_train(const 
 		ASSERT(0 <= queue_len && queue_len <= queue_size);
 	}
 
-	*changed_switch = train_candidate_switch_to_adjust;
+	return (struct attribution) {
+		train_candidate,
+		train_candidate_switch_to_adjust,
+		train_candidate_distance,
+	}
+	*changed_switch = ;
 	return train_candidate;
 }
 
-const struct internal_train_state* attribute_sensor_to_train(struct trainsrv_state *state, int sensor, int now, int *changed_switch) {
+// TODO: this should probably also return the distance the train was thought to have travelled,
+// so we can delurk next_sensor & next_sensor_mm & simplify the actual_speed calculation
+struct attribution attribute_sensor_to_train(struct trainsrv_state *state, int sensor, int now) {
 	const struct track_node *sensor_node = track_node_from_sensor(sensor);
-	const struct internal_train_state *train = attribute_sensor_to_known_train(state, sensor_node, now, changed_switch);
+	struct attribution attr = attribute_sensor_to_known_train(state, sensor_node, now);
 	if (train == NULL && state->unknown_train_id > 0) {
-		train = get_train_state(state, state->unknown_train_id);
-		state->unknown_train_id = 0;
+		attr.train = get_train_state(state, state->unknown_train_id);
+		attr.changed_switch = -1;
+		attr.distance_travelled = 0;
 	}
-	return train;
+	return attr;
 }

@@ -24,12 +24,16 @@ HISTORY_VAL HISTORY_GET_BY_INDEX(const HISTORY_T *s, int index) {
 }
 
 HISTORY_VAL HISTORY_GET_CURRENT(const HISTORY_T *s) {
-	return HISTORY_GET_BY_INDEX(s, 0);
+	return HISTORY_GET_BY_INDEX(s, 1);
 }
 
 int HISTORY_GET_LAST_MOD_TIME(const HISTORY_T *s) {
-	ASSERT(s->len > 0);
-	return s->history[NORMALIZE_OFFSET(s->offset, -1)].time;
+	return HISTORY_GET_MOD_BY_INDEX(s, 1);
+}
+
+int HISTORY_GET_MOD_BY_INDEX(const HISTORY_T *s, int index) {
+	ASSERT(s->len > index);
+	return s->history[NORMALIZE_OFFSET(s->offset, -index)].time;
 }
 
 // return the most recent switch state that was set before the provided time
