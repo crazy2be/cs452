@@ -1,8 +1,8 @@
 #include "clockserver.h"
 #include "nameserver.h"
 #include "../request_type.h"
-#include "../min_heap.h"
 
+#include <min_heap.h>
 #include <kernel.h>
 #include <assert.h>
 
