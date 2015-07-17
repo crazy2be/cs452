@@ -121,12 +121,78 @@ static bool guess_improved(const struct trainsrv_state *state, int now,
 /* 	return position_index; */
 /* } */
 
+struct distance_context {
+	const struct track_node *node;
+	int errors_assumed;
+	int failed_switch;
+	int distance_travelled;
+};
+
 // finds the distance between two points on the track
 // we're willing to go over one turnout the wrong way, or hit a single sensor
 // even with these constraints, for our track, there should only be one such
 // path between two sensors.
-static int distance_between_points_error_tolerant(const struct track_node *start,
-		const struct track_node *end, int start_time, int end_time) {
+static int distance_between_points_error_tolerant(const struct trainsrv_state *state,
+		const struct track_node *start, const struct track_node *end, int start_time, int end_time) {
+	// we assume that the relevant switches do not change position betwen start_time & end_time,
+	// since we have no way of knowing where the train is in the middle.
+	// that would require having a model for the velocity as the train stops, which we
+	// don't have right now
+	// IF THIS ASSUMPTION IS VIOLATED, THIS WILL FAIL SILENTLY
+	// We should assert that the assumption holds
+	const struct switch_state switches = switch_historical_get(&state->switch_history, start_time);
+
+	struct distance_context stack[MAX_BRANCHES_IN_SEARCH];
+	int stack_size = 1;
+
+	stack[0].node = starting_sensor_node;
+	stack[0].errors_assumed = 0;
+	stack[0].failed_switch = -1;
+
+	int distance_candidate = -1;
+
+	while (stack_size > 0) {
+		struct reversed_train_context context = stack[--stack_size];
+
+		if (context.node == end) {
+			ASSERT(distance_candidate < 0);
+			distance_candidate = context.distance_travelled;
+			continue;
+		}
+
+		int edge_index = 0;
+
+		const struct track_edge *e;
+		switch (context.node->type) {
+			case NODE_EXIT:
+				// drop this on the floor
+				continue;
+			case NODE_BRANCH: {
+				edge_index = switch_get(&switches, context.node->num);
+				if (context.errors_assumed == 0) {
+					e = &context.node->edges[!edge_index];
+					stack[stack_size++] = (struct distance_context) {
+						e->dest,
+						1,
+						context.node->num,
+						context.distance_travelled + e->dist,
+					};
+				}
+				break;
+			}
+			case NODE_SENSOR:
+				if (context.errors_assumed != 0) continue;
+				context.errors_assumed++;
+				break;
+		}
+
+		e = &context.node->edges[edge_index];
+		context.node = e->dest;
+		context.distance_travelled += e->dist;
+		stack[stack_size++] = context;
+	}
+	ASSERT(distance_candidate >= 0);
+	return distance_candidate;
 }
 
 /* static int build_reversed_positions(const struct trainsrv_state *state, int now, */
