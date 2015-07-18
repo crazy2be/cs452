@@ -43,3 +43,5 @@ static inline int usermode(void) {
 static inline int abs(int a) {
 	return (a < 0) ? -a : a;
 }
+
+int powi(int base, unsigned exp);

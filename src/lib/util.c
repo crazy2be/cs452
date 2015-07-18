@@ -69,3 +69,15 @@ int strncmp(const char *a, const char *b, int n) {
 	}
 	return n > 0 && *a - *b;
 }
+
+int powi(int base, unsigned exp) {
+	int acc = 1;
+	while (exp != 0) {
+		if (exp & 1) {
+			acc *= base;
+		}
+		base *= base;
+		exp >>= 1;
+	}
+	return acc;
+}

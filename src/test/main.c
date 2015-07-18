@@ -71,6 +71,18 @@ void sqrti_tests(void) {
 	}
 }
 
+void powi_tests(void) {
+	for (unsigned n = 0; n < 1000; n++) {
+		int base = rand() & 0xff;
+		unsigned exponent = rand() & 0xf;
+		int result = 1;
+		for (unsigned i = 0; i < exponent; i++) {
+			result *= base;
+		}
+		ASSERT_INTEQ(result, powi(base, exponent));
+	}
+}
+
 void lssb_tests(void) {
 	int i;
 	ASSERT(0 == least_significant_set_bit(0xffffffff));
@@ -222,6 +234,7 @@ void init_task(void) {
 	memcpy_tests();
 	memset_tests();
 	sqrti_tests();
+	powi_tests();
 	min_heap_tests();
 	track_tests();
 	sensor_attribution_tests();
