@@ -115,6 +115,8 @@ static struct internal_train_state* allocate_train_state(struct trainsrv_state *
 	memset(train_state, 0, sizeof(*train_state));
 	state->state_for_train[train_id - 1] = train_state;
 	train_state->train_id = train_id;
+	speed_historical_init(&train_state->speed_history);
+	sensor_historical_init(&train_state->sensor_history);
 
 	// initialize estimated speeds based on train id
 	//int train_scaling_factor = 0;
@@ -228,7 +230,10 @@ int calculate_actual_velocity(struct internal_train_state *train_state,
 		const struct track_node *sensor_node, const struct switch_state *switches, int ticks) {
 	// we think we're still accelerating, so we don't know how fast we are
 	// allow 4s after the last speed change to adjust to the new speed
-	if (ticks < speed_historical_get_last_mod_time(&train_state->speed_history) + 400) return SILENT_ERROR;
+	if (train_state->speed_history.len > 0 &&
+			ticks < speed_historical_get_kvp_current(&train_state->speed_history).time + 400) {
+		return SILENT_ERROR;
+	}
 	ASSERT(sensor_node != NULL);
 
 	// we don't know where the train was last
@@ -299,8 +304,9 @@ struct sensor_context {
 
 static void sensor_cb(int sensor, void *ctx) {
 	struct sensor_context *context = (struct sensor_context*) ctx;
-	int bad_switch;
-	const struct internal_train_state *train = attribute_sensor_to_train(context->state, sensor, context->time, &bad_switch);
+	struct attribution attr = attribute_sensor_to_train(context->state, sensor, context->time);
+	// TODO: we should use the attr.distance to inform the velocity calculation
+	const struct internal_train_state *train = attr.train;
 
 	// spurious sensor signal
 	if (train == NULL) return;
@@ -313,10 +319,10 @@ static void sensor_cb(int sensor, void *ctx) {
 	// we essentially assume that this must be a spurious signal
 	if (context->train_already_hit[index] & mask) return;
 
-	if (bad_switch != -1) {
+	if (attr.changed_switch != -1) {
 		struct switch_state switches = switch_historical_get_current(&context->state->switch_history);
-		enum sw_direction dir = switch_get(&switches, bad_switch);
-		update_switch(context->state, bad_switch, (dir == CURVED) ? STRAIGHT : CURVED);
+		enum sw_direction dir = switch_get(&switches, attr.changed_switch);
+		update_switch(context->state, attr.changed_switch, (dir == CURVED) ? STRAIGHT : CURVED);
 	}
 
 

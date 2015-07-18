@@ -169,7 +169,8 @@ static void trains_server(void) {
 		}
 		case GET_LAST_KNOWN_SENSOR: {
 			struct internal_train_state *ts = get_train_state(&state, req.train_number);
-			reply(tid, &ts->last_sensor_hit, sizeof(ts->last_sensor_hit));
+			int last_sensor_hit = sensor_historical_get_current(&ts->sensor_history);
+			reply(tid, &last_sensor_hit, sizeof(last_sensor_hit));
 			break;
 		}
 		default:

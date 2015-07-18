@@ -14,22 +14,26 @@
 #endif
 
 #define HISTORY_T struct PASTER(HISTORY_PREFIX, state)
+#define HISTORY_KVP struct PASTER(HISTORY_PREFIX, kvp)
 #define HISTORY_INIT PASTER(HISTORY_PREFIX, init)
 #define HISTORY_GET_CURRENT PASTER(HISTORY_PREFIX, get_current)
 #define HISTORY_GET_BY_INDEX PASTER(HISTORY_PREFIX, get_by_index)
 #define HISTORY_GET PASTER(HISTORY_PREFIX, get)
+#define HISTORY_GET_KVP_CURRENT PASTER(HISTORY_PREFIX, get_kvp_current)
+#define HISTORY_GET_KVP PASTER(HISTORY_PREFIX, get_kvp)
+#define HISTORY_GET_KVP_BY_INDEX PASTER(HISTORY_PREFIX, get_kvp_by_index)
 #define HISTORY_SET PASTER(HISTORY_PREFIX, set)
-#define HISTORY_GET_LAST_MOD_TIME PASTER(HISTORY_PREFIX, get_last_mod_time)
-#define HISTORY_GET_MOD_BY_INDEX PASTER(HISTORY_PREFIX, get_mod_by_index)
+
+HISTORY_KVP {
+	HISTORY_VAL st;
+	int time;
+};
 
 HISTORY_T {
 	// this is a ringbuffer which overwrites itself in a loop
 	// elements within the ringbuffer are ordered by time, with
 	// the most recent at the start of the buffer
-	struct {
-		HISTORY_VAL st;
-		int time;
-	} history[HISTORY_LEN];
+	HISTORY_KVP history[HISTORY_LEN];
 
 	// points to the next element to be written to (so most recently written
 	// element is at a position one less)
@@ -38,10 +42,22 @@ HISTORY_T {
 };
 
 void HISTORY_INIT(HISTORY_T *s);
-HISTORY_VAL HISTORY_GET_CURRENT(const HISTORY_T *s);
-HISTORY_VAL HISTORY_GET_BY_INDEX(const HISTORY_T *s, int index);
-int HISTORY_GET_LAST_MOD_TIME(const HISTORY_T *s);
-int HISTORY_GET_MOD_BY_INDEX(const HISTORY_T *s, int index);
+
+HISTORY_KVP HISTORY_GET_KVP_CURRENT(const HISTORY_T *s);
+HISTORY_KVP HISTORY_GET_KVP_BY_INDEX(const HISTORY_T *s, int index);
 // return the most recent switch state that was set before the provided time
-HISTORY_VAL HISTORY_GET(const HISTORY_T *s, int time);
+HISTORY_KVP HISTORY_GET_KVP(const HISTORY_T *s, int time);
+
 void HISTORY_SET(HISTORY_T *s, HISTORY_VAL current, int time);
+
+static inline HISTORY_VAL HISTORY_GET_BY_INDEX(const HISTORY_T *s, int index) {
+	return HISTORY_GET_KVP_BY_INDEX(s, index).st;
+}
+
+static inline HISTORY_VAL HISTORY_GET_CURRENT(const HISTORY_T *s) {
+	return HISTORY_GET_KVP_CURRENT(s).st;
+}
+
+static inline HISTORY_VAL HISTORY_GET(const HISTORY_T *s, int time) {
+	return HISTORY_GET_KVP(s, time).st;
+}

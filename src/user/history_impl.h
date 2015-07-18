@@ -18,44 +18,36 @@ static inline int NORMALIZE_OFFSET(int initial, int delta) {
 	return initial;
 }
 
-HISTORY_VAL HISTORY_GET_BY_INDEX(const HISTORY_T *s, int index) {
-	ASSERT(s->len > index);
-	return s->history[NORMALIZE_OFFSET(s->offset, -index)].st;
+HISTORY_KVP HISTORY_GET_KVP_BY_INDEX(const HISTORY_T *s, int index) {
+	ASSERTF(s->len >= index, "%d = index >= len = %d in %s", index, s->len, __func__);
+	return s->history[NORMALIZE_OFFSET(s->offset, -index)];
 }
 
-HISTORY_VAL HISTORY_GET_CURRENT(const HISTORY_T *s) {
-	return HISTORY_GET_BY_INDEX(s, 1);
-}
-
-int HISTORY_GET_LAST_MOD_TIME(const HISTORY_T *s) {
-	return HISTORY_GET_MOD_BY_INDEX(s, 1);
-}
-
-int HISTORY_GET_MOD_BY_INDEX(const HISTORY_T *s, int index) {
-	ASSERT(s->len > index);
-	return s->history[NORMALIZE_OFFSET(s->offset, -index)].time;
+HISTORY_KVP HISTORY_GET_KVP_CURRENT(const HISTORY_T *s) {
+	return HISTORY_GET_KVP_BY_INDEX(s, 1);
 }
 
 // return the most recent switch state that was set before the provided time
-HISTORY_VAL HISTORY_GET(const HISTORY_T *s, int time) {
+HISTORY_KVP HISTORY_GET_KVP(const HISTORY_T *s, int time) {
 	ASSERT(s->len > 0);
 	int prev_index = NORMALIZE_OFFSET(s->offset, -1);
 
 	for (int i = 2; i <= s->len; i++) {
 		int index = NORMALIZE_OFFSET(s->offset, - i);
 		ASSERT(s->history[index].time < s->history[prev_index].time);
-		if (s->history[index].time < time) return s->history[prev_index].st;
+		if (s->history[index].time < time) break;
 		prev_index = index;
 	}
-	/* ASSERT(s->history[prev_index].time <= time); */
-	return s->history[prev_index].st;
+	return s->history[prev_index];
 }
 
 void HISTORY_SET(HISTORY_T *s, HISTORY_VAL current, int time) {
 	int last = NORMALIZE_OFFSET(s->offset, -1);
-	ASSERTF(s->len == 0 || time >= s->history[last].time, "Switch records went backwards in time");
+	ASSERTF(s->len == 0 || time >= s->history[last].time,
+			"State records went backwards in time (%d >= %d), len = %d, for %s",
+			time, s->history[last].time, s->len, __func__);
 	// wipe current state if the time interval between states is empty
-	if (s->history[last].time == time) {
+	if (s->len != 0 && s->history[last].time == time) {
 		s->history[last].st = current;
 	} else {
 		s->history[s->offset].st = current;

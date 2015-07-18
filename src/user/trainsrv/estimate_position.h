@@ -42,8 +42,6 @@ struct internal_train_state {
 	// mostly for reporting purposes
 	// this, unlike last_known_position, is not affected by reanchoring
 	struct sensor_historical_state sensor_history;
-	int last_sensor_hit;
-	int last_sensor_hit_time;
 	// reversed is mostly a concern of the sensor attribution code
 	// this is initially 0, and is logically inverted every time we reverse the train
 	// when a sensor is attributed to this train, reversed is returned to 0
