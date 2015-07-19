@@ -102,10 +102,10 @@ void curve_scaling_tests(void) {
 	struct curve_scaling cs = scale_deceleration_curve(60 * fixed_point_scale, 840 * fixed_point_scale, coefs, n, t1);
 
 	printf("x_scale = %d, y_scale = %d" EOL, (int) (cs.x_scale), (int) (cs.y_scale));
-	printf("scaled f(0) = %d vs %d" EOL, (int) (cs.y_scale * evaluate_polynomial_fp(0, coefs, n) / (1 << 10)), 60 * (1 << 10));
-
-	int stopping_distance = (cs.y_scale * integrate_polynomial(0, (t1 * cs.x_scale) / fixed_point_scale, coefs, n)) / (1 << 10);
-	printf("stopping_distance = %d" EOL, stopping_distance);
+	printf("scaled f(0) = %d vs %d" EOL, (int) (cs.y_scale * evaluate_polynomial_fp(0, coefs, n) / fixed_point_scale), (int) (60 * fixed_point_scale));
+	int stopping_distance = cs.y_scale * integrate_polynomial(0, t1, coefs, n) / cs.x_scale;
+	int stopping_time = t1 * fixed_point_scale / cs.x_scale / fixed_point_scale;
+	printf("stopping_distance = %d, stopping_time = %d ticks" EOL, stopping_distance, stopping_time);
 }
 
 struct Msg {
@@ -243,24 +243,28 @@ void hashtable_tests(void) {
 
 void init_task(void) {
 	start_servers();
-
-	lssb_tests();
-	hashtable_tests();
-	memcpy_tests();
-	memset_tests();
-	sqrti_tests();
-	min_heap_tests();
 	curve_scaling_tests();
-	track_tests();
-	sensor_attribution_tests();
-	ASSERT(1);
-	ASSERT(try_create(-1, child) == CREATE_INVALID_PRIORITY);
-	ASSERT(try_create(32, child) == CREATE_INVALID_PRIORITY);
-
-	while (try_create(PRIORITY_MIN, &nop) < 255);
-
 	stop_servers();
 }
+	/* start_servers(); */
+
+	/* lssb_tests(); */
+	/* hashtable_tests(); */
+	/* memcpy_tests(); */
+	/* memset_tests(); */
+	/* sqrti_tests(); */
+	/* min_heap_tests(); */
+	/* curve_scaling_tests(); */
+	/* track_tests(); */
+	/* sensor_attribution_tests(); */
+	/* ASSERT(1); */
+	/* ASSERT(try_create(-1, child) == CREATE_INVALID_PRIORITY); */
+	/* ASSERT(try_create(32, child) == CREATE_INVALID_PRIORITY); */
+
+	/* while (try_create(PRIORITY_MIN, &nop) < 255); */
+
+	/* stop_servers(); */
+/* } */
 
 void message_suite(void) {
 	start_servers();
@@ -357,10 +361,10 @@ int main(int argc, char *argv[]) {
 	/* boot(trains_init, PRIORITY_MIN, 0); */
 	/* return 0; */
 	boot(init_task, PRIORITY_MIN, 0);
-	boot(message_suite, PRIORITY_MIN, 0);
-	boot(io_suite, PRIORITY_MIN, 0);
-	boot(destroy_init, HIGHER(PRIORITY_MIN, 1), 0);
-	boot(test_train_alert_srv, HIGHER(PRIORITY_MIN, 1), 0);
+	/* boot(message_suite, PRIORITY_MIN, 0); */
+	/* boot(io_suite, PRIORITY_MIN, 0); */
+	/* boot(destroy_init, HIGHER(PRIORITY_MIN, 1), 0); */
+	/* boot(test_train_alert_srv, HIGHER(PRIORITY_MIN, 1), 0); */
 	// TODO: get this test working
 	/* boot(int_test_train_alert_srv, HIGHER(PRIORITY_MIN, 1), 0); */
 }
