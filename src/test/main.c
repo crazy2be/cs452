@@ -13,6 +13,7 @@
 #include "../user/sys.h"
 #include "../user/signal.h"
 #include "../user/trainsrv.h"
+#include "../user/polymath.h"
 
 void child(void) {
 	printf("Child task %d" EOL, tid());
@@ -79,6 +80,32 @@ void lssb_tests(void) {
 		pass();
 		ASSERT(i == least_significant_set_bit(0x1 << i));
 	}
+}
+
+void curve_scaling_tests(void) {
+	// the actual fitted values:
+	// 2.12715199e-03  -5.52006015e-02   5.03215652e-01  -1.72569014e+00
+    //		   -2.43091957e-20   9.50222278e+00
+	// the fitted values * 2^32:
+	// [  2.23048052e+03  -5.78820259e+04   5.27659855e+05  -1.80951726e+06
+    //	  -2.54900392e-14   9.96380276e+06]
+	long long coefs[] = { 9963803, 0, -1809517, 527660, -57882, 2230 };
+	int n = sizeof(coefs) / sizeof(coefs[0]);
+	long long t1 = 9402231;
+
+	printf("long is %d bytes" EOL, sizeof(long long));
+	printf("f(0) = %d" EOL, (int) (evaluate_polynomial_fp(0, coefs, n) / (1 << 10)));
+	printf("f(t1) = %d" EOL, (int) (evaluate_polynomial_fp(t1, coefs, n) / (1 << 10)));
+	printf("integral = %d" EOL, (int) (integrate_polynomial(0, t1, coefs, n) / (1 << 10)));
+
+	// speed is 60 mm/tick * scale factor of 2^20
+	struct curve_scaling cs = scale_deceleration_curve(60 * fixed_point_scale, 840 * fixed_point_scale, coefs, n, t1);
+
+	printf("x_scale = %d, y_scale = %d" EOL, (int) (cs.x_scale), (int) (cs.y_scale));
+	printf("scaled f(0) = %d vs %d" EOL, (int) (cs.y_scale * evaluate_polynomial_fp(0, coefs, n) / (1 << 10)), 60 * (1 << 10));
+
+	int stopping_distance = (cs.y_scale * integrate_polynomial(0, (t1 * cs.x_scale) / fixed_point_scale, coefs, n)) / (1 << 10);
+	printf("stopping_distance = %d" EOL, stopping_distance);
 }
 
 struct Msg {
@@ -223,6 +250,7 @@ void init_task(void) {
 	memset_tests();
 	sqrti_tests();
 	min_heap_tests();
+	curve_scaling_tests();
 	track_tests();
 	sensor_attribution_tests();
 	ASSERT(1);
