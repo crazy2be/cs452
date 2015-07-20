@@ -1,4 +1,5 @@
 #include <util.h>
+#include <assert.h>
 
 // this file should only be included by suorce files, not other headers
 #ifndef HISTORY_LEN
@@ -56,10 +57,12 @@ static inline HISTORY_KVP HISTORY_GET_KVP(const HISTORY_T *s, int time) {
 void HISTORY_SET(HISTORY_T *s, HISTORY_VAL current, int time);
 
 static inline HISTORY_VAL HISTORY_GET_BY_INDEX(const HISTORY_T *s, int index) {
+	ASSERTF(s->len >= index, "%d = index > len = %d in %s", index, s->len, __func__);
 	return HISTORY_GET_KVP_BY_INDEX(s, index).st;
 }
 
 static inline HISTORY_VAL HISTORY_GET_CURRENT(const HISTORY_T *s) {
+	ASSERTF(s->len >= 1, "%d = index > len = %d in %s", 1, s->len, __func__);
 	return HISTORY_GET_KVP_CURRENT(s).st;
 }
 
