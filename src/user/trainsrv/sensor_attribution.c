@@ -360,6 +360,12 @@ struct attribution attribute_sensor_to_known_train(const struct trainsrv_state *
 			for (int i = 0; i < state->num_active_trains; i++) {
 				// note that this also excludes the unknown position train, since last_sensor_hit = -1
 				const struct internal_train_state *train_state = &state->train_states[i];
+
+				if (train_state->sensor_history.len == 0) {
+					ASSERT(train_state->train_id == state->unknown_train_id);
+					continue;
+				}
+
 				int last_sensor_hit = sensor_historical_get_current(&train_state->sensor_history);
 				if (last_sensor_hit == node->reverse->num) {
 					// there is a train here

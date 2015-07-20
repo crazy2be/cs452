@@ -41,6 +41,7 @@ static void handle_reverse_unsafe(struct trainsrv_state *state, int train_id) {
 	ASSERT(train_state != NULL);
 	int current_speed = speed_historical_get_current(&train_state->speed_history);
 	ASSERT(current_speed == 0);
+	train_state->reversed = true;
 
 	tc_toggle_reverse(train_id);
 	// TODO: update train state to point in opposite direction

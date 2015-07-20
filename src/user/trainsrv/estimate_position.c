@@ -16,7 +16,7 @@ const long long acceleration_model_coefs[6] = { 0, 0, 119318217, -10618953, 3274
 
 int train_speed_index(const struct internal_train_state *train_state) {
 	int cur_speed = speed_historical_get_current(&train_state->speed_history);
-	int prev_speed = train_state->speed_history.len > 1 ? speed_historical_get_by_index(&train_state->speed_history, 1) : 0;
+	int prev_speed = train_state->speed_history.len >= 2 ? speed_historical_get_by_index(&train_state->speed_history, 2) : 0;
 	int i = cur_speed*2 + (prev_speed >= cur_speed) - 1;
 	ASSERTF(0 <= i && i < sizeof(train_state->est_velocities) / sizeof(train_state->est_velocities[0]),
 			"i = %d, cur_speed = %d, prev_speed = %d", i, cur_speed, prev_speed);

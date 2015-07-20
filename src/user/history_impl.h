@@ -19,6 +19,7 @@ static inline int NORMALIZE_OFFSET(int initial, int delta) {
 }
 
 HISTORY_KVP HISTORY_GET_KVP_BY_INDEX(const HISTORY_T *s, int index) {
+	ASSERT(index > 0);
 	ASSERTF(s->len >= index, "%d = index > len = %d in %s", index, s->len, __func__);
 	return s->history[NORMALIZE_OFFSET(s->offset, -index)];
 }
