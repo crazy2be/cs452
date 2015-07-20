@@ -6,6 +6,7 @@
 #include "../track.h"
 #include "../displaysrv.h"
 #include "../trainsrv.h"
+#include "../polymath.h"
 
 // We are willing to assume that the sensors / turnouts fail at most once - where
 // we missed a sensor hit in the past, or where a turnout was switched in the wrong direction.
@@ -33,19 +34,21 @@ struct reversed_train_context {
 	int distance_to_go;
 };
 
-static int emit_candidate_reverse_position(struct reversed_train_context *context, int train_id,
+static int emit_candidate_reverse_position(struct reversed_train_context *context, int train_id, int edge_index,
 		struct reversed_train_position *positions, int *positions_index) {
-	if (context->distance_to_go < context->node->edge[DIR_STRAIGHT].dist) {
+	if (context->distance_to_go < context->node->edge[edge_index].dist) {
 		// we've arrived at the destination
+		DEBUG("Might have stopped at position %s(%d) + %d mm" EOL, context->node->name, edge_index, context->distance_to_go);
 		positions[(*positions_index)++] = (struct reversed_train_position) {
 			.train_id = train_id,
-			 .position = (struct position) { &context->node->edge[DIR_STRAIGHT], context->distance_to_go },
+			 .position = (struct position) { &context->node->edge[edge_index], context->distance_to_go },
 			  .errors_assumed = context->errors_assumed,
 			   .failed_switch = context->failed_switch,
 		};
 		return 1;
 	} else {
-		context->distance_to_go -= context->node->edge[DIR_STRAIGHT].dist;
+		context->distance_to_go -= context->node->edge[edge_index].dist;
+		context->node = context->node->edge[edge_index].dest;
 		return 0;
 	}
 }
@@ -71,7 +74,7 @@ static int build_reversed_positions_for_train(const struct trainsrv_state *state
 		ASSERT(context.distance_to_go >= 0);
 		int edge_index = 0;
 
-		DEBUG("While reversing, at node %s" EOL, context.node->name);
+		DEBUG("While reversing, at node %s, %d mm left" EOL, context.node->name, context.distance_to_go);
 
 		switch (context.node->type) {
 			case NODE_EXIT:
@@ -81,27 +84,28 @@ static int build_reversed_positions_for_train(const struct trainsrv_state *state
 				edge_index = switch_get(&switches, context.node->num);
 				if (context.errors_assumed == 0) {
 					struct reversed_train_context c2 = {
-						context.node->edge[!edge_index].dest,
+						context.node,
 						1,
 						context.node->num,
 						context.distance_to_go,
 					};
-					if (!emit_candidate_reverse_position(&c2, train->train_id, positions, &position_index)) {
+					if (!emit_candidate_reverse_position(&c2, train->train_id, !edge_index, positions, &position_index)) {
 						stack[stack_size++] = c2;
 					}
 				}
 				break;
 			}
 			case NODE_SENSOR:
-				if (context.node == start) break;
-				if (context.errors_assumed != 0) continue;
-				context.errors_assumed++;
+				if (context.node != start) {
+					if (context.errors_assumed != 0) continue;
+					context.errors_assumed++;
+				}
 				break;
 			default:
 				break;
 		}
-		context.node = context.node->edge[edge_index].dest;
-		if (!emit_candidate_reverse_position(&context, train->train_id, positions, &position_index)) {
+		ASSERT(context.errors_assumed < errors_assumed_threshold);
+		if (!emit_candidate_reverse_position(&context, train->train_id, edge_index, positions, &position_index)) {
 			stack[stack_size++] = context;
 		}
 	}
@@ -115,152 +119,70 @@ struct distance_context {
 	int distance_travelled;
 };
 
-// finds the distance between two points on the track
-// we're willing to go over one turnout the wrong way, or hit a single sensor
-// even with these constraints, for our track, there should only be one such
-// path between two sensors.
-static int distance_between_points_error_tolerant(const struct trainsrv_state *state,
-		const struct track_node *start, const struct track_node *end, int start_time, int end_time) {
-	// we assume that the relevant switches do not change position betwen start_time & end_time,
-	// since we have no way of knowing where the train is in the middle.
-	// that would require having a model for the velocity as the train stops, which we
-	// don't have right now
-	// IF THIS ASSUMPTION IS VIOLATED, THIS WILL FAIL SILENTLY
-	// We should assert that the assumption holds
-	const struct switch_state switches = switch_historical_get(&state->switch_history, start_time);
-
-	struct distance_context stack[MAX_BRANCHES_IN_SEARCH];
-	int stack_size = 1;
-
-	stack[0].node = start;
-	stack[0].errors_assumed = 0;
-	stack[0].failed_switch = -1;
-	stack[0].distance_travelled = 0;
-
-	DEBUG("Trying to find distance between %s and %s" EOL, start->name, end->name);
-
-	int distance_candidate = -1;
-
-	while (stack_size > 0) {
-		struct distance_context context = stack[--stack_size];
-
-		ASSERT(context.distance_travelled >= 0);
-		DEBUG("while looking for path between sensors, at node %s" EOL, context.node->name);
-
-		if (context.node == end) {
-			ASSERT(distance_candidate < 0);
-			distance_candidate = context.distance_travelled;
-			continue;
-		}
-
-		int edge_index = 0;
-
-		const struct track_edge *e;
-		switch (context.node->type) {
-			case NODE_EXIT:
-				// drop this on the floor
-				continue;
-			case NODE_BRANCH: {
-				edge_index = switch_get(&switches, context.node->num);
-				if (context.errors_assumed == 0) {
-					e = &context.node->edge[!edge_index];
-					stack[stack_size++] = (struct distance_context) {
-						e->dest,
-						1,
-						context.node->num,
-						context.distance_travelled + e->dist,
-					};
-				}
-				break;
-			}
-			case NODE_SENSOR:
-				if (context.errors_assumed != 0) continue;
-				context.errors_assumed++;
-				break;
-			default:
-				break;
-		}
-
-		e = &context.node->edge[edge_index];
-		context.node = e->dest;
-		context.distance_travelled += e->dist;
-		stack[stack_size++] = context;
-	}
-	ASSERT(distance_candidate >= 0);
-	return distance_candidate;
-}
-
 static int build_reversed_positions(const struct trainsrv_state *state,
 		struct reversed_train_position *positions) {
 	int out_index = 0;
 	for (int i = 0; i < state->num_active_trains; i++) {
 		const struct internal_train_state *ts = &state->train_states[i];
+		// TODO: we also need to check if we've fully stopped & do the inverse of this check for the normal flow
+		// probably extract this to a helper function
 		if (!ts->reversed || ts->sensor_history.len <= 0) continue;
 
 		// figure out the possible locations we could have stopped at
 
 		// first, figure how far we've travelled since the last sensor
-
-		// TODO: this is an unapologetic hackjob
-		// At the time of writing, we don't have an acceleration model, so we don't support anything
-		// that would require having one.
-		// We assume that the train was going at some constant velocity, and then came to a full stop
 		DEBUG("Precomputing reverse positions for train %d" EOL, ts->train_id);
 		bool found;
 		for (int j = 1; j <= ts->speed_history.len - 1; j++) {
+			struct speed_historical_kvp stopping_point = speed_historical_get_kvp_by_index(&ts->speed_history, j);
 			// first, look for the the time at which we set the speed to zero
-			if (speed_historical_get_by_index(&ts->speed_history, j) == 0) {
+			if (stopping_point.st == 0) {
 				// TODO: some of this should be factored into estimate_position
-				int speed = speed_historical_get_by_index(&ts->speed_history, j + 1);
-				int prev_speed = 0;
+				struct speed_historical_kvp prev_speed = speed_historical_get_kvp_by_index(&ts->speed_history, j + 1);
+				int prev2_speed = 0;
 				if (j + 2 < ts->speed_history.len) {
-					prev_speed = speed_historical_get_by_index(&ts->speed_history, j + 2);
+					prev2_speed = speed_historical_get_by_index(&ts->speed_history, j + 2);
 				}
-				int velocity_index = speed*2 + (prev_speed >= speed) - 1;
+
+				int velocity_index = prev_speed.st*2 + (prev2_speed >= prev_speed.st) - 1;
 				int velocity = ts->est_velocities[velocity_index];
 
-				int speed_time = speed_historical_get_kvp_by_index(&ts->speed_history, j + 1).time;
-				int stop_time = speed_historical_get_kvp_by_index(&ts->speed_history, j).time;
-
 				int stopping_distance = ts->est_stopping_distances[velocity_index];
+
+				struct curve_scaling scale = scale_deceleration_curve(velocity * fixed_point_scale / 1000,
+						stopping_distance * fixed_point_scale, deceleration_model_coefs,
+						acceleration_model_arity, stopping_time_coef);
 
 				struct sensor_historical_kvp last_sensor = sensor_historical_get_kvp_current(&ts->sensor_history);
 				const struct track_node *last_sensor_node = track_node_from_sensor(last_sensor.st);
 
-				// we want to find out how far the train has travelled since the last sensor it hit
-				// we support two cases:
-				// 1: we travel from the previous sensor at some constant velocity, begin stopping,
-				//    then coast over the last sensor.
-				// 2: we stop after hitting the last sensor
+				long long integral_start;
+				long long integral_end = stopping_time_coef;
+				int distance_left;
 
-				// TODO: these assertions holding is not at all guaranteed.
-				// We're basically just checking that we don't change speed too much, to simplify the
-				// problem space.
-				// To generalize this, we would need to have an acceleration model.
-
-				int distance_travelled; // from the last sensor hit
-
-				// this is fucked - we might go through multiple sensors after we begin stopping
-				// we need to do tolerant track traversal between each of these sensors
-				DEBUG("stop_time = %d, last_sensor.time = %d" EOL, stop_time, last_sensor.time);
-				if (stop_time >= last_sensor.time) {
-					ASSERT(speed_time <= last_sensor.time);
-					distance_travelled = velocity * (stop_time - last_sensor.time) / 1000 + stopping_distance;
+				if (last_sensor.time > stopping_point.time) {
+					distance_left = 0;
+					integral_start = (last_sensor.time - stopping_point.time) * scale.x_scale;
 				} else {
-					struct sensor_historical_kvp sensor_before_last = sensor_historical_get_kvp_by_index(&ts->sensor_history, 2);
-					ASSERT(speed_time <= sensor_before_last.time);
-					distance_travelled = velocity * (stop_time - last_sensor.time) / 1000 + stopping_distance;
-
-					const struct track_node *sensor_before_last_node = track_node_from_sensor(sensor_before_last.st);
-					DEBUG("distance_travelled = %d, Last sensor hit was %s, sensor before was %s" EOL, distance_travelled, last_sensor_node->name, sensor_before_last_node->name);
-					distance_travelled -= distance_between_points_error_tolerant(state, sensor_before_last_node, last_sensor_node,
-							sensor_before_last.time, last_sensor.time);
+					distance_left = velocity * (stopping_point.time - last_sensor.time);
+					integral_start = 0;
 				}
 
-				DEBUG("Train %d went %d mm past node %s" EOL, ts->train_id, distance_travelled, last_sensor_node->name);
+				if (integral_start < integral_end) {
+					distance_left += integrate_polynomial(integral_start, integral_end,
+							deceleration_model_coefs, deceleration_model_arity) / fixed_point_scale;
+				}
+
+				int stopping_time = stopping_point.time + stopping_time_coef / scale.x_scale;
+
+				DEBUG("Train %d went %d mm past node %s, integrating from %d to %d, started stopping at %d, finished stopping at %d, last sensor at %d" EOL,
+						ts->train_id, distance_left, last_sensor_node->name,
+						(int) integral_start, (int) integral_end,
+						stopping_point.time, stopping_time, last_sensor.time);
+
 
 				int positions_found = build_reversed_positions_for_train(state, ts, last_sensor_node,
-						last_sensor.time, stop_time + 400, distance_travelled, positions + out_index);
+						last_sensor.time, stopping_time, distance_left, positions + out_index);
 				DEBUG("Got %d potential positions" EOL, positions_found);
 				out_index += positions_found;
 				ASSERT(out_index < MAX_REVERSED_POSITIONS);
@@ -409,6 +331,30 @@ struct attribution attribute_sensor_to_known_train(const struct trainsrv_state *
 		//  2) Reanchoring doesn't happen, so we don't need to worry about the case where the train
 		//     is estimated to be *past* the sensor it just hit.
 		DEBUG("Traversing through node %s" EOL, node->name);
+		for (int i = 0; i < reversed_position_count; i++) {
+			const struct internal_train_state *train_state = state->state_for_train[reversed_position[i].train_id - 1];
+			DEBUG("Checking for reversed train %d at sensor %s (it's at %s)" EOL, train_state->train_id, node->name, reversed_position[i].position.edge->src->name);
+			// we check against the src of the edge, and don't reverse, since these positions are pointed
+			// in the opposite direction that the direction of a train headed towards our sensor
+			if (reversed_position[i].position.edge->src == context.edge->src) {
+				struct train_candidate new_candidate = { train_state, reversed_position[i].errors_assumed,
+					reversed_position[i].position.displacement + context.distance, reversed_position[i].failed_switch };
+				int start_time = -1;
+				DEBUG("Found reversed train %d at %s" EOL, train_state->train_id, context.edge->src->name);
+				for (int j = 2; j <= train_state->speed_history.len - 1; j++) {
+					// first, look for the the time at which we set the speed to zero
+					if (speed_historical_get_by_index(&train_state->speed_history, j) == 0) {
+						start_time = speed_historical_get_kvp_by_index(&train_state->speed_history, j - 1).time;
+					}
+				}
+				ASSERT(start_time != -1);
+				if (!check_candidate_position_validity(state, &context, &new_candidate, start_time)) continue;
+				if (guess_improved(state, now, &candidate, &new_candidate)) {
+					DEBUG("Choosing train as new candidate" EOL);
+					candidate = new_candidate;
+				}
+			}
+		}
 		if (node->type == NODE_SENSOR) {
 			for (int i = 0; i < state->num_active_trains; i++) {
 				// note that this also excludes the unknown position train, since last_sensor_hit = -1
@@ -425,26 +371,6 @@ struct attribution attribute_sensor_to_known_train(const struct trainsrv_state *
 
 					// we want to figure out if this is a better guess for which train hit
 					// the sensor than any guess we might have so far
-					if (guess_improved(state, now, &candidate, &new_candidate)) {
-						DEBUG("Choosing train as new candidate" EOL);
-						candidate = new_candidate;
-					}
-				}
-			}
-			for (int i = 0; i < reversed_position_count; i++) {
-				const struct internal_train_state *train_state = state->state_for_train[reversed_position[i].train_id - 1];
-				if (reversed_position[i].position.edge->src == node->reverse) {
-					struct train_candidate new_candidate = { train_state, reversed_position[i].errors_assumed,
-						reversed_position[i].position.displacement + context.distance, reversed_position[i].failed_switch };
-					int start_time = -1;
-					for (int j = 2; j <= train_state->speed_history.len - 1; j++) {
-						// first, look for the the time at which we set the speed to zero
-						if (speed_historical_get_by_index(&train_state->speed_history, j) == 0) {
-							start_time = speed_historical_get_kvp_by_index(&train_state->speed_history, j - 1).time;
-						}
-					}
-					ASSERT(start_time != -1);
-					if (!check_candidate_position_validity(state, &context, &new_candidate, start_time)) continue;
 					if (guess_improved(state, now, &candidate, &new_candidate)) {
 						DEBUG("Choosing train as new candidate" EOL);
 						candidate = new_candidate;

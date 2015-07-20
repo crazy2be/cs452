@@ -123,12 +123,61 @@ void sensor_attribution_tests() {
 		init_state(&state);
 
 		struct internal_train_state *train_a = init_train(&state, 63, 3, 100, 5000); // A4
-		speed_historical_set(&train_a->speed_history, 0, 3100);
-		sensor_historical_set(&train_a->sensor_history, 31, 3600); // b16
-		sensor_historical_set(&train_a->sensor_history, 36, 4100); // c5
-		speed_historical_set(&train_a->speed_history, 8, 4500);
+		speed_historical_set(&train_a->speed_history, 0, 200);
+		sensor_historical_set(&train_a->sensor_history, 31, 360); // b16
+		sensor_historical_set(&train_a->sensor_history, 36, 510); // c5
+		speed_historical_set(&train_a->speed_history, 8, 580);
 		train_a->reversed = true;
 
-		ASSERT(train_a == attribute_sensor_to_train(&state, 2, 5000).train); // A3
+		ASSERT(train_a == attribute_sensor_to_train(&state, 37, 700).train); // C6
+
+		// one sensor error
+		ASSERT(train_a == attribute_sensor_to_train(&state, 30, 700).train); // B15
+
+		// two sensor errors
+		ASSERT(NULL == attribute_sensor_to_train(&state, 2, 700).train); // A3
+	}
+
+	{
+		struct trainsrv_state state;
+		init_state(&state);
+
+		struct internal_train_state *train_a = init_train(&state, 63, 31, 100, 5000); // B16
+		speed_historical_set(&train_a->speed_history, 0, 300);
+		sensor_historical_set(&train_a->sensor_history, 36, 360); // C5
+		speed_historical_set(&train_a->speed_history, 8, 800);
+		train_a->reversed = true;
+
+		// one sensor failure
+		ASSERT(train_a == attribute_sensor_to_train(&state, 47, 1000).train); // C16
+		// one switch failure
+		ASSERT(train_a == attribute_sensor_to_train(&state, 39, 1000).train); // C8
+	}
+
+	{
+		struct trainsrv_state state;
+		init_state(&state);
+
+		struct internal_train_state *train_a = init_train(&state, 63, 31, 100, 5000); // B16
+		speed_historical_set(&train_a->speed_history, 0, 300);
+		sensor_historical_set(&train_a->sensor_history, 36, 360); // C5
+		speed_historical_set(&train_a->speed_history, 8, 800);
+		train_a->reversed = true;
+
+		// one switch failure
+		ASSERT(train_a == attribute_sensor_to_train(&state, 39, 1000).train); // C8
+	}
+
+	{
+		struct trainsrv_state state;
+		init_state(&state);
+
+		struct internal_train_state *train_a = init_train(&state, 63, 31, 100, 5000); // B16
+		speed_historical_set(&train_a->speed_history, 0, 300);
+		speed_historical_set(&train_a->speed_history, 8, 800);
+		train_a->reversed = true;
+
+		// one switch failure & one sensor missed
+		ASSERT(NULL == attribute_sensor_to_train(&state, 39, 1000).train); // C8
 	}
 }

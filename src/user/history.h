@@ -20,6 +20,7 @@
 #define HISTORY_GET_BY_INDEX PASTER(HISTORY_PREFIX, get_by_index)
 #define HISTORY_GET PASTER(HISTORY_PREFIX, get)
 #define HISTORY_GET_KVP_CURRENT PASTER(HISTORY_PREFIX, get_kvp_current)
+#define HISTORY_GET_KVP_WITH_INDEX PASTER(HISTORY_PREFIX, get_kvp_with_index)
 #define HISTORY_GET_KVP PASTER(HISTORY_PREFIX, get_kvp)
 #define HISTORY_GET_KVP_BY_INDEX PASTER(HISTORY_PREFIX, get_kvp_by_index)
 #define HISTORY_SET PASTER(HISTORY_PREFIX, set)
@@ -46,7 +47,11 @@ void HISTORY_INIT(HISTORY_T *s);
 HISTORY_KVP HISTORY_GET_KVP_CURRENT(const HISTORY_T *s);
 HISTORY_KVP HISTORY_GET_KVP_BY_INDEX(const HISTORY_T *s, int index);
 // return the most recent switch state that was set before the provided time
-HISTORY_KVP HISTORY_GET_KVP(const HISTORY_T *s, int time);
+HISTORY_KVP HISTORY_GET_KVP_WITH_INDEX(const HISTORY_T *s, int time, int *index);
+
+static inline HISTORY_KVP HISTORY_GET_KVP(const HISTORY_T *s, int time) {
+	return HISTORY_GET_KVP_WITH_INDEX(s, time, NULL);
+}
 
 void HISTORY_SET(HISTORY_T *s, HISTORY_VAL current, int time);
 

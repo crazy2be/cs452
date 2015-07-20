@@ -5,6 +5,12 @@
 #include "speed_history.h"
 #include "sensor_history.h"
 
+extern const long long deceleration_model_coefs[6];
+extern const unsigned deceleration_model_arity;
+extern const long long stopping_time_coef;
+extern const long long acceleration_model_coefs[6];
+extern const unsigned acceleration_model_arity;
+
 // state about what we know about this train
 // (previous_speed_was_bigger, current)
 // (true, 0), (false, 1), (true, 1), ..., (false, 13), (true, 13), (false, 14)

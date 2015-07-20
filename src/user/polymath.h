@@ -5,14 +5,15 @@
 
 extern const long long fixed_point_scale;
 
-int integrate_polynomial(long long lo, long long hi, long long *coefs, unsigned n);
+long long integrate_polynomial(long long lo, long long hi, const long long *coefs, unsigned n);
 
 struct curve_scaling {
 	long long x_scale;
 	long long y_scale;
 };
 
-struct curve_scaling scale_deceleration_curve(long long v0, long long d, long long *coefs,
+struct curve_scaling scale_deceleration_curve(long long v0, long long d, const long long *coefs,
 		unsigned n, long long t1_generic);
 
-long long evaluate_polynomial_fp(long long x, long long *coefs, unsigned n);
+// should be static
+long long evaluate_polynomial_fp(long long x, const long long *coefs, unsigned n);

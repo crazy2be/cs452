@@ -28,16 +28,18 @@ HISTORY_KVP HISTORY_GET_KVP_CURRENT(const HISTORY_T *s) {
 }
 
 // return the most recent switch state that was set before the provided time
-HISTORY_KVP HISTORY_GET_KVP(const HISTORY_T *s, int time) {
+HISTORY_KVP HISTORY_GET_KVP_WITH_INDEX(const HISTORY_T *s, int time, int *index) {
 	ASSERT(s->len > 0);
 	int prev_index = NORMALIZE_OFFSET(s->offset, -1);
-
-	for (int i = 2; i <= s->len; i++) {
-		int index = NORMALIZE_OFFSET(s->offset, - i);
+	int i = 1;
+	while (i <= s->len) {
+		int index = NORMALIZE_OFFSET(s->offset, - (i + 1));
 		ASSERT(s->history[index].time < s->history[prev_index].time);
 		if (s->history[index].time < time) break;
 		prev_index = index;
+		i++;
 	}
+	if (index) *index = i;
 	return s->history[prev_index];
 }
 

@@ -6,6 +6,14 @@
 #include "../displaysrv.h"
 #include "../sys.h"
 
+// constants derived from fitting a curve to velocity data collected via a camera
+// we multiply these constants by 2^20 since our fixed point notation uses 20 bits right of the decimal place
+const long long deceleration_model_coefs[6] = { 597828168, 0, -414289819, 231854274, -48630758, 3595593 };
+const unsigned deceleration_model_arity = sizeof(deceleration_model_coefs) / sizeof(deceleration_model_coefs[0]);
+const long long stopping_time_coef = 4701115LL;
+const unsigned acceleration_model_arity = sizeof(acceleration_model_coefs) / sizeof(acceleration_model_coefs[0]);
+const long long acceleration_model_coefs[6] = { 0, 0, 119318217, -10618953, 32740221, -3109563 };
+
 int train_speed_index(const struct internal_train_state *train_state) {
 	int cur_speed = speed_historical_get_current(&train_state->speed_history);
 	int prev_speed = train_state->speed_history.len > 1 ? speed_historical_get_by_index(&train_state->speed_history, 1) : 0;
