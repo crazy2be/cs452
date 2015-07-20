@@ -326,6 +326,7 @@ static void sensor_cb(int sensor, void *ctx) {
 	// we never attribute multiple sensor hits to the same train in the same cycle
 	// we essentially assume that this must be a spurious signal
 	if (context->train_already_hit[index] & mask) return;
+	context->train_already_hit[index] |= mask;
 
 	if (attr.changed_switch != -1) {
 		struct switch_state switches = switch_historical_get_current(&context->state->switch_history);
@@ -333,12 +334,14 @@ static void sensor_cb(int sensor, void *ctx) {
 		update_switch(context->state, attr.changed_switch, (dir == CURVED) ? STRAIGHT : CURVED);
 	}
 
-
-	context->train_already_hit[index] |= mask;
-
 	// we need to get a mutable version of train - this is a bit silly though
 	struct internal_train_state *train_m = get_train_state(context->state, train->train_id);
 	ASSERT(train_m == train);
+
+	if (attr.reversed) {
+		ASSERT(train->reversed);
+		train_m->reversed = false;
+	}
 
 	update_train_position_from_sensor(context->state, train_m, sensor, context->time);
 }

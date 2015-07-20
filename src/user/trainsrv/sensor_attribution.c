@@ -217,6 +217,7 @@ struct train_candidate {
 	int errors_assumed;
 	int distance;
 	int switch_to_adjust;
+	bool reversed;
 };
 
 // evaluate which train is more likely to be responsible for a given sensor hit
@@ -312,7 +313,7 @@ struct attribution attribute_sensor_to_known_train(const struct trainsrv_state *
 
 	queue[0] = (struct search_context){ &sensor->reverse->edge[DIR_STRAIGHT], 0, 0 };
 
-	struct train_candidate candidate = { NULL, 0, 0, -1 };
+	struct train_candidate candidate = { NULL, 0, 0, -1, false };
 
 	// TODO: should write this to eliminate copying context back and forth repeatedly
 	while (queue_len > 0) {
@@ -338,7 +339,7 @@ struct attribution attribute_sensor_to_known_train(const struct trainsrv_state *
 			// in the opposite direction that the direction of a train headed towards our sensor
 			if (reversed_position[i].position.edge->src == context.edge->src) {
 				struct train_candidate new_candidate = { train_state, reversed_position[i].errors_assumed,
-					reversed_position[i].position.displacement + context.distance, reversed_position[i].failed_switch };
+					reversed_position[i].position.displacement + context.distance, reversed_position[i].failed_switch, true };
 				int start_time = -1;
 				DEBUG("Found reversed train %d at %s" EOL, train_state->train_id, context.edge->src->name);
 				for (int j = 2; j <= train_state->speed_history.len - 1; j++) {
@@ -365,7 +366,7 @@ struct attribution attribute_sensor_to_known_train(const struct trainsrv_state *
 					DEBUG("Found train %d at sensor %s" EOL, train_state->train_id, node->name);
 
 					const int last_sensor_hit_time = sensor_historical_get_kvp_current(&train_state->sensor_history).time;
-					struct train_candidate new_candidate = { train_state, 0, context.distance, -1 };
+					struct train_candidate new_candidate = { train_state, 0, context.distance, -1, false };
 					if (!check_candidate_position_validity(state, &context, &new_candidate, last_sensor_hit_time)) continue;
 					DEBUG("Errors are within tolerance" EOL);
 
@@ -420,6 +421,7 @@ struct attribution attribute_sensor_to_known_train(const struct trainsrv_state *
 		candidate.train,
 		candidate.switch_to_adjust,
 		candidate.distance,
+		candidate.reversed,
 	};
 }
 
@@ -432,6 +434,7 @@ struct attribution attribute_sensor_to_train(struct trainsrv_state *state, int s
 		attr.train = get_train_state(state, state->unknown_train_id);
 		attr.changed_switch = -1;
 		attr.distance_travelled = 0;
+		attr.reversed = false;
 	}
 	return attr;
 }

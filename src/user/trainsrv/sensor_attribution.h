@@ -7,6 +7,7 @@ struct attribution {
 	// these two are undefined if train is null
 	int changed_switch;
 	int distance_travelled;
+	bool reversed;
 };
 // Returns the train id of the train though to have hit the sensor, or
 // NULL if the sensor is thought to have misfired
