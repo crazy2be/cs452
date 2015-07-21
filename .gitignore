@@ -8,3 +8,4 @@
 /writeup/*/*.log
 /writeup/*/*.pdf
 *.swp
+*.pyc

@@ -1,6 +1,5 @@
 #!/usr/bin/env python
-import sys
-import csv
+import sys, csv
 
 ########################################################################
 #### Usage and Options.
@@ -14,11 +13,15 @@ parser.add_option('-C', dest='c', default='track_data.c',
 parser.add_option('-H', dest='h', default='track_data.h',
   help='output .h file (default is track_data.h)',
   metavar='OUTPUT-H-FILE')
+parser.add_option('-P', dest='py', default='track.py',
+  help='output .py file (default is track.py)',
+  metavar='OUTPUT-PY-FILE')
 parser.add_option('-E', dest='embedding', action='append',
   help='extra data files containing embeddings',
   metavar='EMBEDDINGS')
+
 (options, args) = parser.parse_args()
-if len(args) == 0 or not options.c or not options.h:
+if len(args) == 0 or not options.c or not options.h or not options.py:
   parser.print_help()
   exit(0)
 
@@ -362,9 +365,6 @@ void %s(track_node *track) {
       fh.write("  track[%d].num = %s;\n" % (idx, nd.num))
     fh.write("  track[%d].reverse = &track[%d];\n" % \
       (idx, nd.reverse.index))
-    coord_x, coord_y = embeddings[fun][nd.name]
-    fh.write("  track[%d].coord_x = %d;\n" % (idx, coord_x))
-    fh.write("  track[%d].coord_y = %d;\n" % (idx, coord_y))
     for dir in ['ahead', 'straight', 'curved']:
       if nd.__dict__[dir] != None:
         idx2 = nd.__dict__[dir].index
@@ -381,5 +381,52 @@ void %s(track_node *track) {
           (idx, dir.upper(), idx2))
         fh.write("  track[%d].edge[DIR_%s].dist = %s;\n" % \
           (idx, dir.upper(), dist))
+        coord_x, coord_y = embeddings[fun][nd.name]
+        fh.write("  track[%d].coord_x = %d;\n" % (idx, coord_x))
+        fh.write("  track[%d].coord_y = %d;\n" % (idx, coord_y))
+
   fh.write("}\n")
+fh.close()
+
+
+########################################################################
+#### Output the .py code.
+fh = open(options.py, 'w')
+fh.write('#!/bin/env python\n')
+fh.write('# THIS FILE IS GENERATED CODE -- DO NOT EDIT\n\n')
+fh.write(open('track_node.py').read())
+for fun in tracks:
+  fh.write('def %s():\n' % fun)
+  fh.write('  track = [\n')
+  for nd in tracks[fun].nodes: fh.write('    TrackNode(),\n')
+  fh.write('  ]\n')
+  for nd in tracks[fun].nodes:
+    idx = nd.index
+    fh.write("  track[%d].name = \"%s\"\n" % (idx, nd.name))
+    nodetype = 'NODE_' + nd.nodetype.upper()
+    fh.write("  track[%d].typ = %s\n" % (idx, nodetype))
+    if nd.num != None:
+      fh.write("  track[%d].num = %s\n" % (idx, nd.num))
+    fh.write("  track[%d].reverse = track[%d]\n" % \
+      (idx, nd.reverse.index))
+    for dir in ['ahead', 'straight', 'curved']:
+      if nd.__dict__[dir] != None:
+        idx2 = nd.__dict__[dir].index
+        dist = nd.__dict__[dir+"_edge"].dist
+        for dir2 in ['ahead', 'straight', 'curved']:
+          if nd.__dict__[dir].reverse.__dict__[dir2] == nd.reverse:
+            fh.write(("  track[%d].edge[DIR_%s].reverse =" + \
+                      " track[%d].edge[DIR_%s]\n") % \
+              (idx, dir.upper(), nd.__dict__[dir].reverse.index, \
+               dir2.upper()))
+        fh.write("  track[%d].edge[DIR_%s].src = track[%d]\n" % \
+          (idx, dir.upper(), idx))
+        fh.write("  track[%d].edge[DIR_%s].dest = track[%d]\n" % \
+          (idx, dir.upper(), idx2))
+        fh.write("  track[%d].edge[DIR_%s].dist = %s\n" % \
+          (idx, dir.upper(), dist))
+        coord_x, coord_y = embeddings[fun][nd.name]
+        fh.write("  track[%d].coord_x = %d;\n" % (idx, coord_x))
+        fh.write("  track[%d].coord_y = %d;\n" % (idx, coord_y))
+  fh.write('  return track\n')
 fh.close()
