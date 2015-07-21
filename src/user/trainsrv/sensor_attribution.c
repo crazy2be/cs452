@@ -148,8 +148,9 @@ static int build_reversed_positions(const struct trainsrv_state *state,
 				int velocity = ts->est_velocities[velocity_index];
 
 				int stopping_distance = ts->est_stopping_distances[velocity_index];
+				long long velocity_fp = ((long long) velocity) * fixed_point_scale / 1000LL;
 
-				struct curve_scaling scale = scale_deceleration_curve(velocity * fixed_point_scale / 1000,
+				struct curve_scaling scale = scale_deceleration_curve(velocity_fp,
 						stopping_distance * fixed_point_scale, deceleration_model_coefs,
 						acceleration_model_arity, stopping_time_coef);
 
@@ -164,13 +165,19 @@ static int build_reversed_positions(const struct trainsrv_state *state,
 					distance_left = 0;
 					integral_start = (last_sensor.time - stopping_point.time) * scale.x_scale;
 				} else {
-					distance_left = velocity * (stopping_point.time - last_sensor.time);
+					distance_left = velocity * (stopping_point.time - last_sensor.time) / 1000;
 					integral_start = 0;
 				}
 
 				if (integral_start < integral_end) {
-					distance_left += integrate_polynomial(integral_start, integral_end,
-							deceleration_model_coefs, deceleration_model_arity) / fixed_point_scale;
+					long long integral = integrate_polynomial(integral_start, integral_end,
+							deceleration_model_coefs, deceleration_model_arity);
+					int partial_stopping_distance = scale.y_scale * integral / scale.x_scale / fixed_point_scale;
+					// NOTE: this assertion may fail spuriously sometimes - our integration isn't that accurate
+					// it's still useful for debugging, though - let's keep this here until we're ~confident
+					// that this works
+					ASSERTF(partial_stopping_distance <= stopping_distance, "partial = %d > %d = full", partial_stopping_distance, stopping_distance);
+					distance_left += partial_stopping_distance;
 				}
 
 				int stopping_time = stopping_point.time + stopping_time_coef / scale.x_scale;

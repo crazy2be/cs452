@@ -143,7 +143,7 @@ void sensor_attribution_tests() {
 		init_state(&state);
 
 		struct internal_train_state *train_a = init_train(&state, 63, 31, 100, 5000); // B16
-		speed_historical_set(&train_a->speed_history, 0, 300);
+		speed_historical_set(&train_a->speed_history, 0, 350);
 		sensor_historical_set(&train_a->sensor_history, 36, 360); // C5
 		speed_historical_set(&train_a->speed_history, 8, 800);
 		train_a->reversed = true;
@@ -160,24 +160,28 @@ void sensor_attribution_tests() {
 
 		struct internal_train_state *train_a = init_train(&state, 63, 31, 100, 5000); // B16
 		speed_historical_set(&train_a->speed_history, 0, 300);
-		sensor_historical_set(&train_a->sensor_history, 36, 360); // C5
-		speed_historical_set(&train_a->speed_history, 8, 800);
-		train_a->reversed = true;
-
-		// one switch failure
-		ASSERT(train_a == attribute_sensor_to_train(&state, 39, 1000).train); // C8
-	}
-
-	{
-		struct trainsrv_state state;
-		init_state(&state);
-
-		struct internal_train_state *train_a = init_train(&state, 63, 31, 100, 5000); // B16
-		speed_historical_set(&train_a->speed_history, 0, 300);
 		speed_historical_set(&train_a->speed_history, 8, 800);
 		train_a->reversed = true;
 
 		// one switch failure & one sensor missed
 		ASSERT(NULL == attribute_sensor_to_train(&state, 39, 1000).train); // C8
+	}
+
+	// test stopping the train after passing the last sensor
+	{
+		struct trainsrv_state state;
+		init_state(&state);
+
+		struct internal_train_state *train_a = init_train(&state, 63, 71, 100, 3000); // E8
+		for (int i = 1; i < sizeof(train_a->est_velocities) / sizeof(train_a->est_velocities[0]); i++) {
+			train_a->est_stopping_distances[i] = 300;
+		}
+
+		speed_historical_set(&train_a->speed_history, 0, 150);
+		speed_historical_set(&train_a->speed_history, 8, 800);
+		train_a->reversed = true;
+
+		// one switch failure & one sensor missed
+		ASSERT(train_a == attribute_sensor_to_train(&state, 70, 1000).train); // E7
 	}
 }
