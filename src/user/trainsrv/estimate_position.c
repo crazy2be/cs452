@@ -264,7 +264,7 @@ static void update_train_velocity_estimate(const struct trainsrv_state *state, s
 	struct switch_state switches = switch_historical_get_current(&state->switch_history);
 	const int actual_velocity = calculate_actual_velocity(train_state, sensor_node, &switches, ticks);
 	if (actual_velocity == TELEPORT_ERROR) {
-		displaysrv_console_feedback(state->displaysrv_tid, "The train supposedly teleported");
+		/* displaysrv_console_feedback(state->displaysrv_tid, "The train supposedly teleported"); */
 		return;
 	} else if (actual_velocity == SILENT_ERROR) {
 		return;
@@ -317,9 +317,16 @@ static void sensor_cb(int sensor, void *ctx) {
 	struct attribution attr = attribute_sensor_to_train(context->state, sensor, context->time);
 	// TODO: we should use the attr.distance to inform the velocity calculation
 	const struct internal_train_state *train = attr.train;
+	char sensor_pretty[4];
+	sensor_repr(sensor, sensor_pretty);
+	char feedback[80];
 
 	// spurious sensor signal
-	if (train == NULL) return;
+	if (train == NULL) {
+		snprintf(feedback, sizeof(feedback), "Ignoring spurious sensor hit %s", sensor_pretty);
+		displaysrv_console_feedback(context->state->displaysrv_tid, feedback);
+		return;
+	}
 
 	const int index = (train->train_id - 1) / 32;
 	const int offset = (train->train_id - 1) % 32;
@@ -329,6 +336,10 @@ static void sensor_cb(int sensor, void *ctx) {
 	// we essentially assume that this must be a spurious signal
 	if (context->train_already_hit[index] & mask) return;
 	context->train_already_hit[index] |= mask;
+
+	snprintf(feedback, sizeof(feedback), "Attributing sensor hit %s to %d", sensor_pretty, train->train_id);
+	displaysrv_console_feedback(context->state->displaysrv_tid, feedback);
+
 
 	if (attr.changed_switch != -1) {
 		struct switch_state switches = switch_historical_get_current(&context->state->switch_history);

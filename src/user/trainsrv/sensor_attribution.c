@@ -441,6 +441,8 @@ struct attribution attribute_sensor_to_train(struct trainsrv_state *state, int s
 		attr.changed_switch = -1;
 		attr.distance_travelled = 0;
 		attr.reversed = false;
+
+		state->unknown_train_id = 0;
 	}
 	return attr;
 }
