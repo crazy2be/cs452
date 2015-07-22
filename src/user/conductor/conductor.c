@@ -31,6 +31,10 @@ static int get_route(int train_id, struct astar_node *path_out) {
 				state.position.edge->src->name, destination->name, len);
 	} while (len <= 0);
 
+	/* for (int i = 0; i < len; i++) { */
+	/* 	printf("Section %d: %s" EOL, i, path[i]->node->name); */
+	/* } */
+
 	return len;
 }
 
@@ -68,10 +72,10 @@ static struct point_of_interest get_next_poi(struct astar_node (*path)[ASTAR_MAX
 
 	for (index = *index_p; index < path_len; index++) {
 		node = path[index]->node;
-		if (last_type < SWITCH && node->type == NODE_BRANCH && index != 0) {
+		if (last_type < SWITCH && node->type == NODE_BRANCH && index > 0 && index < path_len - 1) {
 			// travel backwards through the path for a distance, to give us time for the
 			// turnout to switch
-			int switch_lead_distance = 200; // mm
+			int switch_lead_distance = 500; // mm
 			const struct track_node *current_node = node;
 			const struct track_edge *edge = NULL;
 			for (int i = index - 1; switch_lead_distance > 0 && i >= 0; i--) {
@@ -83,13 +87,15 @@ static struct point_of_interest get_next_poi(struct astar_node (*path)[ASTAR_MAX
 			ASSERT(edge != NULL);
 			poi.position.edge = edge;
 			poi.position.displacement = (switch_lead_distance > 0) ? 0 : -switch_lead_distance;
+			ASSERT(position_is_wellformed(&poi.position));
 			poi.type = SWITCH;
 			poi.u.switch_info.num = node->num;
-			poi.u.switch_info.dir = (path[index - 1]->node->edge[0].dest == node) ? STRAIGHT : CURVED;
+			poi.u.switch_info.dir = (node->edge[0].dest == path[index + 1]->node) ? STRAIGHT : CURVED;
 			break;
 		} else if (last_type < STOPPING_POINT && node == stopping_point.edge->src) {
 			poi.position = stopping_point;
 			poi.type = STOPPING_POINT;
+			break;
 		}
 		last_type = NONE;
 	}
@@ -113,6 +119,7 @@ static struct position find_stopping_point(int train_id, struct astar_node (*pat
 	}
 
 	int stopping_distance = trains_get_stopping_distance(train_id);
+	ASSERT(stopping_distance > 0);
 
 	int distance_until_stop = total_distance - stopping_distance;
 	// if this isn't asserted, we're trying to do a short stop, which we don't really support
@@ -123,7 +130,9 @@ static struct position find_stopping_point(int train_id, struct astar_node (*pat
 		const struct track_node *cur_node = path[i]->node;
 		const struct track_edge *edge = edge_between(prev_node, cur_node);
 		if (distance_until_stop < edge->dist) {
-			return (struct position) { edge, distance_until_stop };
+			struct position position = { edge, distance_until_stop };
+			ASSERT(position_is_wellformed(&position));
+			return position;
 		}
 		distance_until_stop -= edge->dist;
 		prev_node = cur_node;
@@ -152,7 +161,7 @@ static void run_conductor(int train_id) {
 		}
 
 		delay(10);
-		trains_set_speed(train_id, 14);
+		trains_set_speed(train_id, 8);
 
 		struct position stopping_point = find_stopping_point(train_id, &path, path_len);
 
@@ -169,7 +178,24 @@ static void run_conductor(int train_id) {
 			//     we can ensure that the switch is in the right position
 			struct point_of_interest next_poi = get_next_poi(&path, path_len, &index, last_type, stopping_point);
 
+			char poi_repr[20];
+			position_repr(next_poi.position, poi_repr);
+			printf("\e[s\e[10;90Hnext poi is %s\e[u", poi_repr);
+
+			switch (next_poi.type) {
+			case STOPPING_POINT:
+				printf("\e[s\e[11;90HWe want to stop the train\e[u");
+				break;
+			case SWITCH:
+				printf("\e[s\e[11;90HWe want to set the switch %d to %d\e[u", next_poi.u.switch_info.num, next_poi.u.switch_info.dir);
+				break;
+			default:
+				WTF("No such case");
+				break;
+			}
+
 			train_alert_at(train_id, next_poi.position);
+			printf("\e[s\e[12;90HGot alert for POI %s\e[u", poi_repr);
 			switch (next_poi.type) {
 			case STOPPING_POINT:
 				trains_set_speed(train_id, 0);

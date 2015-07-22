@@ -122,3 +122,8 @@ struct position position_calculate_stopping_position(const struct position *curr
 	position_travel_forwards(&stopping_point, distance, switches);
 	return stopping_point;
 }
+
+void position_repr(const struct position p, char *buf) {
+	int edge_index = &p.edge->src->edge[0] != p.edge;
+	snprintf(buf, 20, "%s[%d] + %d", p.edge->src->name, edge_index, p.displacement);
+}
