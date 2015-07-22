@@ -164,6 +164,7 @@ int boot(void (*init_task)(void), int init_task_priority, int debug) {
 		case SYSCALL_IRQ:         irq_handler(current_task);         break;
 		case SYSCALL_HALT:        running = 0;                       break;
 		case SYSCALL_IDLE_PERMILLE: idle_permille_handler(current_task, ts_start); break;
+		case SYSCALL_TASK_STATUS: task_info_handler(current_task);   break;
 		default:
 			KASSERT(0 && "UNKNOWN SYSCALL NUMBER");
 			break;

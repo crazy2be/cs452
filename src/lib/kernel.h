@@ -106,4 +106,10 @@ int should_idle(void); // Just for the idle task.
 int idle_permille(void); // debug info about how much we're idling
 
 void halt(void) __attribute__((noreturn)); // stop the kernel immediately, does not return
-
+enum task_state { DEAD, READY, SEND_BLK, RECV_BLK, REPLY_BLK };
+struct task_info {
+	enum task_state state;
+};
+void task_status(int tid, struct task_info *info);
+#define TASK_STATE_SUCCESS 0
+#define TASK_STATE_INVALID_TID -1
