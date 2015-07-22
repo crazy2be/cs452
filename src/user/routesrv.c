@@ -16,6 +16,8 @@ void routesrv(void) {
 		int tid = -1;
 		struct route_request req;
 		recv(&tid, &req, sizeof(req));
+		// TODO: this should be message passing the path back - this thing
+		// is just writing memory which belongs to another task, which is ~illegal
 		int res = astar_find_path(req.start, req.end, req.path_out);
 		reply(tid, &res, sizeof(res));
 	}

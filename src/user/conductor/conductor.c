@@ -15,16 +15,23 @@ struct conductor_params {
 
 static int get_route(int train_id, struct astar_node (*path)[ASTAR_MAX_PATH]) {
 	// in our idle state, we wait for a command telling us a new destination
-	const struct track_node *destination;
+	int len;
+	do {
+		const struct track_node *destination;
 
-	int tid;
-	receive(&tid, &destination, sizeof(destination));
-	reply(tid, NULL, 0);
+		int tid;
+		receive(&tid, &destination, sizeof(destination));
+		reply(tid, NULL, 0);
 
-	struct train_state state;
-	trains_query_spatials(train_id, &state);
+		struct train_state state;
+		trains_query_spatials(train_id, &state);
 
-	return routesrv_plan(state.position.edge->src, destination, path);
+		len = routesrv_plan(state.position.edge->src, destination, path);
+		printf("We're routing from %s to %s, found a path of length %d" EOL,
+				state.position.edge->src->name, destination->name, len);
+	} while (len <= 0);
+
+	return len;
 }
 
 static const struct track_edge *edge_between(const struct track_node *prev, const struct track_node *cur) {
