@@ -8,13 +8,17 @@ void HISTORY_INIT(HISTORY_T *s) {
 }
 
 static inline int NORMALIZE_OFFSET(int initial, int delta) {
+	int a = abs(delta);
+	ASSERT(0 < a && a <= HISTORY_LEN);
+
 	initial += delta;
 	// these conditions should get optimized out during inlining
 	if (delta < 0) {
-		if (initial < 0) initial = HISTORY_LEN - 1;
+		if (initial < 0) initial += HISTORY_LEN;
 	} else if (delta >= 0) {
 		initial %= HISTORY_LEN;
 	}
+	ASSERT(0 <= initial && initial < HISTORY_LEN);
 	return initial;
 }
 
@@ -34,7 +38,7 @@ HISTORY_KVP HISTORY_GET_KVP_WITH_INDEX(const HISTORY_T *s, int time, int *index)
 	ASSERT(s->len > 0);
 	int prev_index = NORMALIZE_OFFSET(s->offset, -1);
 	int i = 1;
-	while (i <= s->len) {
+	while (i < s->len) {
 		int index = NORMALIZE_OFFSET(s->offset, - (i + 1));
 		ASSERT(s->history[index].time < s->history[prev_index].time);
 		if (s->history[index].time < time) break;
