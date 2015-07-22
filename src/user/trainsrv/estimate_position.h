@@ -2,6 +2,14 @@
 
 #include "../trainsrv.h"
 #include "trainsrv_internal.h"
+#include "speed_history.h"
+#include "sensor_history.h"
+
+extern const long long deceleration_model_coefs[6];
+extern const unsigned deceleration_model_arity;
+extern const long long stopping_time_coef;
+extern const long long acceleration_model_coefs[6];
+extern const unsigned acceleration_model_arity;
 
 // state about what we know about this train
 // (previous_speed_was_bigger, current)
@@ -23,10 +31,8 @@ struct internal_train_state {
 	int est_velocities[NUM_SPEED_SETTINGS];
 	int est_stopping_distances[NUM_SPEED_SETTINGS];
 
-	//  3. Its current speed setting
-	int current_speed_setting;
-	int previous_speed_setting;
-	int constant_speed_starts;
+	//  3. Its current and historical speed
+	struct speed_historical_state speed_history;
 
 	//  4. Later, we'll have information about if (and at what rate) it is currently
 	//     accelerating
@@ -41,8 +47,11 @@ struct internal_train_state {
 
 	// mostly for reporting purposes
 	// this, unlike last_known_position, is not affected by reanchoring
-	int last_sensor_hit;
-	int last_sensor_hit_time;
+	struct sensor_historical_state sensor_history;
+	// reversed is mostly a concern of the sensor attribution code
+	// this is initially 0, and is logically inverted every time we reverse the train
+	// when a sensor is attributed to this train, reversed is returned to 0
+	int reversed;
 
 	// amount estimate was off by the last time we hit a sensor
 	int measurement_error;

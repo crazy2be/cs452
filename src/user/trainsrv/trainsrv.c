@@ -9,6 +9,7 @@
 #include "estimate_position.h"
 #include "train_alert_srv.h"
 #include "trainsrv_request.h"
+#include "speed_history.h"
 
 #include <util.h>
 #include <kernel.h>
@@ -24,13 +25,26 @@ static void handle_sensors(struct trainsrv_state *state, struct sensor_state sen
 
 static void handle_set_speed(struct trainsrv_state *state, int train_id, int speed) {
 	if (update_train_speed(state, train_id, speed)) {
+		// TODO: we should get rid of this behaviour, as it causes more problems than it solves
 		tc_set_speed(train_id, speed);
 	}
 }
 
 static void handle_reverse(struct trainsrv_state *state, int train_id) {
-	int current_speed = update_train_direction(state, train_id);
+	struct internal_train_state *train_state = get_train_state(state, train_id);
+	ASSERT(train_state != NULL);
+	int current_speed = speed_historical_get_current(&train_state->speed_history);
 	start_reverse(train_id, current_speed);
+}
+static void handle_reverse_unsafe(struct trainsrv_state *state, int train_id) {
+	struct internal_train_state *train_state = get_train_state(state, train_id);
+	ASSERT(train_state != NULL);
+	int current_speed = speed_historical_get_current(&train_state->speed_history);
+	ASSERT(current_speed == 0);
+	train_state->reversed = true;
+
+	tc_toggle_reverse(train_id);
+	// TODO: update train state to point in opposite direction
 }
 
 static int handle_query_arrival(struct trainsrv_state *state, int train, int dist) {
@@ -45,7 +59,7 @@ static struct train_state handle_query_spatials(struct trainsrv_state *state, in
 	} else {
 		out.position = get_estimated_train_position(state, train_state);
 		out.velocity = train_velocity_from_state(train_state);
-		out.speed_setting = train_state->current_speed_setting;
+		out.speed_setting = speed_historical_get_current(&train_state->speed_history);
 	}
 	return out;
 }
@@ -127,6 +141,10 @@ static void trains_server(void) {
 			handle_reverse(&state, req.train_number);
 			reply(tid, NULL, 0);
 			break;
+		case REVERSE_UNSAFE:
+			handle_reverse_unsafe(&state, req.train_number);
+			reply(tid, NULL, 0);
+			break;
 		case SWITCH_SWITCH:
 			handle_switch(&state, req.switch_number, req.direction);
 			// TODO: we need to reanchor the trains here
@@ -152,7 +170,8 @@ static void trains_server(void) {
 		}
 		case GET_LAST_KNOWN_SENSOR: {
 			struct internal_train_state *ts = get_train_state(&state, req.train_number);
-			reply(tid, &ts->last_sensor_hit, sizeof(ts->last_sensor_hit));
+			int last_sensor_hit = sensor_historical_get_current(&ts->sensor_history);
+			reply(tid, &last_sensor_hit, sizeof(last_sensor_hit));
 			break;
 		}
 		default:
@@ -229,6 +248,18 @@ void trains_set_speed(int train, int speed) {
 void trains_reverse(int train) {
 	TSEND(((struct trains_request) {
 		.type = REVERSE,
+		 .train_number = train,
+	}));
+}
+
+// Callers outside trainsrv should not call this
+// It just has trainsrv issue a reverse command immediately,
+// and does not slow down the train.
+// We have this done by the trainserver so that we can keep track
+// of the fact that the train points in the other direction
+void trains_reverse_unsafe(int train) {
+	TSEND(((struct trains_request) {
+		.type = REVERSE_UNSAFE,
 		 .train_number = train,
 	}));
 }
