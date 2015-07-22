@@ -39,9 +39,10 @@ static const struct track_edge *edge_between(const struct track_node *prev, cons
 	return edge;
 }
 
+enum poi_type { NONE, SWITCH, STOPPING_POINT };
 struct point_of_interest {
 	struct position position;
-	enum { SWITCH, STOPPING_POINT } type;
+	enum poi_type type;
 	union {
 		struct {
 			int num;
@@ -50,14 +51,17 @@ struct point_of_interest {
 	} u;
 };
 
-static struct point_of_interest get_next_poi(struct astar_node (*path)[ASTAR_MAX_PATH], int path_len, int *index_p,
+static struct point_of_interest get_next_poi(struct astar_node (*path)[ASTAR_MAX_PATH],
+		int path_len, int *index_p, enum poi_type last_type,
 		const struct position stopping_point) {
+
 	int index;
 	const struct track_node *node;
 	struct point_of_interest poi;
+
 	for (index = *index_p; index < path_len; index++) {
 		node = (*path)[index].node;
-		if (node->type == NODE_BRANCH && index != 0) {
+		if (last_type < SWITCH && node->type == NODE_BRANCH && index != 0) {
 			// travel backwards through the path for a distance, to give us time for the
 			// turnout to switch
 			int switch_lead_distance = 200; // mm
@@ -76,14 +80,15 @@ static struct point_of_interest get_next_poi(struct astar_node (*path)[ASTAR_MAX
 			poi.u.switch_info.num = node->num;
 			poi.u.switch_info.dir = ((*path)[index - 1].node->edge[0].dest == node) ? STRAIGHT : CURVED;
 			break;
-		} else if (node == stopping_point.edge->src) {
+		} else if (last_type < STOPPING_POINT && node == stopping_point.edge->src) {
 			poi.position = stopping_point;
 			poi.type = STOPPING_POINT;
 		}
+		last_type = NONE;
 	}
 
 	ASSERT(index < path_len); // we should have broken out by now
-	*index_p = index+1;
+	*index_p = index;
 
 	return poi;
 }
@@ -145,6 +150,7 @@ static void run_conductor(int train_id) {
 		struct position stopping_point = find_stopping_point(train_id, &path, path_len);
 
 		int index = 0;
+		enum poi_type last_type = NONE;
 		while (index < path_len) {
 			// we don't reserve any track right now, since we assume we're the only
 			// train on the track
@@ -154,7 +160,7 @@ static void run_conductor(int train_id) {
 			//  1) the position we want to stop at
 			//  2) a little bit in advance of a switch on our path, so
 			//     we can ensure that the switch is in the right position
-			struct point_of_interest next_poi = get_next_poi(&path, path_len, &index, stopping_point);
+			struct point_of_interest next_poi = get_next_poi(&path, path_len, &index, last_type, stopping_point);
 
 			train_alert_at(train_id, next_poi.position);
 			switch (next_poi.type) {
@@ -168,7 +174,7 @@ static void run_conductor(int train_id) {
 				WTF("No such case");
 				break;
 			}
-
+			last_type = next_poi.type;
 		}
 	}
 }
