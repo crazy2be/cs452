@@ -112,7 +112,7 @@ static void format(producer produce, void* produce_state, const char *fmt, va_li
 			case 'u':
 				bwui2a(produce, produce_state, va_arg(va, unsigned int), 10, w, lz, 0);
 				break;
-			case 'x':
+			case 'x': case 'p':
 				bwui2a(produce, produce_state, va_arg(va, unsigned int), 16, w, lz, 0);
 				break;
 			case 'd':
