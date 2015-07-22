@@ -468,10 +468,14 @@ static void process_command(char *cmd, int displaysrv) {
 		}
 		char conductor_name[CONDUCTOR_NAME_LEN];
 		conductor_get_name(train, &conductor_name);
-		displaysrv_console_feedback(displaysrv,
-			"Waiting for conductor to pick up route...");
+
+		char feedback[80];
+		snprintf(feedback, sizeof(feedback), "Waiting for conductor to pick up route from %s...", node->name);
+		displaysrv_console_feedback(displaysrv, feedback);
+
 		int tid = whois(conductor_name);
-		send(tid, node, sizeof(node), NULL, 0);
+		delay(100);
+		send(tid, &node, sizeof(node), NULL, 0);
 		return;
 	}
 	default:

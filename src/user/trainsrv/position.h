@@ -28,3 +28,5 @@ int position_distance_apart(const struct position *start, const struct position 
 
 struct position position_calculate_stopping_position(const struct position *current,
 		const struct position *target, int stopping_distance, const struct switch_state *switches);
+
+void position_repr(const struct position p, char *buf);

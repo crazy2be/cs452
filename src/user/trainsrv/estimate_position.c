@@ -115,6 +115,22 @@ static void initialize_train_velocity_table(struct internal_train_state *train_s
 		}
 		train_state->est_velocities[i] = velocity;
 	}
+
+	// nasty hack to help speed up calibration
+	switch (train_id) {
+	case 62:
+		// speed 8, both acceleration offsets
+		train_state->est_velocities[15] = train_state->est_velocities[16] = 3827;
+		train_state->est_stopping_distances[15] = train_state->est_stopping_distances[16] = 441;
+		train_state->est_stopping_distances[27] = 828;
+		break;
+	case 58:
+		train_state->est_stopping_distances[15] = train_state->est_stopping_distances[16] = 166;
+		train_state->est_stopping_distances[27] = 1273;
+		break;
+	default:
+		break;
+	}
 }
 
 static struct internal_train_state* allocate_train_state(struct trainsrv_state *state, int train_id) {
@@ -381,6 +397,7 @@ void update_switch(struct trainsrv_state *state, int sw, enum sw_direction dir) 
 	struct switch_state switches = switch_historical_get_current(&state->switch_history);
 	switch_set(&switches, sw, dir);
 	switch_historical_set(&state->switch_history, switches, time());
+	train_alert_update_switch(switches);
 	displaysrv_update_switch(state->displaysrv_tid, &switches);
 }
 
