@@ -503,8 +503,17 @@ static void displaysrv_update_time(int displaysrv, unsigned millis, int active_t
 static void clock_update_task(void) {
 	int ticks = 0;
 	int displaysrv = parent_tid();
+	int trainsrv = -1;
 	for (;;) {
 		ticks = delay_until(ticks + 10);
+		if (trainsrv < 0) {
+			// Sometimes the clock_update task starts before the trainsrv has
+			// had a chance to start up. We could fix this by properly ordering
+			// our task startups, but this is easier and faster and seems to
+			// work just fine thank you very much.
+			trainsrv = whois("trains");
+			continue;
+		}
 
 		int active_trains_ids[MAX_ACTIVE_TRAINS];
 		const int active_trains = trains_query_active(active_trains_ids);
