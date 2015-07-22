@@ -52,7 +52,7 @@ static int whois_poll(const char *name) {
 
 static void heartbeat(void) {
 	int count = 0;
-	int trains_tid = whois_poll("trainsrv");
+	int trains_tid = whois_poll("trains");
 	int display_tid = whois_poll("displaysrv");
 	int command_tid = whois_poll("commandsrv");
 	for (;;) {
