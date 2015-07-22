@@ -5,6 +5,7 @@
 #include "../track.h"
 #include "../displaysrv.h"
 #include "../sys.h"
+#include "../conductor.h"
 
 // constants derived from fitting a curve to velocity data collected via a camera
 // we multiply these constants by 2^20 since our fixed point notation uses 20 bits right of the decimal place
@@ -129,6 +130,8 @@ static struct internal_train_state* allocate_train_state(struct trainsrv_state *
 	// initialize estimated speeds based on train id
 	//int train_scaling_factor = 0;
 	initialize_train_velocity_table(train_state, train_id);
+
+	conductor(train_id);
 
 	return train_state;
 }

@@ -10,7 +10,7 @@ LIB_SRC_DIR=$(SRC_DIR)/lib
 
 BENCHMARK_FLAGS = -DBENCHMARK_CACHE -DBENCHMARK_SEND_FIRST -DBENCHMARK_MSG_SIZE=64
 
-STACK_SEED = $(shell date +%N)
+STACK_SEED := $(shell date +%N)
 CFLAGS  = -g -fPIC -Wall -Werror -I$(SRC_DIR)/lib -std=c99 -O2 \
 	$(BENCHMARK_FLAGS) \
 	-fno-builtin-puts -fno-builtin-fputs -fno-builtin-fputc -fno-builtin-putc \
@@ -82,15 +82,15 @@ GENERATED_SOURCES = $(GEN_SRC_DIR)/syscalls.s $(GEN_SRC_DIR)/syscalls.h
 
 # find sources for each subproject independantly,
 # since it's not easy to split them back up again with make
-KERNEL_SOURCES=$(shell find $(KERNEL_SRC_DIR) -name *.c)
-USER_SOURCES=$(shell find $(USER_SRC_DIR) -name *.c)
-TEST_SOURCES=$(shell find $(TEST_SRC_DIR) -name *.c)
-LIB_SOURCES=$(shell find $(LIB_SRC_DIR) -name *.c)
+KERNEL_SOURCES:=$(shell find $(KERNEL_SRC_DIR) -name *.c)
+USER_SOURCES:=$(shell find $(USER_SRC_DIR) -name *.c)
+TEST_SOURCES:=$(shell find $(TEST_SRC_DIR) -name *.c)
+LIB_SOURCES:=$(shell find $(LIB_SRC_DIR) -name *.c)
 
-KERNEL_ASM_SOURCES=$(shell find $(KERNEL_SRC_DIR) -name *.s) $(GEN_SRC_DIR)/syscalls.s
-USER_ASM_SOURCES=$(shell find $(USER_SRC_DIR) -name *.s)
-TEST_ASM_SOURCES=$(shell find $(TEST_SRC_DIR) -name *.s)
-LIB_ASM_SOURCES=$(shell find $(LIB_SRC_DIR) -name *.s)
+KERNEL_ASM_SOURCES:=$(shell find $(KERNEL_SRC_DIR) -name *.s) $(GEN_SRC_DIR)/syscalls.s
+USER_ASM_SOURCES:=$(shell find $(USER_SRC_DIR) -name *.s)
+TEST_ASM_SOURCES:=$(shell find $(TEST_SRC_DIR) -name *.s)
+LIB_ASM_SOURCES:=$(shell find $(LIB_SRC_DIR) -name *.s)
 
 # definitions for compiling C source code
 SOURCES=$(KERNEL_SOURCES) $(USER_SOURCES) $(TEST_SOURCES) $(LIB_SOURCES)

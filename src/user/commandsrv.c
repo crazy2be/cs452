@@ -9,6 +9,7 @@
 #include "trainsrv/position.h"
 #include "trainsrv/track_control.h" // TODO: remove this
 #include "track.h"
+#include "conductor.h"
 
 #define COMMANDSRV_PRIORITY HIGHER(PRIORITY_MIN, 5)
 
@@ -464,12 +465,12 @@ static void process_command(char *cmd, int displaysrv) {
 			displaysrv_console_feedback(displaysrv, "Failed to parse node");
 			return;
 		}
+		char conductor_name[CONDUCTOR_NAME_LEN];
+		conductor_get_name(train, &conductor_name);
 		displaysrv_console_feedback(displaysrv,
 			"Waiting for conductor to pick up route...");
-		int tid = -1;
-		recv(&tid, NULL, 0);
-		ASSERT(tid == whois("conductor"));
-		reply(tid, node, sizeof(*node));
+		int tid = whois(conductor_name);
+		send(tid, node, sizeof(node), NULL, 0);
 		return;
 	}
 	default:

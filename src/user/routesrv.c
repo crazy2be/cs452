@@ -4,8 +4,8 @@
 #include "sys/nameserver.h"
 
 struct route_request {
-	struct track_node *start;
-	struct track_node *end;
+	const struct track_node *start;
+	const struct track_node *end;
 	struct astar_node (*path_out)[ASTAR_MAX_PATH];
 };
 
@@ -26,7 +26,7 @@ void routesrv_start(void) {
 	signal_send(tid);
 }
 
-int routesrv_plan(struct track_node *start, struct track_node *end,
+int routesrv_plan(const struct track_node *start, const struct track_node *end,
 		struct astar_node (*path_out)[ASTAR_MAX_PATH]) {
 	static int route_tid = -1;
 	if (route_tid < 0) route_tid = whois("route");
