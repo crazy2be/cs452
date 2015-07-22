@@ -8,7 +8,7 @@ static int h(struct track_node *start, struct track_node *end) {
 	return sqrti(dx*dx + dy*dy);
 }
 
-static void reconstruct_path(struct track_node *node_parents[TRACK_MAX],
+static int reconstruct_path(struct track_node *node_parents[TRACK_MAX],
 							 struct track_node *current,
 							 struct astar_node (*path_out)[ASTAR_MAX_PATH]) {
 	int l = 0;
@@ -25,6 +25,7 @@ static void reconstruct_path(struct track_node *node_parents[TRACK_MAX],
 		cur = node_parents[TRACK_NODE_INDEX(cur)];
 		i++;
 	}
+	return l;
 // 	path = []
 // 	while current is not None:
 // 		if current in path:
@@ -34,8 +35,9 @@ static void reconstruct_path(struct track_node *node_parents[TRACK_MAX],
 // 	return path
 }
 
-void astar_find_path(struct track_node *start, struct track_node *end,
-					 struct astar_node (*path_out)[ASTAR_MAX_PATH]) {
+int astar_find_path(struct track_node *start, struct track_node *end,
+					struct astar_node (*path_out)[ASTAR_MAX_PATH]) {
+	memset(path_out, -1, sizeof(*path_out));
 	struct min_heap mh;
 	min_heap_init(&mh);
 	min_heap_push(&mh, 0, TRACK_NODE_INDEX(start));
@@ -58,12 +60,12 @@ void astar_find_path(struct track_node *start, struct track_node *end,
 			node_f[TRACK_NODE_INDEX(suc)] = suc_f;
 			node_parents[TRACK_NODE_INDEX(suc)] = q;
 			if (suc == end) {
-				reconstruct_path(node_parents, suc, path_out);
-				return;
+				return reconstruct_path(node_parents, suc, path_out);
 			}
 			min_heap_push(&mh, suc_f, TRACK_NODE_INDEX(suc));
 		}
 	}
+	return -1;
 // 		mh = []
 // 		min_heap_push(mh, 0., start.i)
 // 		node_g = [100000000.]*len(cur_track)
