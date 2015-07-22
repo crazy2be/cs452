@@ -2,6 +2,7 @@
 #include "trainsrv_internal.h"
 #include "../sys.h"
 #include "../track.h"
+#include "../buffer.h"
 
 // Other tasks can message this service, and request to be woken up
 // when a train is at a particular point
@@ -315,21 +316,21 @@ void train_alert_update_train(int train_id, struct position position) {
 	req.type = TRAIN_UPDATE;
 	req.u.train_update.train_id = train_id;
 	req.u.train_update.position = position;
-	send(train_alert_tid(), &req, sizeof(req), NULL, 0);
+	send_async(train_alert_tid(), &req, sizeof(req));
 }
 
 void train_alert_update_train_speed(int train_id) {
 	struct alertsrv_request req;
 	req.type = TRAIN_SPEED_UPDATE;
 	req.u.train_speed_update.train_id = train_id;
-	send(train_alert_tid(), &req, sizeof(req), NULL, 0);
+	send_async(train_alert_tid(), &req, sizeof(req));
 }
 
 void train_alert_update_switch(struct switch_state switches) {
 	struct alertsrv_request req;
 	req.type = SWITCH_UPDATE;
 	memcpy(&req.u.switch_update, &switches, sizeof(req.u.switch_update));
-	send(train_alert_tid(), &req, sizeof(req), NULL, 0);
+	send_async(train_alert_tid(), &req, sizeof(req));
 }
 
 int train_alert_at(int train_id, struct position position) {
