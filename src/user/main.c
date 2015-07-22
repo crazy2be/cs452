@@ -42,10 +42,17 @@ void init(void) {
 	stop_servers();
 }
 
-void fuck_the_police(void) {
-	delay(1000);
-	stop_servers();
+static void heartbeat(void) {
+	int count = 0;
+	for (;;) {
+		delay(10);
+		printf("\e[s\e[5;90H%d\e[u", count++);
+	}
 }
+
+static void heartbeat_start(void) {
+	create(LOWER(PRIORITY_MAX, 4), heartbeat);
+};
 
 void test_init(void) {
 	// initialize the track
@@ -58,8 +65,6 @@ void test_init(void) {
 
 	start_servers();
 
-	//ASSERTOK(try_create(PRIORITY_MAX, fuck_the_police));
-
 #if CALIBRATE
 	calibratesrv();
 #else
@@ -67,6 +72,7 @@ void test_init(void) {
 	commandsrv();
 	trains_start();
 	routesrv_start();
+	heartbeat_start();
 #endif
 	sensorsrv();
 
