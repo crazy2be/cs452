@@ -21,18 +21,11 @@ static int reconstruct_path(const struct track_node *node_parents[TRACK_MAX],
 	int i = 0;
 	cur = current;
 	while (cur != NULL) {
-		(*path_out)[l - i].node = cur;
+		path_out[l - i - 1]->node = cur;
 		cur = node_parents[TRACK_NODE_INDEX(cur)];
 		i++;
 	}
 	return l;
-// 	path = []
-// 	while current is not None:
-// 		if current in path:
-// 			raise Exception("cycle at %d" % current.i)
-// 		path.insert(0, current)
-// 		current = node_parents[current.i]
-// 	return path
 }
 
 int astar_find_path(const struct track_node *start, const struct track_node *end,
@@ -41,11 +34,11 @@ int astar_find_path(const struct track_node *start, const struct track_node *end
 	struct min_heap mh;
 	min_heap_init(&mh);
 	min_heap_push(&mh, 0, TRACK_NODE_INDEX(start));
-	int node_g[TRACK_MAX];
-	int node_f[TRACK_MAX];
+	int node_g[TRACK_MAX] = {[0 ... TRACK_MAX-1] = 0x7FFFFFFF};
+	int node_f[TRACK_MAX] = {[0 ... TRACK_MAX-1] = 0x7FFFFFFF};
 	node_g[TRACK_NODE_INDEX(start)] = 0;
 	node_f[TRACK_NODE_INDEX(start)] = 0;
-	const struct track_node *node_parents[TRACK_MAX];
+	const struct track_node *node_parents[TRACK_MAX] = {};
 
 	while (!min_heap_empty(&mh)) {
 		int min_i = min_heap_pop(&mh);
@@ -66,28 +59,18 @@ int astar_find_path(const struct track_node *start, const struct track_node *end
 		}
 	}
 	return -1;
-// 		mh = []
-// 		min_heap_push(mh, 0., start.i)
-// 		node_g = [100000000.]*len(cur_track)
-// 		node_f = [100000000.]*len(cur_track)
-// 		node_g[start.i], node_f[start.i] = 0., 0.
-// 		node_parents = [None]*len(cur_track)
-//
-// 		while len(mh) > 0:
-// 			min_i = min_heap_pop(mh)
-// 			q = cur_track[min_i]
-// 			for suc_edge in q.edge:
-// 				suc = suc_edge.dest
-// 				if suc is None:
-// 					continue
-// 				suc_g = node_g[q.i] + suc_edge.dist
-// 				suc_f = suc_g + h(suc, end)
-// 				if node_f[suc.i] < suc_f:
-// 					continue
-// 				node_g[suc.i], node_f[suc.i] = suc_g, suc_f
-// 				node_parents[suc.i] = q
-// 				if suc == end:
-// 					return reconstruct_path(node_parents, suc)
-// 				min_heap_push(mh, suc_f, suc.i)
-// 		return None
+}
+
+void astar_print_path(struct astar_node (*path)[ASTAR_MAX_PATH], int l) {
+	ASSERT(l >= 0);
+	if (l == 0) {
+		printf("[Empty path]"EOL);
+		return;
+	}
+	ASSERT(l <= ASTAR_MAX_PATH);
+	printf("%p %s", path[0]->node, path[0]->node->name);
+	for (int i = 1; i < l; i++) {
+		printf(" -> %p %s", path[i]->node, path[i]->node->name);
+	}
+	printf(EOL);
 }
