@@ -44,7 +44,7 @@ struct switch_state tc_init_switches(void) {
 void tc_set_speed(int train, int speed) {
 	ASSERT(1 <= train && train <= 80);
 	ASSERT(0 <= speed && speed <= 14);
-#ifdef QEMU
+#ifdef ASCII_TC
 	fputs("Changing train speed" EOL, COM1);
 #else
 	char train_command[2] = {speed, train};
@@ -54,7 +54,7 @@ void tc_set_speed(int train, int speed) {
 
 void tc_toggle_reverse(int train) {
 	ASSERT(1 <= train && train <= 80);
-#ifdef QEMU
+#ifdef ASCII_TC
 	fputs("Reversing train" EOL, COM1);
 #else
 	char train_command[2] = {15, train};
@@ -64,7 +64,7 @@ void tc_toggle_reverse(int train) {
 
 void tc_switch_switch(int sw, enum sw_direction d) {
 	ASSERT((1 <= sw && sw <= 18) || (145 <= sw && sw <= 156));
-#ifdef QEMU
+#ifdef ASCII_TC
 	fputs("Changing switch position" EOL, COM1);
 #else
 	char cmd = (d == STRAIGHT) ? 0x21 : 0x22;
@@ -74,7 +74,7 @@ void tc_switch_switch(int sw, enum sw_direction d) {
 }
 
 void tc_deactivate_switch(void) {
-#ifdef QEMU
+#ifdef ASCII_TC
 	fputs("Resetting solenoid" EOL, COM1);
 #else
 	fputc(0x20, COM1);

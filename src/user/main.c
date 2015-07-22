@@ -7,6 +7,7 @@
 #include "displaysrv.h"
 #include "sensorsrv.h"
 #include "trainsrv.h"
+#include "routesrv.h"
 #include "calibrate.h"
 #include "track.h"
 
@@ -65,6 +66,7 @@ void test_init(void) {
 	displaysrv();
 	commandsrv();
 	trains_start();
+	routesrv_start();
 #endif
 	sensorsrv();
 

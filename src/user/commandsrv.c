@@ -79,15 +79,15 @@ static void consume_whitespace(char *cmd, int *ip) {
 	*ip = i;
 };
 
-enum command_type { TR, SW, RV, QUIT, STOP, BSW, BISECT, INVALID };
-char *command_listing[] = { "tr", "sw", "rv", "q", "stp", "bsw", "bisect" };
+enum command_type { TR, SW, RV, QUIT, STOP, BSW, BISECT, ROUTE, INVALID };
+char *command_listing[] = { "tr", "sw", "rv", "q", "stp", "bsw", "bisect", "route", ""  };
 
 static enum command_type get_command_type(char *cmd, int *ip) {
 	int i = *ip;
 	while (is_alpha(cmd[i])) {
 		i++;
 	}
-	for (int c = 0; c < sizeof(command_listing) / sizeof(command_listing[0]); c++) {
+	for (int c = 0; c < ARRAY_LENGTH(command_listing); c++) {
 		if (strncmp(cmd, command_listing[c], i) == 0 && command_listing[c][i] == '\0') {
 			*ip = i;
 			return (enum command_type) c;
@@ -447,6 +447,29 @@ static void process_command(char *cmd, int displaysrv) {
 		} else {
 			handle_bisect(displaysrv, train);
 		}
+		return;
+	}
+	case ROUTE: {
+		int train = -1;
+		if (get_integer(cmd, &i, &train)) {
+			break;
+		}
+		if (!(1 <= train && train <= 80)) {
+			displaysrv_console_feedback(displaysrv, "Invalid train number");
+			return;
+		}
+		consume_whitespace(cmd, &i);
+		const struct track_node *node = NULL;
+		if ((node = get_node(cmd, &i)) == NULL) {
+			displaysrv_console_feedback(displaysrv, "Failed to parse node");
+			return;
+		}
+		displaysrv_console_feedback(displaysrv,
+			"Waiting for conductor to pick up route...");
+		int tid = -1;
+		recv(&tid, NULL, 0);
+		ASSERT(tid == whois("conductor"));
+		reply(tid, node, sizeof(*node));
 		return;
 	}
 	default:

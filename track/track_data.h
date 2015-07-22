@@ -1,5 +1,3 @@
-#pragma once
-
 /* THIS FILE IS GENERATED CODE -- DO NOT EDIT */
 
 #include "track_node.h"
