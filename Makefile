@@ -208,6 +208,9 @@ qemu-start: $(KERNEL_BIN)
 qemu-debug: $(KERNEL_ELF)
 	./scripts/qemu debug $<
 
+qemu-fast-test: $(TEST_BIN)
+	./scripts/qemu print $<
+
 qemu-run-test: $(TEST_BIN)
 	./scripts/qemu run $<
 

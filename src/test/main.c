@@ -9,6 +9,7 @@
 #include "min_heap.h"
 #include "track_test.h"
 #include "sensor_attribution_test.h"
+#include "astar_test.h"
 
 #include "../user/sys.h"
 #include "../user/signal.h"
@@ -259,6 +260,7 @@ void hashtable_tests(void) {
 void init_task(void) {
 	start_servers();
 
+	astar_tests();
 	lssb_tests();
 	hashtable_tests();
 	memcpy_tests();

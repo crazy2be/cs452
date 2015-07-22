@@ -39,7 +39,7 @@ static void init_state(struct trainsrv_state *state) {
 	// sens_prev & sensors_are_known should not be used
 }
 
-void sensor_attribution_tests() {
+void sensor_attribution_tests(void) {
 	{
 		struct trainsrv_state state;
 		init_state(&state);
