@@ -34,8 +34,7 @@ static int reconstruct_path(int *node_parents, int start, struct astar_node *pat
 
 int astar_find_path(const struct track_node *start, const struct track_node *end,
 					struct astar_node *path_out) {
-	memset(path_out, 0, sizeof(path_out)*ASTAR_MAX_PATH);
-	printf("sizeof(*path_out), %d"EOL, sizeof(*path_out));
+	memset(path_out, 0, sizeof(*path_out)*ASTAR_MAX_PATH);
 	struct min_heap mh;
 	min_heap_init(&mh);
 	min_heap_push(&mh, 0, idx(start));
