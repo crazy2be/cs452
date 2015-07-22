@@ -15,6 +15,7 @@ void create_handler(struct task_descriptor *current_task) {
 	struct user_context *uc = current_task->context;
 	int priority = (int) syscall_arg(uc, 0);
 	void *code = (void*) syscall_arg(uc, 1);
+	KFASSERT((intptr_t)code > 1000, "%p invalid", code); // No null pointers please.
 	int result;
 
 	if (priority < PRIORITY_MAX || priority > PRIORITY_MIN) {
