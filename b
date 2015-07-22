@@ -15,4 +15,7 @@ elif cmd == 'qs':
 	os.system('make ENV=qemu qemu-start')
 elif cmd == 'qd':
 	os.system('make ENV=qemu qemu-debug')
-
+elif cmd == 't':
+	os.system('make ENV=qemu qemu-fast-test')
+else:
+	print "Unknown command"

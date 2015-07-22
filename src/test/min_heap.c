@@ -1,4 +1,4 @@
-#include "../user/min_heap.h"
+#include "../lib/min_heap.h"
 #include "min_heap.h"
 #include <assert.h>
 
