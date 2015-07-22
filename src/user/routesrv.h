@@ -2,7 +2,7 @@
 
 #include <astar.h>
 
-void routesrv(void);
+void routesrv_start(void);
 
 // Blocking call
 int routesrv_plan(struct track_node *start, struct track_node *end,
