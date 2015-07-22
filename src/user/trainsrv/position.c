@@ -107,7 +107,10 @@ struct position position_calculate_stopping_position(const struct position *curr
 		// account for being too close to the stopping point, and needing to loop around to get
 		// back to the same position / coast around to slow down
 		const int loop_distance = position_distance_apart(target, target, switches);
-		ASSERT(loop_distance > 0);
+		if (loop_distance <= 0) {
+			// no path to that position
+			return (struct position){};
+		}
 		do {
 			distance += loop_distance;
 		} while (distance < 0);
