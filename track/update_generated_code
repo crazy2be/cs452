@@ -1,2 +1,2 @@
-python parse_track tracka trackb -E embedding_a.txt -E embedding_b.txt
+python parse_track new/tracka_new new/trackb_new -E embedding_a.txt -E embedding_b.txt
 
