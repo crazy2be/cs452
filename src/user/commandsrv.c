@@ -3,6 +3,7 @@
 #include <assert.h>
 #include <util.h>
 #include "sys.h"
+#include "signal.h"
 #include "displaysrv.h"
 #include "trainsrv.h"
 #include "trainsrv/train_alert_srv.h"
@@ -483,6 +484,8 @@ unknown:
 
 void commandsrv_main(void) {
 	char buf[80];
+	register_as("commandsrv");
+	signal_recv();
 
 	int displaysrv = whois(DISPLAYSRV_NAME);
 	ASSERT(displaysrv >= 0);
@@ -494,5 +497,6 @@ void commandsrv_main(void) {
 }
 
 void commandsrv(void) {
-	create(COMMANDSRV_PRIORITY, commandsrv_main);
+	int tid = create(COMMANDSRV_PRIORITY, commandsrv_main);
+	signal_send(tid);
 }

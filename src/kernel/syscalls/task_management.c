@@ -81,3 +81,19 @@ void idle_permille_handler(struct task_descriptor *current_task, unsigned ts_sta
 	syscall_set_return(current_task->context, permille);
 	task_schedule(current_task);
 }
+
+void task_info_handler(struct task_descriptor *current_task) {
+	struct user_context *uc = current_task->context;
+	int subject_tid = (int) syscall_arg(uc, 0);
+	struct task_info *info_out = (struct task_info*) syscall_arg(uc, 1);
+
+	if (!tid_valid(subject_tid)) {
+		syscall_set_return(uc, TASK_STATE_INVALID_TID);
+	} else {
+		const struct task_descriptor *subject_td = task_from_tid(subject_tid);
+		info_out->state = subject_td->state;
+		syscall_set_return(uc, TASK_STATE_SUCCESS);
+	}
+
+	task_schedule(current_task);
+}

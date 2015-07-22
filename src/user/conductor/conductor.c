@@ -60,7 +60,7 @@ static struct point_of_interest get_next_poi(struct astar_node (*path)[ASTAR_MAX
 	struct point_of_interest poi;
 
 	for (index = *index_p; index < path_len; index++) {
-		node = (*path)[index].node;
+		node = path[index]->node;
 		if (last_type < SWITCH && node->type == NODE_BRANCH && index != 0) {
 			// travel backwards through the path for a distance, to give us time for the
 			// turnout to switch
@@ -68,7 +68,7 @@ static struct point_of_interest get_next_poi(struct astar_node (*path)[ASTAR_MAX
 			const struct track_node *current_node = node;
 			const struct track_edge *edge = NULL;
 			for (int i = index - 1; switch_lead_distance > 0 && i >= 0; i--) {
-				const struct track_node *prev_node = (*path)[i].node;
+				const struct track_node *prev_node = path[i]->node;
 				edge = edge_between(prev_node, current_node);
 				switch_lead_distance -= edge->dist;
 				current_node = prev_node;
@@ -78,7 +78,7 @@ static struct point_of_interest get_next_poi(struct astar_node (*path)[ASTAR_MAX
 			poi.position.displacement = (switch_lead_distance > 0) ? 0 : -switch_lead_distance;
 			poi.type = SWITCH;
 			poi.u.switch_info.num = node->num;
-			poi.u.switch_info.dir = ((*path)[index - 1].node->edge[0].dest == node) ? STRAIGHT : CURVED;
+			poi.u.switch_info.dir = (path[index - 1]->node->edge[0].dest == node) ? STRAIGHT : CURVED;
 			break;
 		} else if (last_type < STOPPING_POINT && node == stopping_point.edge->src) {
 			poi.position = stopping_point;
@@ -96,10 +96,10 @@ static struct point_of_interest get_next_poi(struct astar_node (*path)[ASTAR_MAX
 static struct position find_stopping_point(int train_id, struct astar_node (*path)[ASTAR_MAX_PATH], int path_len) {
 	struct switch_state switches;
 	memzero(&switches);
-	const struct track_node *prev_node = (*path)[0].node;
+	const struct track_node *prev_node = path[0]->node;
 	int total_distance = 0;
 	for (int i = 1; i < path_len; i++) {
-		const struct track_node *cur_node = (*path)[i].node;
+		const struct track_node *cur_node = path[i]->node;
 		const struct track_edge *edge = edge_between(prev_node, cur_node);
 		prev_node = cur_node;
 		total_distance += edge->dist;
@@ -111,9 +111,9 @@ static struct position find_stopping_point(int train_id, struct astar_node (*pat
 	// if this isn't asserted, we're trying to do a short stop, which we don't really support
 	ASSERT(distance_until_stop > 0);
 
-	prev_node = (*path)[0].node;
+	prev_node = path[0]->node;
 	for (int i = 1; i < path_len; i++) {
-		const struct track_node *cur_node = (*path)[i].node;
+		const struct track_node *cur_node = path[i]->node;
 		const struct track_edge *edge = edge_between(prev_node, cur_node);
 		if (distance_until_stop < edge->dist) {
 			return (struct position) { edge, distance_until_stop };
@@ -192,7 +192,7 @@ static void init_conductor(void) {
 	conductor_get_name(params.train_id, &conductor_name);
 
 	// check that nobody else is registered
-	ASSERT(-1 == whois(conductor_name));
+	ASSERT(-1 == try_whois(conductor_name));
 	register_as(conductor_name);
 
 	reply(tid, NULL, 0);

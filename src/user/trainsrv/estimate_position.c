@@ -131,7 +131,7 @@ static struct internal_train_state* allocate_train_state(struct trainsrv_state *
 	//int train_scaling_factor = 0;
 	initialize_train_velocity_table(train_state, train_id);
 
-	/* conductor(train_id); */
+	conductor(train_id);
 
 	return train_state;
 }
