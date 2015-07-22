@@ -6,9 +6,17 @@
 #include "../displaysrv.h"
 #include "../sys.h"
 
+// constants derived from fitting a curve to velocity data collected via a camera
+// we multiply these constants by 2^20 since our fixed point notation uses 20 bits right of the decimal place
+const long long deceleration_model_coefs[6] = { 597828168, 0, -414289819, 231854274, -48630758, 3595593 };
+const unsigned deceleration_model_arity = sizeof(deceleration_model_coefs) / sizeof(deceleration_model_coefs[0]);
+const long long stopping_time_coef = 4701115LL;
+const unsigned acceleration_model_arity = sizeof(acceleration_model_coefs) / sizeof(acceleration_model_coefs[0]);
+const long long acceleration_model_coefs[6] = { 0, 0, 119318217, -10618953, 32740221, -3109563 };
+
 int train_speed_index(const struct internal_train_state *train_state) {
-	int cur_speed = train_state->current_speed_setting;
-	int prev_speed = train_state->previous_speed_setting;
+	int cur_speed = speed_historical_get_current(&train_state->speed_history);
+	int prev_speed = train_state->speed_history.len >= 2 ? speed_historical_get_by_index(&train_state->speed_history, 2) : 0;
 	int i = cur_speed*2 + (prev_speed >= cur_speed) - 1;
 	ASSERTF(0 <= i && i < sizeof(train_state->est_velocities) / sizeof(train_state->est_velocities[0]),
 			"i = %d, cur_speed = %d, prev_speed = %d", i, cur_speed, prev_speed);
@@ -115,6 +123,8 @@ static struct internal_train_state* allocate_train_state(struct trainsrv_state *
 	memset(train_state, 0, sizeof(*train_state));
 	state->state_for_train[train_id - 1] = train_state;
 	train_state->train_id = train_id;
+	speed_historical_init(&train_state->speed_history);
+	sensor_historical_init(&train_state->sensor_history);
 
 	// initialize estimated speeds based on train id
 	//int train_scaling_factor = 0;
@@ -141,6 +151,7 @@ static void reanchor_all(struct trainsrv_state *state) {
 	}
 }
 
+// TODO: account for the stopping distance when we set the train to speed 0
 int update_train_speed(struct trainsrv_state *state, int train_id, int speed) {
 	struct internal_train_state *train_state = get_train_state(state, train_id);
 	if (train_state == NULL) {
@@ -152,30 +163,34 @@ int update_train_speed(struct trainsrv_state *state, int train_id, int speed) {
 	}
 	// Just don't allow this so that we don't have to think about what the train
 	// controller does in this case in terms of actual train speed.
-	if (train_state->current_speed_setting == speed) return 0;
+	// NOTE: we don't currently do this, since it caused more problems that it fixed
+	// (the trains moving when the program starts, and then it refuses to stop them,
+	// since it thinks they're already stopped.) 
+	/* if (train_state->current_speed_setting == speed) return 0; */
+	speed_historical_set(&train_state->speed_history, speed, time());
 	reanchor(state, train_state); // TODO: Deacceration model.
-	train_state->previous_speed_setting = train_state->current_speed_setting;
-	train_state->current_speed_setting = speed;
-	train_state->constant_speed_starts = time() + 400;
+
+	ASSERT(train_state->speed_history.len > 0);
 	return 1;
 }
 
-static bool position_unknown(struct trainsrv_state *state, int train_id) {
-	ASSERT(train_id > 0);
-	return state->unknown_train_id == train_id;
-}
+/* static bool position_unknown(struct trainsrv_state *state, int train_id) { */
+/* 	ASSERT(train_id > 0); */
+/* 	return state->unknown_train_id == train_id; */
+/* } */
 
-int update_train_direction(struct trainsrv_state *state, int train_id) {
-	struct internal_train_state *train_state = get_train_state(state, train_id);
-	if ((train_state != NULL) && (!position_unknown(state, train_id))) {
-		position_reverse(&train_state->last_known_position);
-	}
-	// TODO: This is basically wrong.
-	// We want to reanchor whenever we actually change speed, which happens
-	// twice when we are reversing.
-	reanchor(state, train_state);
-	return train_state->current_speed_setting;
-}
+/* // TODO: REMOVE ME */
+/* int update_train_direction(struct trainsrv_state *state, int train_id) { */
+/* 	struct internal_train_state *train_state = get_train_state(state, train_id); */
+/* 	if ((train_state != NULL) && (!position_unknown(state, train_id))) { */
+/* 		position_reverse(&train_state->last_known_position); */
+/* 	} */
+/* 	// TODO: This is basically wrong. */
+/* 	// We want to reanchor whenever we actually change speed, which happens */
+/* 	// twice when we are reversing. */
+/* 	reanchor(state, train_state); */
+/* 	return train_state->current_speed_setting; */
+/* } */
 
 // called each time we hit a sensor
 // prints out how far away we thought we were from the sensor at the time
@@ -224,7 +239,11 @@ static void log_position_estimation_error(const struct trainsrv_state *state,
 int calculate_actual_velocity(struct internal_train_state *train_state,
 		const struct track_node *sensor_node, const struct switch_state *switches, int ticks) {
 	// we think we're still accelerating, so we don't know how fast we are
-	if (ticks < train_state->constant_speed_starts) return SILENT_ERROR;
+	// allow 4s after the last speed change to adjust to the new speed
+	if (train_state->speed_history.len > 0 &&
+			ticks < speed_historical_get_kvp_current(&train_state->speed_history).time + 400) {
+		return SILENT_ERROR;
+	}
 	ASSERT(sensor_node != NULL);
 
 	// we don't know where the train was last
@@ -245,7 +264,7 @@ static void update_train_velocity_estimate(const struct trainsrv_state *state, s
 	struct switch_state switches = switch_historical_get_current(&state->switch_history);
 	const int actual_velocity = calculate_actual_velocity(train_state, sensor_node, &switches, ticks);
 	if (actual_velocity == TELEPORT_ERROR) {
-		displaysrv_console_feedback(state->displaysrv_tid, "The train supposedly teleported");
+		/* displaysrv_console_feedback(state->displaysrv_tid, "The train supposedly teleported"); */
 		return;
 	} else if (actual_velocity == SILENT_ERROR) {
 		return;
@@ -276,8 +295,8 @@ static void update_train_position_from_sensor(const struct trainsrv_state *state
 	train_state->last_known_position.edge = &sensor_node->edge[0];
 	train_state->last_known_position.displacement = 0;
 	train_state->last_known_time = ticks;
-	train_state->last_sensor_hit = sensor;
-	train_state->last_sensor_hit_time = ticks;
+
+	sensor_historical_set(&train_state->sensor_history, sensor, ticks);
 
 	ASSERTF(position_is_wellformed(&train_state->last_known_position), "(%s, %d) is malformed",
 			train_state->last_known_position.edge->src->name, train_state->last_known_position.displacement);
@@ -295,11 +314,19 @@ struct sensor_context {
 
 static void sensor_cb(int sensor, void *ctx) {
 	struct sensor_context *context = (struct sensor_context*) ctx;
-	int bad_switch;
-	const struct internal_train_state *train = attribute_sensor_to_train(context->state, sensor, context->time, &bad_switch);
+	struct attribution attr = attribute_sensor_to_train(context->state, sensor, context->time);
+	// TODO: we should use the attr.distance to inform the velocity calculation
+	const struct internal_train_state *train = attr.train;
+	char sensor_pretty[4];
+	sensor_repr(sensor, sensor_pretty);
+	char feedback[80];
 
 	// spurious sensor signal
-	if (train == NULL) return;
+	if (train == NULL) {
+		snprintf(feedback, sizeof(feedback), "Ignoring spurious sensor hit %s", sensor_pretty);
+		displaysrv_console_feedback(context->state->displaysrv_tid, feedback);
+		return;
+	}
 
 	const int index = (train->train_id - 1) / 32;
 	const int offset = (train->train_id - 1) % 32;
@@ -308,19 +335,26 @@ static void sensor_cb(int sensor, void *ctx) {
 	// we never attribute multiple sensor hits to the same train in the same cycle
 	// we essentially assume that this must be a spurious signal
 	if (context->train_already_hit[index] & mask) return;
-
-	if (bad_switch != -1) {
-		struct switch_state switches = switch_historical_get_current(&context->state->switch_history);
-		enum sw_direction dir = switch_get(&switches, bad_switch);
-		update_switch(context->state, bad_switch, (dir == CURVED) ? STRAIGHT : CURVED);
-	}
-
-
 	context->train_already_hit[index] |= mask;
+
+	snprintf(feedback, sizeof(feedback), "Attributing sensor hit %s to %d", sensor_pretty, train->train_id);
+	displaysrv_console_feedback(context->state->displaysrv_tid, feedback);
+
+
+	if (attr.changed_switch != -1) {
+		struct switch_state switches = switch_historical_get_current(&context->state->switch_history);
+		enum sw_direction dir = switch_get(&switches, attr.changed_switch);
+		update_switch(context->state, attr.changed_switch, (dir == CURVED) ? STRAIGHT : CURVED);
+	}
 
 	// we need to get a mutable version of train - this is a bit silly though
 	struct internal_train_state *train_m = get_train_state(context->state, train->train_id);
 	ASSERT(train_m == train);
+
+	if (attr.reversed) {
+		ASSERT(train->reversed);
+		train_m->reversed = false;
+	}
 
 	update_train_position_from_sensor(context->state, train_m, sensor, context->time);
 }

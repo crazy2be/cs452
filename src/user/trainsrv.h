@@ -27,6 +27,7 @@ int trains_query_error(int train_id);
 void trains_send_sensors(struct sensor_state state);
 void trains_set_speed(int train, int speed);
 void trains_reverse(int train);
+void trains_reverse_unsafe(int train);
 void trains_switch(int switch_numuber, enum sw_direction d);
 struct switch_state trains_get_switches(void);
 

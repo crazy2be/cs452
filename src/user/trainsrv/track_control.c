@@ -62,16 +62,6 @@ void tc_toggle_reverse(int train) {
 #endif
 }
 
-void tc_stop(int train) {
-	ASSERT(1 <= train && train <= 80);
-#ifdef ASCII_TC
-	fputs("Stopping train" EOL, COM1);
-#else
-	char train_command[2] = {0, train};
-	fput_buf(train_command, sizeof(train_command), COM1);
-#endif
-}
-
 void tc_switch_switch(int sw, enum sw_direction d) {
 	ASSERT((1 <= sw && sw <= 18) || (145 <= sw && sw <= 156));
 #ifdef ASCII_TC
