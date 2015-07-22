@@ -52,6 +52,7 @@ int astar_find_path(const struct track_node *start, const struct track_node *end
 		for (int i = 0; i < 2; i++) {
 			const struct track_node *suc = q->edge[i].dest;
 			if (!suc) continue;
+			ASSERT(idx(suc) >= 0 && idx(suc) < TRACK_MAX);
 			int suc_g = node_g[idx(q)] + q->edge[i].dist;
 			int suc_f = suc_g + h(suc, end);
 			if (node_f[idx(suc)] < suc_f) continue;
