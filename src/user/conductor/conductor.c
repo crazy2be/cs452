@@ -179,13 +179,17 @@ static void run_conductor(int train_id) {
 	}
 }
 
+void conductor_get_name(int train_id, char (*buf)[CONDUCTOR_NAME_LEN]) {
+	snprintf(*buf, CONDUCTOR_NAME_LEN, "conductor_%d", train_id);
+}
+
 static void init_conductor(void) {
 	int tid;
 	struct conductor_params params;
 	receive(&tid, &params, sizeof(params));
 
-	char conductor_name[20];
-	snprintf(conductor_name, sizeof(conductor_name), "conductor_%d", params.train_id);
+	char conductor_name[CONDUCTOR_NAME_LEN];
+	conductor_get_name(params.train_id, &conductor_name);
 
 	// check that nobody else is registered
 	ASSERT(-1 == whois(conductor_name));
