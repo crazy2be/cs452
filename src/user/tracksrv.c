@@ -21,7 +21,15 @@ struct tracksrv_request {
 };
 
 static int conductor_train_ids[256] = {}; // Just for debugging
-//static int reservation_table[TRACK_MAX] = {};
+static int reservation_table[TRACK_MAX] = {};
+
+static int reserve_path(int tid, struct track_node *path,
+						int len, int stopping_distance) {
+	for (int i = 0; i < len; i++) {
+		reservation_table[i] = tid;
+	}
+	return len;
+}
 
 void tracksrv(void) {
 	register_as("tracksrv");
@@ -31,9 +39,14 @@ void tracksrv(void) {
 		int tid = -1;
 		recv(&tid, &req, sizeof(req));
 		switch (req.type) {
-		case TRK_RESERVE:
-			// TODO:
+		case TRK_RESERVE: {
+			int res = reserve_path(tid,
+								   req.u.reserve_path.path,
+								   req.u.reserve_path.len,
+								   req.u.reserve_path.stopping_distance);
+			reply(tid, &res, sizeof(res));
 			break;
+		}
 		case TRK_SET_ID: {
 			int trid = req.u.set_train_id.train_id;
 			ASSERT(conductor_train_ids[trid] == 0); // No changing trains?
