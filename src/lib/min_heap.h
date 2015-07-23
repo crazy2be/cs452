@@ -38,11 +38,11 @@ MH_T {
 
 #include <assert.h>
 
-static void MH_INIT(MH_T *mh) {
+static inline void MH_INIT(MH_T *mh) {
 	mh->size = 0;
 }
 
-static int MH_EMPTY(MH_T *mh) {
+static inline int MH_EMPTY(MH_T *mh) {
 	return mh->size == 0;
 }
 

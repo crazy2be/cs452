@@ -6,7 +6,7 @@
 struct route_request {
 	const struct track_node *start;
 	const struct track_node *end;
-	struct astar_node (*path_out)[ASTAR_MAX_PATH];
+	struct astar_node *path_out;
 };
 
 void routesrv(void) {
@@ -29,7 +29,7 @@ void routesrv_start(void) {
 }
 
 int routesrv_plan(const struct track_node *start, const struct track_node *end,
-		struct astar_node (*path_out)[ASTAR_MAX_PATH]) {
+		struct astar_node *path_out) {
 	static int route_tid = -1;
 	if (route_tid < 0) route_tid = whois("route");
 	struct route_request req = (struct route_request) {

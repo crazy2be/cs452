@@ -13,7 +13,7 @@ struct conductor_params {
 	int train_id;
 };
 
-static int get_route(int train_id, struct astar_node (*path)[ASTAR_MAX_PATH]) {
+static int get_route(int train_id, struct astar_node *path_out) {
 	// in our idle state, we wait for a command telling us a new destination
 	int len;
 	do {
@@ -26,7 +26,7 @@ static int get_route(int train_id, struct astar_node (*path)[ASTAR_MAX_PATH]) {
 		struct train_state state;
 		trains_query_spatials(train_id, &state);
 
-		len = routesrv_plan(state.position.edge->src, destination, path);
+		len = routesrv_plan(state.position.edge->src, destination, path_out);
 		printf("We're routing from %s to %s, found a path of length %d" EOL,
 				state.position.edge->src->name, destination->name, len);
 	} while (len <= 0);
@@ -144,7 +144,7 @@ static struct position find_stopping_point(int train_id, struct astar_node (*pat
 static void run_conductor(int train_id) {
 	for (;;) {
 		struct astar_node path[ASTAR_MAX_PATH];
-		int path_len = get_route(train_id, &path);
+		int path_len = get_route(train_id, path);
 
 		ASSERT(path_len > 0);
 
