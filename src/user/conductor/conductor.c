@@ -152,8 +152,7 @@ static void handle_switch_timeout(int switch_num, enum sw_direction dir) {
 }
 
 static void handle_poi(struct conductor_state *state, int time) {
-	int eta = trains_query_arrival_time(state->train_id, state->poi.displacement);
-	int awake_at = time + eta;
+	int delay = trains_query_arrival_time(state->train_id, state->poi.displacement);
 
 	struct conductor_req req;
 
@@ -162,6 +161,7 @@ static void handle_poi(struct conductor_state *state, int time) {
 		req.type = CND_STOP_TIMEOUT;
 		break;
 	case SWITCH:
+		delay = MAX(delay - 20, 0);
 		req.type = CND_SWITCH_TIMEOUT;
 		req.u.switch_timeout.switch_num = state->poi.u.switch_info.num;
 		req.u.switch_timeout.dir = state->poi.u.switch_info.dir;
@@ -171,6 +171,7 @@ static void handle_poi(struct conductor_state *state, int time) {
 		break;
 	}
 
+	int awake_at = time + delay;
 	delay_async(awake_at, &req, sizeof(req), -1);
 
 	state->poi = get_next_poi(state->path, state->path_len, &state->poi_index, state->poi.type, state->stopping_point);
