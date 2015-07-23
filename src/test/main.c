@@ -363,6 +363,8 @@ void destroy_init(void) {
 	stop_servers();
 }
 int main(int argc, char *argv[]) {
+	extern void tracksrv_tests_init(void);
+	boot(tracksrv_tests_init, PRIORITY_MIN, 0);
 	boot(init_task, PRIORITY_MIN, 0);
 	boot(message_suite, PRIORITY_MIN, 0);
 	boot(io_suite, PRIORITY_MIN, 0);

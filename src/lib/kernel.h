@@ -57,6 +57,8 @@ int tid(void);
 #define MyParentTid parent_tid
 int parent_tid(void);
 
+// TODO: These priorities should probably be reinvestigated. I doubt they are
+// optimal, or even correct.
 #define PRIORITY_CLOCKSRV_NOTIFIER        PRIORITY_MAX
 #define PRIORITY_CLOCKSRV                 LOWER(PRIORITY_MAX, 1)
 #define PRIORITY_CLOCKSRV_COURIER         LOWER(PRIORITY_MAX, 1)
@@ -66,6 +68,7 @@ int parent_tid(void);
 #define PRIORITY_BUFFER_COURIER           LOWER(PRIORITY_MAX, 4)
 #define PRIORITY_HEARTBEAT_DEBUG          LOWER(PRIORITY_MAX, 4)
 
+#define PRIORITY_TRACKSRV                 HIGHER(PRIORITY_MIN, 7)
 #define PRIORITY_SENSORSRV                HIGHER(PRIORITY_MIN, 6)
 #define PRIORITY_COMMANDSRV               HIGHER(PRIORITY_MIN, 5)
 #define PRIORITY_TRAIN_ALERT_SRV          HIGHER(PRIORITY_MIN, 3)
