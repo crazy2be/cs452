@@ -6,6 +6,7 @@
 #include "../displaysrv.h"
 #include "../sys.h"
 #include "../conductor.h"
+#include "../buffer.h"
 
 // constants derived from fitting a curve to velocity data collected via a camera
 // we multiply these constants by 2^20 since our fixed point notation uses 20 bits right of the decimal place
@@ -147,7 +148,7 @@ static struct internal_train_state* allocate_train_state(struct trainsrv_state *
 	//int train_scaling_factor = 0;
 	initialize_train_velocity_table(train_state, train_id);
 
-	conductor(train_id);
+	train_state->conductor_tid = conductor(train_id);
 
 	return train_state;
 }
@@ -298,6 +299,15 @@ static void update_train_velocity_estimate(const struct trainsrv_state *state, s
 	*velocity_entry = ((divisor - alpha) * *velocity_entry + alpha * actual_velocity) / divisor;
 }
 
+static void notify_conductor_of_sensor(const struct internal_train_state *train_state,
+		int sensor, int ticks) {
+	struct conductor_req req;
+	req.type = CND_SENSOR;
+	req.u.sensor.sensor_num = sensor;
+	req.u.sensor.time = ticks;
+	send_async(train_state->conductor_tid, &req, sizeof(req));
+}
+
 static void update_train_position_from_sensor(const struct trainsrv_state *state,
         struct internal_train_state *train_state,
         int sensor, int ticks) {
@@ -376,6 +386,7 @@ static void sensor_cb(int sensor, void *ctx) {
 	}
 
 	update_train_position_from_sensor(context->state, train_m, sensor, context->time);
+	notify_conductor_of_sensor(train, sensor, context->time);
 }
 
 void update_sensors(struct trainsrv_state *state, struct sensor_state sens) {

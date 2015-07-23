@@ -9,7 +9,7 @@
 struct queued_async_request {
 	int tid;
 	unsigned buf_len;
-	unsigned buf_tick_offset;
+	int buf_tick_offset;
 	unsigned char buf[ASYNC_MSG_BUFSZ];
 };
 
@@ -29,7 +29,7 @@ struct clockserver_request {
 
 	// only used for async requests
 	unsigned buf_len;
-	unsigned buf_tick_offset;
+	int buf_tick_offset;
 	unsigned char buf[ASYNC_MSG_BUFSZ];
 };
 
@@ -87,8 +87,10 @@ void clockserver(void) {
 			while (!async_req_min_heap_empty(&async_delayed) && async_req_min_heap_top_key(&async_delayed) <= num_ticks) {
 				struct queued_async_request qreq = async_req_min_heap_pop(&async_delayed);
 				int courier_tid = create(LOWER(PRIORITY_MAX, 1), courier);
-				int *tick_p = (int*)(qreq.buf + qreq.buf_tick_offset);
-				*tick_p = num_ticks;
+				if (qreq.buf_tick_offset >= 0) {
+					int *tick_p = (int*)(qreq.buf + qreq.buf_tick_offset);
+					*tick_p = num_ticks;
+				}
 				send(courier_tid, &qreq, sizeof(qreq), NULL, 0);
 			}
 			break;
@@ -152,7 +154,7 @@ int delay_until(int ticks) {
 	});
 }
 
-void delay_async(int ticks, void *msg, unsigned msg_len, unsigned msg_tick_offset) {
+void delay_async(int ticks, void *msg, unsigned msg_len, int msg_tick_offset) {
 	struct clockserver_request req;
 	ASSERT(msg_len <= sizeof(req.buf));
 

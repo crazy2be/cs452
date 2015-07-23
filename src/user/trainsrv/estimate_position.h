@@ -55,6 +55,8 @@ struct internal_train_state {
 
 	// amount estimate was off by the last time we hit a sensor
 	int measurement_error;
+
+	int conductor_tid;
 };
 
 // catch-all struct to avoid static memory allocation for a user space task

@@ -14,4 +14,5 @@ int delay_until(int ticks);
 // sends a message back to the send, instead of replying
 // does not block
 // example use: delay_async(50, &msg, sizeof(msg), offsetof(msg.ticks))
-void delay_async(int ticks, void *msg, unsigned msglen, unsigned msg_tick_offset);
+// if msg_tick_offset >= 0, the time at which the message was fired is written to the message
+void delay_async(int ticks, void *msg, unsigned msglen, int msg_tick_offset);
