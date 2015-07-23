@@ -91,7 +91,7 @@ static void delay_task(void) {
 	send(tid, &req, sizeof(req), NULL, 0);
 }
 static void enqueue_delay(int amount) {
-	int tid = create(PRIORITY_MAX, delay_task); // TODO: What priority?
+	int tid = create(PRIORITY_CALIBRATE_DELAY, delay_task); // TODO: What priority?
 	printf("Delaying for %d"EOL, amount);
 	send(tid, &amount, sizeof(amount), NULL, 0);
 }
@@ -352,8 +352,8 @@ void run_acc_calibration(void) {
 
 
 void calibratesrv(void) {
-	/* int tid = create(HIGHER(PRIORITY_MIN, 1), start_calibrate); */
-	int tid = create(HIGHER(PRIORITY_MIN, 1), run_acc_calibration);
+	/* int tid = create(PRIORITY_CALIBRATE, start_calibrate); */
+	int tid = create(PRIORITY_CALIBRATE, run_acc_calibration);
 	signal_send(tid);
 }
 void calibrate_send_sensors(int calibratesrv, struct sensor_state *st) {

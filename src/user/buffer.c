@@ -21,7 +21,7 @@ static void courier(void) {
 
 void send_async(int tid, void *msg, unsigned msglen) {
 	// same priority as nameserver
-	int courier_tid = create(LOWER(PRIORITY_MAX, 4), courier);
+	int courier_tid = create(PRIORITY_BUFFER_COURIER, courier);
 	struct courier_params params = { tid, msglen };
 	send(courier_tid, &params, sizeof(params), NULL, 0);
 	send(courier_tid, msg, msglen, NULL, 0);

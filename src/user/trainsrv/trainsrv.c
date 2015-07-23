@@ -182,7 +182,7 @@ static void trains_server(void) {
 }
 
 void trains_start(void) {
-	create(HIGHER(PRIORITY_MIN, 2), trains_server);
+	create(PRIORITY_TRAINSRV, trains_server);
 }
 
 static int trains_tid(void) {

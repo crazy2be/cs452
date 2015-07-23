@@ -24,7 +24,7 @@ void routesrv(void) {
 }
 
 void routesrv_start(void) {
-	int tid = create(HIGHER(PRIORITY_MIN, 0), routesrv);
+	int tid = create(PRIORITY_ROUTESRV, routesrv);
 	signal_send(tid);
 }
 

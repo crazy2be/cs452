@@ -2,10 +2,10 @@
 #include <kernel.h>
 
 void start_servers(void) {
-	create(LOWER(PRIORITY_MAX, 4), nameserver);
-	ioserver(LOWER(PRIORITY_MAX, 3), COM1);
-	ioserver(LOWER(PRIORITY_MAX, 3), COM2);
-	create(LOWER(PRIORITY_MAX, 1), clockserver);
+	create(PRIORITY_NAMESRV, nameserver);
+	ioserver(COM1);
+	ioserver(COM2);
+	create(PRIORITY_CLOCKSRV, clockserver);
 }
 
 void stop_servers(void) {
