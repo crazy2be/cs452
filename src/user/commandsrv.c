@@ -469,13 +469,12 @@ static void process_command(char *cmd, int displaysrv) {
 		char conductor_name[CONDUCTOR_NAME_LEN];
 		conductor_get_name(train, &conductor_name);
 
-		char feedback[80];
-		snprintf(feedback, sizeof(feedback), "Waiting for conductor to pick up route from %s...", node->name);
-		displaysrv_console_feedback(displaysrv, feedback);
-
 		int tid = whois(conductor_name);
-		delay(100);
-		send(tid, &node, sizeof(node), NULL, 0);
+		struct conductor_req req;
+		req.type = CND_DEST;
+		req.u.dest.dest = node;
+
+		send(tid, &req, sizeof(req), NULL, 0);
 		return;
 	}
 	default:
