@@ -28,7 +28,7 @@ static void reverse_task(void) {
 	trains_set_speed(info.train, info.speed);
 }
 void start_reverse(int train, int speed) {
-	int tid = create(HIGHER(PRIORITY_MIN, 2), reverse_task);
+	int tid = create(PRIORITY_TRAINSRV_DELAYED_REVERSE, reverse_task);
 	struct reverse_info info = (struct reverse_info) {
 		.train = train,
 		 .speed = speed,

@@ -535,7 +535,7 @@ void ptid(void) {
 void displaysrv_start(void) {
 	register_as(DISPLAYSRV_NAME);
 	ptid();
-	create(HIGHER(PRIORITY_MIN, 2), clock_update_task);
+	create(PRIORITY_DISPLAYSRV_CLOCK_UPDATE, clock_update_task);
 	signal_recv();
 
 	initial_draw();
@@ -588,7 +588,7 @@ void displaysrv_start(void) {
 }
 
 void displaysrv(void) {
-	int tid = create(HIGHER(PRIORITY_MIN, 1), displaysrv_start);
+	int tid = create(PRIORITY_DISPLAYSRV, displaysrv_start);
 	// block until displaysrv has registered itself with the nameserver
 	signal_send(tid);
 }

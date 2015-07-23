@@ -63,7 +63,7 @@ void clockserver(void) {
 	async_req_min_heap_init(&async_delayed);
 
 	int num_ticks = 0;
-	create(PRIORITY_MAX, &clocknotifier);
+	create(PRIORITY_CLOCKSRV_NOTIFIER, &clocknotifier);
 
 	for (;;) {
 		int tid, resp;
@@ -86,7 +86,7 @@ void clockserver(void) {
 			}
 			while (!async_req_min_heap_empty(&async_delayed) && async_req_min_heap_top_key(&async_delayed) <= num_ticks) {
 				struct queued_async_request qreq = async_req_min_heap_pop(&async_delayed);
-				int courier_tid = create(LOWER(PRIORITY_MAX, 1), courier);
+				int courier_tid = create(PRIORITY_CLOCKSRV_COURIER, courier);
 				if (qreq.buf_tick_offset >= 0) {
 					int *tick_p = (int*)(qreq.buf + qreq.buf_tick_offset);
 					*tick_p = num_ticks;

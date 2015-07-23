@@ -302,7 +302,7 @@ static void train_alert_server(void) {
 
 void train_alert_start(struct switch_state switches, bool actually_delay) {
 	// one higher than train server
-	int tid = create(HIGHER(PRIORITY_MIN, 3), train_alert_server);
+	int tid = create(PRIORITY_TRAIN_ALERT_SRV, train_alert_server);
 	struct train_alert_params params = { switches, actually_delay };
 	send(tid, &params, sizeof(params), NULL, 0);
 }

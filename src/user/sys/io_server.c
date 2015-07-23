@@ -253,15 +253,15 @@ static void io_server_init(void) {
 	static void (*notifiers[NOTIFIER_COUNT])(void) = { rx_notifier, tx_notifier };
 
 	for (int i = 0; i < NOTIFIER_COUNT; i++) {
-		tid = create(LOWER(PRIORITY_MAX, 2), notifiers[i]);
+		tid = create(PRIORITY_IOSRV_NOTIFIER, notifiers[i]);
 		send(tid, &channel, sizeof(channel), NULL, 0);
 	}
 
 	io_server_run();
 }
 
-void ioserver(const int priority, const int channel) {
-	int tid = create(priority, io_server_init);
+void ioserver(const int channel) {
+	int tid = create(PRIORITY_IOSRV, io_server_init);
 	send(tid, &channel, sizeof(channel), NULL, 0);
 }
 

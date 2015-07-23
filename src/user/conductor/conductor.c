@@ -280,7 +280,7 @@ static void init_conductor(void) {
 
 int conductor(int train_id) {
 	struct conductor_params params = { train_id };
-	int tid = create(PRIORITY_MIN, init_conductor);
+	int tid = create(PRIORITY_CONDUCTOR, init_conductor);
 	send(tid, &params, sizeof(params), NULL, 0);
 	return tid;
 }

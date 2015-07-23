@@ -12,8 +12,6 @@
 #include "track.h"
 #include "conductor.h"
 
-#define COMMANDSRV_PRIORITY HIGHER(PRIORITY_MIN, 5)
-
 static void get_command(char *buf, int buflen, int displaysrv) {
 	int i = 0;
 	static int parsing_esc = 0;
@@ -203,7 +201,7 @@ static void handle_stop(int displaysrv, int train, struct position pos) {
 		return;
 	}
 
-	int tid = create(COMMANDSRV_PRIORITY, stop_task);
+	int tid = create(PRIORITY_COMMANDSRV, stop_task);
 	struct stop_task_params params = { train, stopping_point };
 	send(tid, &params, sizeof(params), NULL, 0);
 }
@@ -295,7 +293,7 @@ static void bisect_task(void) {
 }
 
 static void handle_bisect(int displaysrv, int train) {
-	int tid = create(COMMANDSRV_PRIORITY, bisect_task);
+	int tid = create(PRIORITY_COMMANDSRV, bisect_task);
 	struct bisect_params params = { displaysrv, train };
 	send(tid, &params, sizeof(params), NULL, 0);
 }
@@ -501,6 +499,6 @@ void commandsrv_main(void) {
 }
 
 void commandsrv(void) {
-	int tid = create(COMMANDSRV_PRIORITY, commandsrv_main);
+	int tid = create(PRIORITY_COMMANDSRV, commandsrv_main);
 	signal_send(tid);
 }
