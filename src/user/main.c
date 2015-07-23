@@ -44,8 +44,6 @@ static void heartbeat_start(void) {
 };
 
 void init(void) {
-	// initialize the track
-
 #ifdef TRACKA
 	init_tracka(track);
 #else
@@ -65,34 +63,7 @@ void init(void) {
 #endif
 	sensorsrv();
 
-	/* printf("Hello world" EOL); */
-	/* char buf[] = {0xE2, 0x94, 0x90}; */
-	/* char buf[128]; */
-	/* for (int i = 0; i < 128; i++) { */
-	/* 	buf[i] = 128 + i; */
-	/* } */
-	/* fput_buf(COM2, buf, sizeof(buf)); */
-	/* fput_buf(COM2, buf, sizeof(buf)); */
-	/* fput_buf(COM2, buf, sizeof(buf)); */
-	/* fput_buf(COM2, buf, sizeof(buf)); */
-	/* printf("Hello world" EOL); */
-
-	/* int switches[] = {4, 12}; */
-
-	/* for (int i = 0; i < sizeof(switches) / sizeof(switches[0]); i++) { */
-	/* 	set_switch_state(switches[i], STRAIGHT); */
-	/* 	if (i % 8 == 7) { */
-	/* 		delay(10); */
-	/* 		disable_switch_solenoid(); */
-	/* 	} */
-	/* } */
-	/* delay(10); */
-	/* disable_switch_solenoid(); */
-
-	/* printf("Goodbye, world" EOL); */
-
-	/* delay(100); */
-	/* stop_servers(); */
+	stop_servers();
 }
 
 int main(int argc, char *argv[]) {
