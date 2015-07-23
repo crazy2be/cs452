@@ -8,6 +8,8 @@
  * should be used instead.
  */
 
+#include <util.h>
+
 #ifndef RBUF_SIZE
 #error No buffer size was provided to ring buffer
 #endif

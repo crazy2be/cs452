@@ -1,6 +1,8 @@
 #include "astar.h"
 
 #include <util.h>
+#define MIN_HEAP_PREFIX int
+#define MIN_HEAP_VALUE int
 #include <min_heap.h>
 
 static int h(const struct track_node *start, const struct track_node *end) {
@@ -31,17 +33,17 @@ static int reconstruct_path(const struct track_node *node_parents[TRACK_MAX],
 int astar_find_path(const struct track_node *start, const struct track_node *end,
 					struct astar_node (*path_out)[ASTAR_MAX_PATH]) {
 	memset(path_out, -1, sizeof(*path_out));
-	struct min_heap mh;
-	min_heap_init(&mh);
-	min_heap_push(&mh, 0, TRACK_NODE_INDEX(start));
+	struct int_min_heap mh;
+	int_min_heap_init(&mh);
+	int_min_heap_push(&mh, 0, TRACK_NODE_INDEX(start));
 	int node_g[TRACK_MAX] = {[0 ... TRACK_MAX-1] = 0x7FFFFFFF};
 	int node_f[TRACK_MAX] = {[0 ... TRACK_MAX-1] = 0x7FFFFFFF};
 	node_g[TRACK_NODE_INDEX(start)] = 0;
 	node_f[TRACK_NODE_INDEX(start)] = 0;
 	const struct track_node *node_parents[TRACK_MAX] = {};
 
-	while (!min_heap_empty(&mh)) {
-		int min_i = min_heap_pop(&mh);
+	while (!int_min_heap_empty(&mh)) {
+		int min_i = int_min_heap_pop(&mh);
 		const struct track_node *q = &track[min_i];
 		for (int i = 0; i < 2; i++) {
 			const struct track_node *suc = q->edge[i].dest;
@@ -55,7 +57,7 @@ int astar_find_path(const struct track_node *start, const struct track_node *end
 			if (suc == end) {
 				return reconstruct_path(node_parents, suc, path_out);
 			}
-			min_heap_push(&mh, suc_f, TRACK_NODE_INDEX(suc));
+			int_min_heap_push(&mh, suc_f, TRACK_NODE_INDEX(suc));
 		}
 	}
 	return -1;
