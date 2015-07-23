@@ -62,8 +62,6 @@ void init(void) {
 	heartbeat_start();
 #endif
 	sensorsrv();
-
-	stop_servers();
 }
 
 int main(int argc, char *argv[]) {
