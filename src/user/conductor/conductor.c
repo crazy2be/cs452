@@ -129,7 +129,7 @@ static struct point_of_interest get_next_poi(struct astar_node *path, int path_l
 		poi = stopping_point;
 		context->stopped = true;
 	} else {
-		context->poi_index = index;
+		context->poi_index = index + 1;
 	}
 
 	ASSERT(poi.type != NONE || !poi_context_finished(*context, path_len));
