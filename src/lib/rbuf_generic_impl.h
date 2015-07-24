@@ -5,9 +5,7 @@
 // the kernel to panic
 #include "../kernel/kassert.h"
 
-#define assert_consistent(rbuf) \
-	KASSERT(rbuf->l >= 0 && rbuf->l < RBUF_SIZE); \
-	KASSERT(rbuf->i >= 0 && rbuf->i < RBUF_SIZE);
+#define assert_consistent(rbuf) KASSERT(RBUF_CONSISTENT(rbuf))
 
 void RBUF_INIT(RBUF_T *rbuf) {
 	rbuf->i = 0;

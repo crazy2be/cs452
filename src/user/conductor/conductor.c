@@ -93,6 +93,8 @@ static inline bool poi_context_finished(struct poi_context pc, int path_len) {
 static struct point_of_interest get_next_poi(struct astar_node *path, int path_len,
 		struct poi_context *context, int stopping_distance, int velocity) {
 
+	printf("Called POI" EOL);
+
 	int index;
 	const struct track_node *node = NULL;
 	struct point_of_interest poi;
@@ -217,9 +219,9 @@ static void handle_set_destination(const struct track_node *dest, struct conduct
 	printf("\e[s\e[14;90HWe're routing from %s to %s, found a path of length %d, first poi is for sensor %d + %d ticks\e[u",
 			train_state.position.edge->src->name, dest->name, state->path_len, state->poi.sensor_num, state->poi.delay);
 
-	while (state->poi.sensor_num == -1 ||
-			(state->path[0].node->type == NODE_SENSOR && state->poi.sensor_num == state->path[0].node->num)) {
-		ASSERT(state->poi.type != NONE);
+	while (state->poi.type != NONE &&
+			(state->poi.sensor_num == -1 ||
+			(state->path[0].node->type == NODE_SENSOR && state->poi.sensor_num == state->path[0].node->num))) {
 		ASSERT(state->poi.type != STOPPING_POINT);
 		handle_switch_timeout(state->poi.u.switch_info.num, state->poi.u.switch_info.dir);
 		state->poi = get_next_poi(state->path, state->path_len, &state->poi_context, stopping_distance, velocity);
@@ -255,19 +257,13 @@ static void handle_sensor_hit(int sensor_num, int time, struct conductor_state *
 		return;
 	} else if (sensor_num == state->poi.sensor_num) {
 		printf("\e[s\e[16;90HApproaching poi at sensor %s\e[u", repr);
-		handle_poi(state, time);
 		struct train_state train_state;
 		trains_query_spatials(state->train_id, &train_state);
 		int stopping_distance = trains_get_stopping_distance(state->train_id);
-		if (!poi_context_finished(state->poi_context, state->path_len)) {
-			do {
-				state->poi = get_next_poi(state->path, state->path_len, &state->poi_context,
-						stopping_distance, train_state.velocity);
-				if (state->poi.type == NONE || state->poi.sensor_num != sensor_num) break;
-				handle_poi(state, time);
-			} while (!poi_context_finished(state->poi_context, state->path_len));
-		} else {
-			state->poi.type = NONE;
+		while (state->poi.type != NONE && state->poi.sensor_num == sensor_num) {
+			handle_poi(state, time);
+			state->poi = get_next_poi(state->path, state->path_len, &state->poi_context,
+					stopping_distance, train_state.velocity);
 		}
 	} else {
 		printf("\e[s\e[16;90HOn track at sensor %s\e[u", repr);
