@@ -65,6 +65,47 @@ static void test_actual_velocity(void) {
 
 int get_estimated_distance_travelled(struct internal_train_state *train_state, int now);
 
+static void test_estimated_distance_travelled(void) {
+	int train_id = 27;
+	int velocity = 5000;
+	int stopping_dist = 700;
+
+	struct internal_train_state train;
+	train.train_id = train_id;
+
+	sensor_historical_init(&train.sensor_history);
+	train.reversed = 0;
+
+	speed_historical_init(&train.speed_history);
+	speed_historical_set(&train.speed_history, 8, 0);
+
+	train.est_velocities[0] = 0;
+	train.est_stopping_distances[0] = 0;
+	for (int i = 1; i < sizeof(train.est_velocities) / sizeof(train.est_velocities[0]); i++) {
+		train.est_velocities[i] = velocity;
+		train.est_stopping_distances[i] = stopping_dist;
+	}
+
+	train.last_known_position = (struct position){ &track[44].edge[0], 0 }; // C13
+	train.last_known_time = 100;
+	train.mm_to_next_sensor = 1000;
+
+	speed_historical_set(&train.speed_history, 14, 0);
+	speed_historical_set(&train.speed_history, 0, 100);
+
+	// NOTE: we leave a bunch of state uninitialized, since it shouldn't be used for this
+	// test.
+
+	int dist;
+    dist = get_estimated_distance_travelled(&train, 100);
+	ASSERT(dist == 0);
+	for (int d = 100; d < 600; d += 20) {
+		dist = get_estimated_distance_travelled(&train, d);
+		/* printf("%d mm past after %d ticks" EOL, dist, d); */
+	}
+	/* printf("Estimated distance travelled test done" EOL); */
+}
+
 static struct position random_position(void) {
 	for (;;) {
 		const struct track_node *start = &track[rand() % TRACK_MAX];
@@ -292,6 +333,7 @@ void track_tests(void) {
 	init_tracka(track);
 	test_next_sensor();
 	test_actual_velocity();
+	/* test_estimated_distance_travelled(); */
 	test_travel_forwards();
 	test_calculate_stopping_position();
 }

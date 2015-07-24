@@ -56,7 +56,7 @@ int get_estimated_distance_travelled(struct internal_train_state *train_state, i
 		int index = train_speed_index(train_state, 2);
 		int velocity = train_state->est_velocities[index];
 		int stopping_distance = train_state->est_stopping_distances[index];
-		int time_stopped = speed_historical_get_kvp_by_index(&train_state->speed_history, 2).time;
+		int time_stopped = speed_historical_get_kvp_by_index(&train_state->speed_history, 1).time;
 
 		// we should have reanchored when stopping
 		ASSERT(train_state->last_known_time >= time_stopped);
@@ -80,6 +80,9 @@ int get_estimated_distance_travelled(struct internal_train_state *train_state, i
 		// integrate for delta_t time after the start of the integral
 		int delta_t = now - MAX(train_state->last_known_time, time_stopped);
 		long long integral_end = MIN(integral_start + delta_t * scale.x_scale, stopping_time_coef);
+
+		/* printf("integrating from %d to %d, last known at %d, stopped at %d, now %d, delta_t %d" EOL, */
+		/* 		(int) integral_start, (int) integral_end, train_state->last_known_time, time_stopped, now, delta_t); */
 
 		long long integral = integrate_polynomial(integral_start, integral_end,
 			deceleration_model_coefs, deceleration_model_arity);
