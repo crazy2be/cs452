@@ -72,7 +72,10 @@ int astar_find_path(const struct track_node *start, const struct track_node *end
 }
 
 void astar_print_path(struct astar_node *path, int l) {
-	ASSERT(l >= 0);
+	if (l < 0) {
+		printf("[No path]"EOL);
+		return;
+	}
 	if (l == 0) {
 		printf("[Empty path]"EOL);
 		return;

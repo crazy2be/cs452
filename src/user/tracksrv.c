@@ -64,8 +64,10 @@ static void reserve_forwards(int tid, int *desired, const struct track_node *sta
 }
 static int reserve_path(int tid, struct astar_node *path,
 						int len, int stopping_distance) {
+	ASSERT(len >= 0);
 	for (int i = 0; i < len; i++) {
-		ASSERT(idx(path[i].node) >= 0 && idx(path[i].node) < TRACK_MAX);
+		ASSERTF(idx(path[i].node) >= 0 && idx(path[i].node) < TRACK_MAX,
+			"%d %d", idx(path[i].node), len);
 	}
 	int total_path_length = 0;
 	for (int i = 0; i < len - 1; i++) {
