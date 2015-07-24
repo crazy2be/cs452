@@ -158,13 +158,13 @@ static void trains_server(void) {
 		}
 		case GET_STOPPING_DISTANCE: {
 			struct internal_train_state *ts = get_train_state(&state, req.train_number);
-			int distance = ts->est_stopping_distances[train_speed_index(ts)];
+			int distance = ts->est_stopping_distances[train_speed_index(ts, 1)];
 			reply(tid, &distance, sizeof(distance));
 			break;
 		}
 		case SET_STOPPING_DISTANCE: {
 			struct internal_train_state *ts = get_train_state(&state, req.train_number);
-			ts->est_stopping_distances[train_speed_index(ts)] = req.stopping_distance;
+			ts->est_stopping_distances[train_speed_index(ts, 1)] = req.stopping_distance;
 			reply(tid, NULL, 0);
 			break;
 		}

@@ -7,6 +7,7 @@
 #include "../sys.h"
 #include "../conductor.h"
 #include "../buffer.h"
+#include "../polymath.h"
 
 // constants derived from fitting a curve to velocity data collected via a camera
 // we multiply these constants by 2^20 since our fixed point notation uses 20 bits right of the decimal place
@@ -16,9 +17,14 @@ const long long stopping_time_coef = 4701115LL;
 const unsigned acceleration_model_arity = sizeof(acceleration_model_coefs) / sizeof(acceleration_model_coefs[0]);
 const long long acceleration_model_coefs[6] = { 0, 0, 119318217, -10618953, 32740221, -3109563 };
 
-int train_speed_index(const struct internal_train_state *train_state) {
-	int cur_speed = speed_historical_get_current(&train_state->speed_history);
-	int prev_speed = train_state->speed_history.len >= 2 ? speed_historical_get_by_index(&train_state->speed_history, 2) : 0;
+int train_speed_index(const struct internal_train_state *train_state, int offset) {
+	int cur_speed = speed_historical_get_by_index(&train_state->speed_history, offset);
+	int prev_speed;
+	if (train_state->speed_history.len >= offset + 1) {
+		prev_speed = speed_historical_get_by_index(&train_state->speed_history, offset + 1);
+	} else {
+		prev_speed = 0;
+	}
 	int i = cur_speed*2 + (prev_speed >= cur_speed) - 1;
 	ASSERTF(0 <= i && i < sizeof(train_state->est_velocities) / sizeof(train_state->est_velocities[0]),
 			"i = %d, cur_speed = %d, prev_speed = %d", i, cur_speed, prev_speed);
@@ -26,7 +32,7 @@ int train_speed_index(const struct internal_train_state *train_state) {
 }
 
 int train_velocity_from_state(const struct internal_train_state *train_state) {
-	return train_state->est_velocities[train_speed_index(train_state)];
+	return train_state->est_velocities[train_speed_index(train_state, 1)];
 }
 
 int train_eta_from_state(const struct trainsrv_state *state, const struct internal_train_state *train_state, int distance) {
@@ -41,10 +47,49 @@ int train_eta(struct trainsrv_state *state, int train_id, int distance) {
 }
 
 int get_estimated_distance_travelled(struct internal_train_state *train_state, int now) {
-	const int delta_t = now - train_state->last_known_time;
-	const int velocity = train_velocity_from_state(train_state);
 
-	const int distance = delta_t * velocity / 1000;
+	int distance;
+	if (train_state->speed_history.len >= 2 && speed_historical_get_current(&train_state->speed_history) == 0) {
+		// we stopped - for the period of time that we were slowing down, project our distance forwards
+
+		// get the time we stopped at, and the velocity we used to be going at
+		int index = train_speed_index(train_state, 2);
+		int velocity = train_state->est_velocities[index];
+		int stopping_distance = train_state->est_stopping_distances[index];
+		int time_stopped = speed_historical_get_kvp_by_index(&train_state->speed_history, 2).time;
+
+		// we should have reanchored when stopping
+		ASSERT(train_state->last_known_time >= time_stopped);
+
+		// scale the deceleration curve so that it fits this particular set of velocities / times
+		long long velocity_fp = ((long long) velocity) * fixed_point_scale / 1000LL;
+		struct curve_scaling scale = scale_deceleration_curve(velocity_fp,
+				stopping_distance * fixed_point_scale, deceleration_model_coefs,
+				acceleration_model_arity, stopping_time_coef);
+
+		// prepare the interal boundaries
+		// we want to integrate over the velocity curve to get the distance travelled.
+		// if we've passed a sensor since we started stopping, only integrate the part of the curve
+		// after the time we hit the sensor
+		long long integral_start = MAX((train_state->last_known_time - time_stopped) * scale.x_scale, 0);
+
+		// clip off excess time, if a lot of time passed between us stopping, and reanchoring
+		// this shouldn't really happen.
+		integral_start = MIN(integral_start, stopping_time_coef);
+
+		// integrate for delta_t time after the start of the integral
+		int delta_t = now - MAX(train_state->last_known_time, time_stopped);
+		long long integral_end = MIN(integral_start + delta_t * scale.x_scale, stopping_time_coef);
+
+		long long integral = integrate_polynomial(integral_start, integral_end,
+			deceleration_model_coefs, deceleration_model_arity);
+		distance = scale.y_scale * integral / scale.x_scale / fixed_point_scale;
+
+	} else {
+		const int velocity = train_velocity_from_state(train_state);
+		const int delta_t = now - train_state->last_known_time;
+		distance = delta_t * velocity / 1000;
+	}
 
 	const int overshoot_tolerance = 50;
 	const int maximum_acceptable_distance = train_state->mm_to_next_sensor + overshoot_tolerance;
@@ -295,7 +340,7 @@ static void update_train_velocity_estimate(const struct trainsrv_state *state, s
 	const int alpha = 100;
 	const int divisor = 1000;
 
-	int *velocity_entry = &train_state->est_velocities[train_speed_index(train_state)];
+	int *velocity_entry = &train_state->est_velocities[train_speed_index(train_state, 1)];
 	*velocity_entry = ((divisor - alpha) * *velocity_entry + alpha * actual_velocity) / divisor;
 }
 

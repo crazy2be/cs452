@@ -63,6 +63,8 @@ static void test_actual_velocity(void) {
 	ASSERT(-2 == calculate_actual_velocity(&ts, d12, &switches, 100));
 }
 
+int get_estimated_distance_travelled(struct internal_train_state *train_state, int now);
+
 static struct position random_position(void) {
 	for (;;) {
 		const struct track_node *start = &track[rand() % TRACK_MAX];

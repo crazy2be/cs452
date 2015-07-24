@@ -82,7 +82,7 @@ struct trainsrv_state {
 	int sensors_are_known;
 };
 
-int train_speed_index(const struct internal_train_state *train_state);
+int train_speed_index(const struct internal_train_state *train_state, int offset);
 int train_velocity_from_state(const struct internal_train_state *train_state);
 int train_velocity(struct trainsrv_state *state, int train);
 struct position get_estimated_train_position(struct trainsrv_state *state,
