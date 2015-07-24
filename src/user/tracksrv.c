@@ -17,6 +17,7 @@ struct tracksrv_request {
 			struct astar_node *path;
 			int len;
 			int stopping_distance;
+			int tid;
 		} reserve_path;
 	} u;
 };
@@ -116,7 +117,7 @@ void tracksrv(void) {
 		recv(&tid, &req, sizeof(req));
 		switch (req.type) {
 		case TRK_RESERVE: {
-			int res = reserve_path(tid,
+			int res = reserve_path(req.u.reserve_path.tid,
 								   req.u.reserve_path.path,
 								   req.u.reserve_path.len,
 								   req.u.reserve_path.stopping_distance);
@@ -155,14 +156,19 @@ void tracksrv_set_train_id(int train_id) {
 	send(tracksrv_tid(), &req, sizeof(req), NULL, 0);
 }
 
-int tracksrv_reserve_path(struct astar_node *path, int len, int stopping_distance) {
+int tracksrv_reserve_path_test(struct astar_node *path, int len, int stopping_distance, int tid) {
 	struct tracksrv_request req = (struct tracksrv_request) {
 		.type = TRK_RESERVE,
 		.u.reserve_path.path = path,
 		.u.reserve_path.len = len,
 		.u.reserve_path.stopping_distance = stopping_distance,
+		.u.reserve_path.tid = tid,
 	};
 	int resp = -1;
 	send(tracksrv_tid(), &req, sizeof(req), &resp, sizeof(resp));
 	return resp;
+}
+
+int tracksrv_reserve_path(struct astar_node *path, int len, int stopping_distance) {
+	return tracksrv_reserve_path_test(path, len, stopping_distance, tid());
 }

@@ -18,5 +18,8 @@ void tracksrv_set_train_id(int train_id);
 // error code < 0 will be returned.
 int tracksrv_reserve_path(struct astar_node *path, int len, int stopping_distance);
 
+// For tests only
+int tracksrv_reserve_path_test(struct astar_node *path, int len, int stopping_distance, int tid);
+
 // For debugging only
 void tracksrv_get_reservation_table();
