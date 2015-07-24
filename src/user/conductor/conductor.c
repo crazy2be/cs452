@@ -30,7 +30,7 @@ enum poi_type { NONE, SWITCH, STOPPING_POINT };
 // work)
 struct point_of_interest {
 	int sensor_num;
-	int displacement;
+	int delay;
 
 	enum poi_type type;
 	union {
@@ -41,26 +41,36 @@ struct point_of_interest {
 	} u;
 };
 
-static void poi_from_node(struct astar_node *path, int index, struct point_of_interest *poi) {
-	const struct track_node *node_ahead = path[index].node;
-	int displacement = 0;
-	while (--index >= 0) {
-		const struct track_node *node = path[index].node;
-		displacement += edge_between(node, node_ahead)->dist;
-		if (node->type == NODE_SENSOR) {
-			poi->displacement = displacement;
-			poi->sensor_num = node->num;
-			return;
+static void poi_from_node(struct astar_node *path, int index, struct point_of_interest *poi,
+		int velocity, int lead_dist, int lead_time) {
+	ASSERT(velocity > 0);
+	int displacement = lead_dist + velocity * lead_time / 1000;
+	while (index >= 0) {
+		const struct track_node *node;
+		int sensor_gap = 0;
+		while (--index >= 0) {
+			node = path[index].node;
+			sensor_gap += edge_between(node, path[index + 1].node)->dist;
+			if (node->type == NODE_SENSOR) break;
 		}
-		node_ahead = node;
+
+		if (index < 0) {
+			break;
+		} else if (sensor_gap >= displacement) {
+			poi->sensor_num = node->num;
+			poi->delay = (sensor_gap - displacement) * 1000 / velocity;
+			ASSERT(poi->delay >= 0);
+			return;
+		} else {
+			displacement -= sensor_gap;
+		}
 	}
 	poi->sensor_num = -1;
-	poi->displacement = 0;
 }
 
 static struct point_of_interest get_next_poi(struct astar_node *path,
 		int path_len, int *index_p, enum poi_type last_type,
-		const struct position stopping_point) {
+		const struct position stopping_point, int velocity) {
 
 	int index;
 	const struct track_node *node = NULL;
@@ -69,15 +79,16 @@ static struct point_of_interest get_next_poi(struct astar_node *path,
 	for (index = *index_p; index < path_len; index++) {
 		node = path[index].node;
 		if (last_type < SWITCH && node->type == NODE_BRANCH && index > 0 && index < path_len - 1) {
+			poi_from_node(path, index, &poi, velocity, 0, 40);
+
 			poi.type = SWITCH;
 			poi.u.switch_info.num = node->num;
 			poi.u.switch_info.dir = (node->edge[0].dest == path[index + 1].node) ? STRAIGHT : CURVED;
 
-			poi_from_node(path, index, &poi);
 			break;
 		} else if (last_type < STOPPING_POINT && node == stopping_point.edge->src) {
-			poi_from_node(path, index, &poi);
-			poi.displacement += stopping_point.displacement;
+			poi_from_node(path, index, &poi, velocity, stopping_point.displacement, 0);
+
 			poi.type = STOPPING_POINT;
 
 			break;
@@ -93,9 +104,10 @@ static struct point_of_interest get_next_poi(struct astar_node *path,
 
 	char repr[4];
 	sensor_repr(poi.sensor_num, repr);
-	printf("\e[s\e[15;90HNext POI is sensor %s + %d mm, real target is %s\e[u", repr, poi.displacement, (node != NULL) ? node->name : "(NULL)");
+	printf("\e[s\e[15;90HNext POI is sensor %s + %d ticks, real target is %s\e[u", repr, poi.delay, (node != NULL) ? node->name : "(NULL)");
 	return poi;
 }
+
 
 static struct position find_stopping_point(int train_id, struct astar_node *path, int path_len) {
 	struct switch_state switches;
@@ -158,8 +170,6 @@ static void handle_switch_timeout(int switch_num, enum sw_direction dir) {
 }
 
 static void handle_poi(struct conductor_state *state, int time) {
-	int delay = trains_query_arrival_time(state->train_id, state->poi.displacement);
-
 	struct conductor_req req;
 
 	switch (state->poi.type) {
@@ -167,7 +177,6 @@ static void handle_poi(struct conductor_state *state, int time) {
 		req.type = CND_STOP_TIMEOUT;
 		break;
 	case SWITCH:
-		delay = MAX(delay - 20, 0);
 		req.type = CND_SWITCH_TIMEOUT;
 		req.u.switch_timeout.switch_num = state->poi.u.switch_info.num;
 		req.u.switch_timeout.dir = state->poi.u.switch_info.dir;
@@ -177,13 +186,16 @@ static void handle_poi(struct conductor_state *state, int time) {
 		break;
 	}
 
+	int delay = state->poi.delay;
 	char repr[4];
 	sensor_repr(state->poi.sensor_num, repr);
-	printf("\e[s\e[17;90HWe're approaching POI %s, delay_async for %d, %d mm away\e[u",
-			repr, delay, state->poi.displacement);
+	printf("\e[s\e[17;90HWe're approaching POI %s, delay_async for %d\e[u",
+			repr, delay);
 
 	delay_async(delay, &req, sizeof(req), -1);
 }
+
+const int max_speed = 8;
 
 static void handle_set_destination(const struct track_node *dest, struct conductor_state *state) {
 	struct train_state train_state;
@@ -193,13 +205,21 @@ static void handle_set_destination(const struct track_node *dest, struct conduct
 	state->path_index = state->poi_index = 1; // drop the first node in the route, since we've already rolled over it
 
 	if (state->path_len < 0) return; // no such path
-	state->poi = get_next_poi(state->path, state->path_len, &state->poi_index, NONE, state->stopping_point);
-	while (state->poi.sensor_num == -1) {
-		ASSERT(state->poi.type == SWITCH);
+	// NOTE: this is a bit of a hack - we really just want to check for poi whose sensor we've already passed over
+	// we don't know the train's speed yet, so we just fudge it with a value that shouldn't matter anyway
+	// (the velocity is only used if we need to delay a long time ahead of the switch, but if we're at a dead
+	// stop, we don't)
+	trains_set_speed(state->train_id, max_speed);
+	trains_query_spatials(state->train_id, &train_state);
+
+	int velocity = train_state.velocity;
+	state->poi = get_next_poi(state->path, state->path_len, &state->poi_index, NONE, state->stopping_point, velocity);
+	while (state->poi.sensor_num == -1 ||
+			(state->path[0].node->type == NODE_SENSOR && state->poi.sensor_num == state->path[0].node->num)) {
+		ASSERT(state->poi.type == SWITCH); // if it's a stop, we're doing short moves, which we don't support
 		handle_switch_timeout(state->poi.u.switch_info.num, state->poi.u.switch_info.dir);
-		state->poi = get_next_poi(state->path, state->path_len, &state->poi_index, state->poi.type, state->stopping_point);
+		state->poi = get_next_poi(state->path, state->path_len, &state->poi_index, state->poi.type, state->stopping_point, velocity);
 	}
-	trains_set_speed(state->train_id, 8);
 	state->stopping_point = find_stopping_point(state->train_id, state->path, state->path_len);
 	char pos_repr[20];
 	position_repr(state->stopping_point, pos_repr);
@@ -235,9 +255,11 @@ static void handle_sensor_hit(int sensor_num, int time, struct conductor_state *
 	if (sensor_num == state->poi.sensor_num) {
 		printf("\e[s\e[16;90HApproaching poi at sensor %s\e[u", repr);
 		if (state->poi_index < state->path_len) {
+			struct train_state train_state;
+			trains_query_spatials(state->train_id, &train_state);
 			do {
 				handle_poi(state, time);
-				state->poi = get_next_poi(state->path, state->path_len, &state->poi_index, state->poi.type, state->stopping_point);
+				state->poi = get_next_poi(state->path, state->path_len, &state->poi_index, state->poi.type, state->stopping_point, train_state.velocity);
 			} while (state->poi.sensor_num == sensor_num && state->poi_index < state->path_len);
 		} else {
 			state->poi.type = NONE;
