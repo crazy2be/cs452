@@ -27,7 +27,7 @@ static int reservation_table[TRACK_MAX] = {};
 static int edge_num_btwn(const struct track_node *a, const struct track_node *b) {
 	if (a->edge[0].dest == b) return 0;
 	else if (a->edge[1].dest == b) return 1;
-	else {WTF("Discontinuous path!"); return -1;}
+	else {WTF("Discontinuous path! %p %p %p %p", a, b, a->edge[0].dest, a->edge[1].dest); return -1;}
 }
 #define edge_btwn(a, b) (&a->edge[edge_num_btwn(a, b)])
 static void reserve_forwards(int tid, int *desired, const struct track_node *start, int dist) {
@@ -48,12 +48,13 @@ static void reserve_forwards(int tid, int *desired, const struct track_node *sta
 							 rem_dist - edge_btwn(cur, cur->edge[0].dest)->dist);
 			reserve_forwards(tid, desired, cur->edge[1].dest,
 							 rem_dist - edge_btwn(cur, cur->edge[1].dest)->dist);
+			return;
 		} else {
 			if (prev) {
 				rem_dist -= edge_btwn(prev, cur)->dist;
 			}
-			cur = cur->edge[0].dest;
 			prev = cur;
+			cur = cur->edge[0].dest;
 		}
 	}
 }
@@ -148,6 +149,7 @@ int tracksrv_tid(void) {
 
 void tracksrv_set_train_id(int train_id) {
 	struct tracksrv_request req = (struct tracksrv_request) {
+		.type = TRK_SET_ID,
 		.u.set_train_id.train_id = train_id,
 	};
 	send(tracksrv_tid(), &req, sizeof(req), NULL, 0);
@@ -155,6 +157,7 @@ void tracksrv_set_train_id(int train_id) {
 
 int tracksrv_reserve_path(struct astar_node *path, int len, int stopping_distance) {
 	struct tracksrv_request req = (struct tracksrv_request) {
+		.type = TRK_RESERVE,
 		.u.reserve_path.path = path,
 		.u.reserve_path.len = len,
 		.u.reserve_path.stopping_distance = stopping_distance,
