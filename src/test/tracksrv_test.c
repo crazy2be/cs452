@@ -6,7 +6,8 @@
 
 void tracksrv_test_basic(void) {
 	struct astar_node path[ASTAR_MAX_PATH];
-	int l = astar_find_path(&track[0], &track[1], path);
+	bool blocked_table[TRACK_MAX] = {};
+	int l = astar_find_path(&track[0], &track[1], path, blocked_table);
 	astar_print_path(path, l);
 	int n = tracksrv_reserve_path_test(path, l, 1000, 1);
 	printf("Reserved %d segments of track"EOL, n);

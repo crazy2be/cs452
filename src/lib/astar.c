@@ -35,7 +35,7 @@ static int reconstruct_path(int *node_parents, int start, struct astar_node *pat
 }
 
 int astar_find_path(const struct track_node *start, const struct track_node *end,
-					struct astar_node *path_out) {
+					struct astar_node *path_out, bool *blocked_table) {
 	memset(path_out, 0, sizeof(*path_out)*ASTAR_MAX_PATH);
 	struct int_min_heap mh;
 	int_min_heap_init(&mh);
@@ -55,6 +55,7 @@ int astar_find_path(const struct track_node *start, const struct track_node *end
 			const struct track_node *suc = q->edge[i].dest;
 			if (!suc) continue;
 			ASSERT(idx(suc) >= 0 && idx(suc) < TRACK_MAX);
+			if (blocked_table[idx(suc)]) continue;
 			int suc_g = node_g[idx(q)] + q->edge[i].dist;
 			int suc_f = suc_g + h(suc, end);
 			if (node_f[idx(suc)] < suc_f) continue;

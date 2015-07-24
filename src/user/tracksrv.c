@@ -19,6 +19,9 @@ struct tracksrv_request {
 			int stopping_distance;
 			int tid;
 		} reserve_path;
+		struct {
+			int *table_out;
+		} table;
 	} u;
 };
 
@@ -131,6 +134,11 @@ void tracksrv(void) {
 			reply(tid, NULL, 0);
 			break;
 		}
+		case TRK_TABLE: {
+			memcpy(req.u.table.table_out, reservation_table, sizeof(reservation_table));
+			reply(tid, NULL, 0);
+			break;
+		}
 		default:
 			WTF();
 		}
@@ -171,4 +179,12 @@ int tracksrv_reserve_path_test(struct astar_node *path, int len, int stopping_di
 
 int tracksrv_reserve_path(struct astar_node *path, int len, int stopping_distance) {
 	return tracksrv_reserve_path_test(path, len, stopping_distance, tid());
+}
+
+void tracksrv_get_reservation_table(int *table_out) {
+	struct tracksrv_request req = (struct tracksrv_request) {
+		.type = TRK_TABLE,
+		.u.table.table_out = table_out,
+	};
+	send(tracksrv_tid(), &req, sizeof(req), NULL, 0);
 }
