@@ -72,7 +72,9 @@ static void poi_from_node(struct astar_node *path, int index, struct point_of_in
 }
 
 static bool poi_lte(struct point_of_interest *a, struct point_of_interest *b) {
-	if (a->path_index == b->path_index) {
+	if (a->type == NONE || b->type == NONE) { // reject NONE if there's an alternative
+		return b->type == NONE;
+	} else if (a->path_index == b->path_index) {
 		return a->delay < b->delay;
 	} else {
 		return a->path_index < b->path_index;
@@ -101,7 +103,7 @@ static struct point_of_interest get_next_poi(struct astar_node *path, int path_l
 
 	// initialize to poi for stopping point
 
-	if (context->stopped) {
+	if (!context->stopped) {
 		poi_from_node(path, path_len - 1, &stopping_point, velocity, stopping_distance, 0);
 		stopping_point.type = STOPPING_POINT;
 	}
@@ -121,7 +123,7 @@ static struct point_of_interest get_next_poi(struct astar_node *path, int path_l
 	}
 
 	// chose which poi we want to use, and then set the state so we won't repeat it
-	if (poi.type == NONE || poi_lte(&stopping_point, &poi)) {
+	if (poi_lte(&stopping_point, &poi)) {
 		poi = stopping_point;
 		context->stopped = true;
 	} else {
