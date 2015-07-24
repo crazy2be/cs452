@@ -93,8 +93,6 @@ static inline bool poi_context_finished(struct poi_context pc, int path_len) {
 static struct point_of_interest get_next_poi(struct astar_node *path, int path_len,
 		struct poi_context *context, int stopping_distance, int velocity) {
 
-	printf("Called POI" EOL);
-
 	int index;
 	const struct track_node *node = NULL;
 	struct point_of_interest poi;
@@ -125,14 +123,18 @@ static struct point_of_interest get_next_poi(struct astar_node *path, int path_l
 	}
 
 	// chose which poi we want to use, and then set the state so we won't repeat it
-	if (poi_lte(&stopping_point, &poi)) {
+	if (stopping_point.type == NONE && poi.type == NONE) {
+		context->stopped = true;
+		context->poi_index = path_len;
+		return poi;
+	} else if (poi_lte(&stopping_point, &poi)) {
+		ASSERT(!context->stopped);
 		poi = stopping_point;
 		context->stopped = true;
 	} else {
 		context->poi_index = index + 1;
 	}
 
-	ASSERT(poi.type != NONE || !poi_context_finished(*context, path_len));
 	char repr[4];
 	sensor_repr(poi.sensor_num, repr);
 	printf("\e[s\e[15;90HNext POI is sensor %s + %d ticks, real target is %s\e[u", repr, poi.delay, (node != NULL) ? node->name : "(NULL)");
@@ -148,6 +150,11 @@ struct conductor_state {
 
 	struct point_of_interest poi;
 	struct poi_context poi_context;
+
+	// this is a hack so we can find poi that happen after we start stopping the train
+	// we assume that the train is still travelling at the old speed, which doesn't matter
+	// too much, since it just means the switches will get flipped a bit early
+	int last_velocity;
 };
 
 // these are event driven
@@ -212,6 +219,8 @@ static void handle_set_destination(const struct track_node *dest, struct conduct
 	trains_query_spatials(state->train_id, &train_state);
 
 	int velocity = train_state.velocity;
+	state->last_velocity = velocity;
+
 	int stopping_distance = trains_get_stopping_distance(state->train_id);
 	state->poi = get_next_poi(state->path, state->path_len, &state->poi_context, stopping_distance, velocity);
 	ASSERT(state->poi.type != NONE);
@@ -257,13 +266,21 @@ static void handle_sensor_hit(int sensor_num, int time, struct conductor_state *
 		return;
 	} else if (sensor_num == state->poi.sensor_num) {
 		printf("\e[s\e[16;90HApproaching poi at sensor %s\e[u", repr);
+
 		struct train_state train_state;
 		trains_query_spatials(state->train_id, &train_state);
+		int velocity = train_state.velocity;
+		if (velocity == 0) {
+			velocity = state->last_velocity;
+		} else {
+			state->last_velocity = velocity;
+		}
+
 		int stopping_distance = trains_get_stopping_distance(state->train_id);
 		while (state->poi.type != NONE && state->poi.sensor_num == sensor_num) {
 			handle_poi(state, time);
 			state->poi = get_next_poi(state->path, state->path_len, &state->poi_context,
-					stopping_distance, train_state.velocity);
+					stopping_distance, velocity);
 		}
 	} else {
 		printf("\e[s\e[16;90HOn track at sensor %s\e[u", repr);
