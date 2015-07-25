@@ -106,63 +106,6 @@ def main():
 		trains.append(train)
 		return train
 
-	def astar(start, end):
-		import math
-		def min_heap_push(mh, key, val):
-			mh.append({'key': key, 'val': val})
-
-		def min_heap_pop(mh):
-			min_f = 1000000000.
-			min_i = -1
-			for (i, e) in enumerate(mh):
-				if e['key'] < min_f:
-					min_f = e['key']
-					min_i = i
-			min_val = mh[min_i]['val']
-			del mh[min_i]
-			return min_val
-
-		def h(start, end):
-			dx, dy = start.coord_x - end.coord_x, start.coord_y - end.coord_y
-			return math.sqrt(dx*dx + dy*dy)
-
-		def reconstruct_path(node_parents, current):
-			path = []
-			while current is not None:
-				if current in path:
-					raise Exception("cycle at %d" % current.i)
-				path.insert(0, current)
-				current = node_parents[current.i]
-			return path
-
-		mh = []
-		min_heap_push(mh, 0., start.i)
-		node_g = [100000000.]*len(cur_track)
-		node_f = [100000000.]*len(cur_track)
-		node_g[start.i], node_f[start.i] = 0., 0.
-		node_parents = [None]*len(cur_track)
-
-		while len(mh) > 0:
-			min_i = min_heap_pop(mh)
-			q = cur_track[min_i]
-			for suc_edge in q.edge:
-				suc = suc_edge.dest
-				if suc is None:
-					continue
-				suc_g = node_g[q.i] + suc_edge.dist
-				suc_f = suc_g + h(suc, end)
-				if node_f[suc.i] < suc_f:
-					continue
-				node_g[suc.i], node_f[suc.i] = suc_g, suc_f
-				node_parents[suc.i] = q
-				if suc == end:
-					return reconstruct_path(node_parents, suc)
-				min_heap_push(mh, suc_f, suc.i)
-		return None
-
-	print cur_track[0].name, cur_track[1].name
-	print map(lambda n: n and n.name, astar(cur_track[0], cur_track[1]))
-
 	trains = [Train(12)]
 	startup_time = time.time()
 	last_sensor_poll = [0]
@@ -188,3 +131,61 @@ def main():
 	Gtk.main()
 
 main()
+
+# Prototype a* junk. You can just ignore this...
+def astar(start, end):
+	import math
+	def min_heap_push(mh, key, val):
+		mh.append({'key': key, 'val': val})
+
+	def min_heap_pop(mh):
+		min_f = 1000000000.
+		min_i = -1
+		for (i, e) in enumerate(mh):
+			if e['key'] < min_f:
+				min_f = e['key']
+				min_i = i
+		min_val = mh[min_i]['val']
+		del mh[min_i]
+		return min_val
+
+	def h(start, end):
+		dx, dy = start.coord_x - end.coord_x, start.coord_y - end.coord_y
+		return math.sqrt(dx*dx + dy*dy)
+
+	def reconstruct_path(node_parents, current):
+		path = []
+		while current is not None:
+			if current in path:
+				raise Exception("cycle at %d" % current.i)
+			path.insert(0, current)
+			current = node_parents[current.i]
+		return path
+
+	mh = []
+	min_heap_push(mh, 0., start.i)
+	node_g = [100000000.]*len(cur_track)
+	node_f = [100000000.]*len(cur_track)
+	node_g[start.i], node_f[start.i] = 0., 0.
+	node_parents = [None]*len(cur_track)
+
+	while len(mh) > 0:
+		min_i = min_heap_pop(mh)
+		q = cur_track[min_i]
+		for suc_edge in q.edge:
+			suc = suc_edge.dest
+			if suc is None:
+				continue
+			suc_g = node_g[q.i] + suc_edge.dist
+			suc_f = suc_g + h(suc, end)
+			if node_f[suc.i] < suc_f:
+				continue
+			node_g[suc.i], node_f[suc.i] = suc_g, suc_f
+			node_parents[suc.i] = q
+			if suc == end:
+				return reconstruct_path(node_parents, suc)
+			min_heap_push(mh, suc_f, suc.i)
+	return None
+
+#print cur_track[0].name, cur_track[1].name
+#print map(lambda n: n and n.name, astar(cur_track[0], cur_track[1]))
