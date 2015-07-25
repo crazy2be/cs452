@@ -236,9 +236,11 @@ static void initial_draw(void) {
 }
 
 #define MAX_FEEDBACK_LEN 80
+#define MAX_LOG_LEN 60
+#define MAX_LOG_LINES 36
 enum displaysrv_req_type { UPDATE_SWITCH, UPDATE_SENSOR, UPDATE_TIME, CONSOLE_INPUT,
-                           CONSOLE_BACKSPACE, CONSOLE_CLEAR, CONSOLE_FEEDBACK, QUIT
-                         };
+                           CONSOLE_BACKSPACE, CONSOLE_CLEAR, CONSOLE_FEEDBACK,
+						   CONSOLE_LOG, QUIT};
 
 struct display_train_state {
 	int train_id;
@@ -270,6 +272,9 @@ struct displaysrv_req {
 			int active_trains;
 			struct display_train_state active_train_states[MAX_ACTIVE_TRAINS];
 		} time;
+		struct {
+			char msg[MAX_LOG_LEN + 2]; // +2 for ellipsis
+		} log;
 	} data;
 };
 
@@ -551,6 +556,10 @@ void displaysrv(void) {
 	struct displaysrv_req req;
 	int tid;
 
+	int log_line = 0;
+
+	printf("\e[s\e[1;82H------LOG:-----\e[u");
+
 	for (;;) {
 		receive(&tid, &req, sizeof(req));
 		// requests are fire and forget, and provide no feedback
@@ -578,6 +587,12 @@ void displaysrv(void) {
 			break;
 		case CONSOLE_FEEDBACK:
 			console_feedback(req.data.feedback.feedback);
+			break;
+		case CONSOLE_LOG:
+			printf("\e[s");
+			printf("\e[%d;%dH%s", log_line + 2, 82, req.data.log.msg);
+			log_line = (log_line + 1) % MAX_LOG_LINES;
+			printf("\e[u");
 			break;
 		case QUIT:
 			return;
@@ -637,6 +652,30 @@ void displaysrv_update_switch(int displaysrv, struct switch_state *state) {
 	struct displaysrv_req req;
 	req.data.sw.state = *state;
 	displaysrv_send(displaysrv, UPDATE_SWITCH, &req);
+}
+
+void displaysrv_log(const char *fmt, ...) {
+	va_list va;
+	va_start(va,fmt);
+	struct displaysrv_req req;
+	char *buf = req.data.log.msg;
+	int n = snprintf(buf, MAX_LOG_LEN, "%6d ", time());
+	n += vsnprintf(buf + n, MAX_LOG_LEN - n, fmt, va);
+	if (n > MAX_LOG_LEN) {
+		// ... character http://www.fileformat.info/info/unicode/char/2026/index.htm
+		buf[MAX_LOG_LEN - 2] = 0b11100010;
+		buf[MAX_LOG_LEN - 1] = 0b10000000;
+		buf[MAX_LOG_LEN + 0] = 0b10100110;
+		buf[MAX_LOG_LEN + 1] = '\0';
+	} else {
+		for (int i = n; i < MAX_LOG_LEN; i++) {
+			buf[i] = ' ';
+		}
+		buf[MAX_LOG_LEN] = '\0';
+	}
+	int tid = whois(DISPLAYSRV_NAME);
+	displaysrv_send(tid, CONSOLE_LOG, &req);
+	va_end(va);
 }
 
 void displaysrv_quit(int displaysrv) {

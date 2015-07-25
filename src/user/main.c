@@ -32,10 +32,10 @@ static void heartbeat(void) {
 		task_status(display_tid, &display_info);
 		task_status(command_tid, &command_info);
 
-		printf("\e[s\e[5;90H%d"
-			   "\e[6;90Htrainsrv status = %d"
-			   "\e[7;90Hdisplaysrv status = %d"
-			   "\e[8;90Hcommandsrv status = %d"
+		printf("\e[s\e[1;100H%d"
+			   "\e[1;110Hts %d"
+			   "\e[1;120Hds %d"
+			   "\e[1;130Hcs %d"
 			   "\e[u", count++, trains_info.state, display_info.state, command_info.state);
 	}
 }
