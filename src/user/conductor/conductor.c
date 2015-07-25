@@ -106,7 +106,7 @@ struct point_of_interest get_next_poi(struct astar_node *path, int path_len,
 	}
 
 	if (switch_poi.type == NONE) {
-		ASSERT(index == path_len);
+		ASSERT(index >= path_len - 1);
 		context->poi_index = path_len;
 	}
 
