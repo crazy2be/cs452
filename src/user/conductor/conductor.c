@@ -180,7 +180,7 @@ static void handle_set_destination(const struct track_node *dest, struct conduct
 	struct train_state train_state;
 	trains_query_spatials(state->train_id, &train_state);
 
-	state->path_len = routesrv_plan(train_state.position.edge->dest, dest, state->path);
+	state->path_len = routesrv_plan(train_state.position.edge->src, dest, state->path);
 	state->path_index = 0; // drop the first node in the route, since we've already rolled over it
 	state->poi_context.poi_index = 0;
 	state->poi_context.stopped = false;
