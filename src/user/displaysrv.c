@@ -136,6 +136,16 @@ static const struct sensor_display sensor_display_info[] = {
 	{ 28, 20 },
 };
 
+struct node_display {
+	const char *name;
+	const char *name_r;
+	unsigned char x, y;
+};
+
+static const struct node_display node_display_info[] = {
+	{"C3", "C4", 10, 3}
+};
+
 #define HLINE "\xe2\x94\x80"
 #define VLINE "\xe2\x94\x82"
 #define ULCORNER "\xe2\x94\x8c"
@@ -238,9 +248,10 @@ static void initial_draw(void) {
 #define MAX_FEEDBACK_LEN 80
 #define MAX_LOG_LEN 60
 #define MAX_LOG_LINES 36
-enum displaysrv_req_type { UPDATE_SWITCH, UPDATE_SENSOR, UPDATE_TIME, CONSOLE_INPUT,
-                           CONSOLE_BACKSPACE, CONSOLE_CLEAR, CONSOLE_FEEDBACK,
-						   CONSOLE_LOG, QUIT};
+enum displaysrv_req_type {
+	UPDATE_SWITCH, UPDATE_SENSOR, UPDATE_TIME, UPDATE_TRACK,
+	CONSOLE_INPUT, CONSOLE_BACKSPACE, CONSOLE_CLEAR, CONSOLE_FEEDBACK,
+	CONSOLE_LOG, QUIT};
 
 struct display_train_state {
 	int train_id;
@@ -260,6 +271,9 @@ struct displaysrv_req {
 			struct sensor_state state;
 			unsigned avg_delay;
 		} sensor;
+		struct {
+			int *table;
+		} track;
 		struct {
 			char input;
 		} console_input;
@@ -485,6 +499,12 @@ static void update_train_states(int active_trains, struct display_train_state *a
 	puts("\e[u");
 }
 
+static void update_track(int *track_table) {
+	puts("\e[s");
+
+	puts("\e[u");
+}
+
 static void console_input(char c) {
 	putc(c);
 }
@@ -576,6 +596,9 @@ void displaysrv(void) {
 			update_time(req.data.time.millis);
 			update_train_states(req.data.time.active_trains, req.data.time.active_train_states, &old_switches);
 			break;
+		case UPDATE_TRACK:
+			update_track(req.data.track.table);
+			break;
 		case CONSOLE_INPUT:
 			console_input(req.data.console_input.input);
 			break;
@@ -652,6 +675,12 @@ void displaysrv_update_switch(int displaysrv, struct switch_state *state) {
 	struct displaysrv_req req;
 	req.data.sw.state = *state;
 	displaysrv_send(displaysrv, UPDATE_SWITCH, &req);
+}
+
+void displaysrv_update_track_table(int displaysrv, int *track_table) {
+	struct displaysrv_req req;
+	req.data.track.table = track_table;
+	displaysrv_send(displaysrv, UPDATE_TRACK, &req);
 }
 
 void displaysrv_log(const char *fmt, ...) {

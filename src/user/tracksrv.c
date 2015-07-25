@@ -5,6 +5,7 @@
 #include "request_type.h"
 #include "sys.h"
 #include "signal.h"
+#include "displaysrv.h"
 #define idx(node) ({ \
 	int ix = TRACK_NODE_INDEX(node); \
 	ASSERTF(ix >= 0 && ix < TRACK_MAX, "%d", ix); \
@@ -182,7 +183,11 @@ int tracksrv_reserve_path_test(struct astar_node *path, int len, int stopping_di
 }
 
 int tracksrv_reserve_path(struct astar_node *path, int len, int stopping_distance) {
-	return tracksrv_reserve_path_test(path, len, stopping_distance, tid());
+	int n = tracksrv_reserve_path_test(path, len, stopping_distance, tid());
+	int track_table[TRACK_MAX];
+	tracksrv_get_reservation_table(track_table);
+	displaysrv_update_track_table(whois("displaysrv"), track_table);
+	return n;
 }
 
 void tracksrv_get_reservation_table(int *table_out) {
