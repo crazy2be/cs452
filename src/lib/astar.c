@@ -7,6 +7,8 @@
 
 #define idx TRACK_NODE_INDEX
 
+// h is a heurestic for the cost of getting from one node on the graph to another
+// h must be admissible - ie: it can never overestimate the cost of a path
 static int h(const struct track_node *start, const struct track_node *end) {
 	int dx = start->coord_x - end->coord_x, dy = start->coord_y - end->coord_y;
 	return sqrti(dx*dx + dy*dy);
@@ -51,11 +53,22 @@ int astar_find_path(const struct track_node *start, const struct track_node *end
 		ASSERT(min_i >= 0 && min_i < TRACK_MAX);
 		const struct track_node *q = &track[min_i];
 		ASSERT(idx(q) == min_i);
-		for (int i = 0; i < 2; i++) {
-			const struct track_node *suc = q->edge[i].dest;
+		int edges = q->type == NODE_MERGE ? 3 : 2;
+		for (int i = 0; i < edges; i++) {
+			int cost = 0;
+			const struct track_edge *edge;
+			if (i > 0 && q->type == NODE_MERGE) {
+				edge = &q->reverse->edge[i - 1];
+				cost = 1000; // fudge factor penalty for reverses
+			} else {
+				edge = &q->edge[i];
+			}
+			const struct track_node *suc = edge->dest;
+			cost += edge->dist;
+
 			if (!suc) continue;
 			ASSERT(idx(suc) >= 0 && idx(suc) < TRACK_MAX);
-			int suc_g = node_g[idx(q)] + q->edge[i].dist;
+			int suc_g = node_g[idx(q)] + cost;
 			int suc_f = suc_g + h(suc, end);
 			if (node_f[idx(suc)] < suc_f) continue;
 			node_g[idx(suc)] = suc_g;

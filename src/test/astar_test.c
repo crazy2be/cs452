@@ -9,4 +9,11 @@ void astar_tests(void) {
 		int l = astar_find_path(&track[0], &track[1], path);
 		astar_print_path(path, l);
 	}
+
+	// b1 -> b13
+	{
+		struct astar_node path[ASTAR_MAX_PATH];
+		int l = astar_find_path(&track[16], &track[28], path);
+		astar_print_path(path, l);
+	}
 }
