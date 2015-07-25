@@ -68,7 +68,7 @@ class Conn():
 
 	def _parse_cmd(self, s):
 		if len(s) < 1: return (s, None, None, None)
-		print "Got command %s"% s.encode('hex')
+		#print "Got command %s"% s.encode('hex')
 		f = ord(s[0])
 		if 0 <= f <= 14:
 			if len(s) < 2: return (s, None, None, None)
@@ -86,10 +86,10 @@ class Conn():
 			print "Switch command not supported %d %d" % (f, ord(s[1]))
 			return (s[2:], 'switch', ord(s[1]), f - 0x21)
 		elif f == 0x85:
-			print "Got sensor poll"
+			#print "Got sensor poll"
 			self.tn.write(self.sensors)
 			self.sensors = bytearray(10)
-			return self._parse_cmd(s[1:])
+			return (s[1:], 'sensor', None, None)
 		raise Exception("Unknown command %s" % s.encode('hex'))
 
 def connect():

@@ -2,6 +2,7 @@
 import itertools
 import numpy as np
 import os
+import time
 from numpy.random import randint
 import numpy.random
 from graph_tool import Graph
@@ -161,16 +162,23 @@ def main():
 	print map(lambda n: n and n.name, astar(cur_track[0], cur_track[1]))
 
 	trains = [Train(12)]
+	startup_time = time.time()
+	last_sensor_poll = [0]
 	def my_draw(da, cr):
 		(typ, a1, a2) = conn.next_cmd()
 		if typ is None: pass
 		elif typ == 'set_speed': find_train(a1).set_speed(a2)
 		elif typ == 'toggle_reverse': find_train(a1).toggle_reverse()
 		elif typ == 'switch': set_switch(a1, a2)
+		elif typ == 'sensor': last_sensor_poll[0] = round((time.time() - startup_time) * 1000)/1000
 		else: print "Ignoring command %s" % typ
 		for train in trains:
 			train.update()
 			train.draw(n_pos, da, cr)
+			cr.move_to(10., 10.)
+			cr.set_source_rgb(0., 0., 0.)
+			cr.set_font_size(12)
+			cr.show_text("Last polled at %.3f" % last_sensor_poll[0])
 		da.queue_draw()
 
 	win.connect("delete_event", destroy_callback)
