@@ -29,9 +29,10 @@ def main():
 		v = g.vertex(node.i)
 		n_title[v] = node.name
 		if node.typ == track.NODE_EXIT:
-			n_pos[v] = (node.reverse.coord_x, node.reverse.coord_y)
+			# Invert points to match our ASCII display.
+			n_pos[v] = (-node.reverse.coord_x, -node.reverse.coord_y)
 		else:
-			n_pos[v] = (node.coord_x, node.coord_y)
+			n_pos[v] = (-node.coord_x, -node.coord_y)
 		e = g.add_edge(g.vertex(node.i), g.vertex(node.reverse.i))
 		if node.typ == track.NODE_SENSOR: n_color[v] = "blue"
 		elif node.typ == track.NODE_BRANCH: n_color[v] = "orange"
