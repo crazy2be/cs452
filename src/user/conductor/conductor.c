@@ -9,6 +9,7 @@
 #include "../sys.h"
 #include "../routesrv.h"
 #include "conductor_internal.h"
+#include "../displaysrv.h"
 
 static const struct track_edge *edge_between(const struct track_node *prev, const struct track_node *cur) {
 	ASSERT(prev->type != NODE_EXIT); // this wouldn't make any sense
@@ -24,6 +25,8 @@ static const struct track_edge *edge_between(const struct track_node *prev, cons
 
 static void poi_from_node(struct astar_node *path, int index, struct point_of_interest *poi,
 		int lead_dist) {
+
+	poi->original = path[index].node;
 
 	int displacement = lead_dist;
 	while (index >= 0) {
@@ -130,41 +133,45 @@ struct point_of_interest get_next_poi(struct astar_node *path, int path_len,
 	if (chosen_poi->sensor_num > 0) {
 		sensor_repr(chosen_poi->sensor_num, repr);
 	}
-	printf("\e[s\e[15;90HNext POI is sensor %s + %d mm / %d ticks\e[u", repr, chosen_poi->displacement, chosen_poi->delay);
+	logf("Next POI is sensor %s + %d mm / %d ticks, type = %d, target = %s",
+			repr, chosen_poi->displacement, chosen_poi->delay, chosen_poi->type,
+			chosen_poi->original->name);
 
 	return *chosen_poi;
 }
 
 // these are event driven
 static void handle_stop_timeout(struct conductor_state *state) {
-	printf("\e[s\e[19;90HHandling stop timeout\e[u");
+	logf("Handling stop timeout");
 	trains_set_speed(state->train_id, 0);
 }
 
 static void handle_switch_timeout(int switch_num, enum sw_direction dir) {
-	printf("\e[s\e[18;90HHandling switch timeout\e[u");
+	logf("Handling switch timeout");
 	trains_switch(switch_num, dir);
 }
 
 static void handle_poi(struct conductor_state *state, int time) {
 	struct conductor_req req;
 
+	int offset;
 	switch (state->poi.type) {
 	case STOPPING_POINT:
 		req.type = CND_STOP_TIMEOUT;
-		delay_async(state->poi.delay, &req, sizeof(req), offsetof(struct conductor_req, u.stop_timeout.time));
+		offset = offsetof(struct conductor_req, u.stop_timeout.time);
 		break;
 	case SWITCH:
 		req.type = CND_STOP_TIMEOUT;
 		req.type = CND_SWITCH_TIMEOUT;
 		req.u.switch_timeout.switch_num = state->poi.u.switch_info.num;
 		req.u.switch_timeout.dir = state->poi.u.switch_info.dir;
-		delay_async(state->poi.delay, &req, sizeof(req), offsetof(struct conductor_req, u.switch_timeout.time));
+		offset = offsetof(struct conductor_req, u.switch_timeout.time);
 		break;
 	default:
 		WTF("No such case");
-		return;
 	}
+	logf("For POI of type %d, offset = %d", state->poi.type, offset);
+	delay_async(state->poi.delay, &req, sizeof(req), offset);
 }
 
 const int max_speed = 14;
@@ -193,7 +200,7 @@ static void handle_set_destination(const struct track_node *dest, struct conduct
 	state->poi = get_next_poi(state->path, state->path_len, &state->poi_context, stopping_distance, velocity);
 	ASSERT(state->poi.type != NONE);
 	ASSERT(state->poi.type != STOPPING_POINT);
-	printf("\e[s\e[14;90HWe're routing from %s to %s, found a path of length %d, first poi is for sensor %d + %d ticks\e[u",
+	logf("We're routing from %s to %s, found a path of length %d, first poi is for sensor %d + %d ticks",
 			train_state.position.edge->src->name, dest->name, state->path_len, state->poi.sensor_num, state->poi.delay);
 
 	while (state->poi.type != NONE &&
@@ -204,7 +211,7 @@ static void handle_set_destination(const struct track_node *dest, struct conduct
 		state->poi = get_next_poi(state->path, state->path_len, &state->poi_context, stopping_distance, velocity);
 	}
 
-	printf("\e[s\e[14;90HWe're routing from %s to %s, found a path of length %d\e[u",
+	logf("We're routing from %s to %s, found a path of length %d",
 			train_state.position.edge->src->name, dest->name, state->path_len);
 }
 
@@ -225,9 +232,11 @@ static void set_next_poi(int time, struct conductor_state *state) {
 	if (state->poi.type != NONE) {
 		if (state->poi.sensor_num == last_sensor) {
 			// account for time passed we hit the last sensor
+			logf("We passed this POI already, begin event now");
 			state->poi.delay -= time - state->last_sensor_time;
 			handle_poi(state, time);
 		} else if (state->poi.path_index < state->path_index) {
+			logf("We passed this POI already, begin event now");
 			// fuck - we've passed this already - just kick off the event immediately
 			state->poi.delay = 0;
 			handle_poi(state, time);
@@ -243,7 +252,10 @@ static void handle_sensor_hit(int sensor_num, int time, struct conductor_state *
 	for (i = state->path_index; errors < error_tolerance && i < state->path_len; i++) {
 		const struct track_node *node = state->path[i].node;
 		if (node->type != NODE_SENSOR) continue;
-		else if (node->num == sensor_num) break;
+		char repr[4];
+		sensor_repr(node->num, repr);
+		logf("Checking hit against sensor %s, index = %d", repr, i);
+		if (node->num == sensor_num) break;
 		else errors++;
 	}
 	char repr[4];
@@ -252,21 +264,21 @@ static void handle_sensor_hit(int sensor_num, int time, struct conductor_state *
 		// we've gone of the rails, so to speak
 		state->poi.type = NONE; // go to idle mode
 		trains_set_speed(state->train_id, 0);
-		printf("\e[s\e[16;90HWe've diverged from our desired path at sensor %s\e[u", repr);
+		logf("We've diverged from our desired path at sensor %s", repr);
 		// TODO: later, we should reroute when we error out like this
 		return;
 	}
 
 	if (state->poi.type != NONE && i >= state->poi.path_index) {
-		printf("\e[s\e[16;90HApproaching poi at sensor %s\e[u", repr);
+		logf("Approaching poi at sensor %s", repr);
 		handle_poi(state, time);
 		state->poi.type = NONE;
 		state->last_sensor_time = time;
 	} else {
-		printf("\e[s\e[16;90HOn track at sensor %s\e[u", repr);
+		logf("On track at sensor %s", repr);
 	}
 
-	state->path_index = MAX(state->path_len, i + 1);
+	state->path_index = MIN(state->path_len, i + 1);
 }
 
 static void run_conductor(int train_id) {
@@ -282,26 +294,26 @@ static void run_conductor(int train_id) {
 
 		// if the conductor is idling, discard events other than new dest events
 		if (req.type == CND_SENSOR && state.poi.type == NONE) {
-			printf("\e[s\e[13;90HConductor got %d request, but ignored it\e[u", req.type);
+			logf("Conductor got %d request, but ignored it", req.type);
 			continue;
 		}
 
 		switch (req.type) {
 		case CND_DEST:
-			printf("\e[s\e[13;90HConductor got dest request\e[u");
+			logf("Conductor got dest request");
 			handle_set_destination(req.u.dest.dest, &state);
 			break;
 		case CND_SENSOR:
-			printf("\e[s\e[13;90HConductor got sensor request\e[u");
+			logf("Conductor got sensor request");
 			handle_sensor_hit(req.u.sensor.sensor_num, req.u.sensor.time, &state);
 			break;
 		case CND_SWITCH_TIMEOUT:
-			printf("\e[s\e[13;90HConductor got switch timeout request\e[u");
+			logf("Conductor got switch timeout request");
 			handle_switch_timeout(req.u.switch_timeout.switch_num, req.u.switch_timeout.dir);
 			set_next_poi(req.u.switch_timeout.time, &state);
 			break;
 		case CND_STOP_TIMEOUT:
-			printf("\e[s\e[13;90HConductor got stop timeout request\e[u");
+			logf("Conductor got stop timeout request");
 			handle_stop_timeout(&state);
 			set_next_poi(req.u.stop_timeout.time, &state);
 			break;

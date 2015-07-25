@@ -13,6 +13,7 @@ struct point_of_interest {
 	int sensor_num;
 	int delay;
 
+	const struct track_node *original;
 	int path_index; // internal use only, for ease of comparing poi
 	int displacement; // internal use only, this is cheaper to compute than the delay
 

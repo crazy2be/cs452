@@ -589,10 +589,8 @@ void displaysrv(void) {
 			console_feedback(req.data.feedback.feedback);
 			break;
 		case CONSOLE_LOG:
-			printf("\e[s");
-			printf("\e[%d;%dH%s", log_line + 2, 82, req.data.log.msg);
+			printf("\e[s\e[%d;%dH%s\e[u", log_line + 2, 82, req.data.log.msg);
 			log_line = (log_line + 1) % MAX_LOG_LINES;
-			printf("\e[u");
 			break;
 		case QUIT:
 			return;
