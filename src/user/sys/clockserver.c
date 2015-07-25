@@ -1,6 +1,7 @@
 #include "clockserver.h"
 #include "nameserver.h"
 #include "../request_type.h"
+#include "../displaysrv.h"
 
 #include <kernel.h>
 #include <assert.h>
@@ -76,7 +77,7 @@ void clockserver(void) {
 			// we shouldn't be skipping any ticks
 			// a weaker form of this assertion would be to check that time never goes backwards
 			if (num_ticks + 1 != req.ticks) {
-				printf("num_ticks = %d, req.ticks = %d" EOL, num_ticks, req.ticks);
+				logf("num_ticks = %d, req.ticks = %d" EOL, num_ticks, req.ticks);
 			}
 			//ASSERT(num_ticks + 1 == req.ticks);
 			num_ticks = req.ticks;
@@ -153,7 +154,7 @@ int delay_until(int ticks) {
 		 .ticks = ticks,
 	});
 }
-
+;
 void delay_async(int ticks, void *msg, unsigned msg_len, int msg_tick_offset) {
 	struct clockserver_request req;
 	ASSERT(msg_len <= sizeof(req.buf));
