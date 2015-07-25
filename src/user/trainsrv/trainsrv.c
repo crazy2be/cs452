@@ -133,7 +133,6 @@ static void trains_server(void) {
 			reply(tid, NULL, 0);
 			break;
 		case SET_SPEED:
-			// TODO: What do we do if we are already reversing or something?
 			handle_set_speed(&state, req.train_number, req.speed);
 			reply(tid, NULL, 0);
 			break;
@@ -147,8 +146,6 @@ static void trains_server(void) {
 			break;
 		case SWITCH_SWITCH:
 			handle_switch(&state, req.switch_number, req.direction);
-			// TODO: we need to reanchor the trains here
-			/* displaysrv_update_switch(displaysrv, &switches); */
 			reply(tid, NULL, 0);
 			break;
 		case SWITCH_GET: {
