@@ -243,6 +243,7 @@ enum displaysrv_req_type { UPDATE_SWITCH, UPDATE_SENSOR, UPDATE_TIME, CONSOLE_IN
 struct display_train_state {
 	int train_id;
 	struct train_state state;
+	int est_stopping_distance;
 	int error;
 };
 
@@ -462,7 +463,7 @@ static void update_train_states(int active_trains, struct display_train_state *a
 			const int displacement = active_train_states[i].state.position.displacement;
 			const char *pos_name = active_train_states[i].state.position.edge->src->name;
 			const int velocity = active_train_states[i].state.velocity;
-			const int stopping_distance = trains_get_stopping_distance(train_id);
+			const int stopping_distance = active_train_states[i].state.velocity;
 			const int error = active_train_states[i].error;
 
 			char buf[78];
@@ -523,6 +524,7 @@ static void clock_update_task(void) {
 			const int train_id = active_trains_ids[i];
 			active_train_states[i].train_id = train_id;
 			trains_query_spatials(train_id, &active_train_states[i].state);
+			active_train_states[i].est_stopping_distance = trains_get_stopping_distance(train_id);
 			active_train_states[i].error = trains_query_error(train_id);
 		}
 
