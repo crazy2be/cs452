@@ -15,12 +15,13 @@
 static void get_command(char *buf, int buflen, int displaysrv) {
 	int i = 0;
 	static int parsing_esc = 0;
+	const char DELETE = 127;
 	for (;;) {
 		char c = getc();
 		if (c == '\r') {
 			displaysrv_console_clear(displaysrv);
 			break;
-		} else if (c == '\b') {
+		} else if (c == '\b' || c == DELETE) {
 			if (i > 0) {
 				i--;
 				displaysrv_console_backspace(displaysrv);
