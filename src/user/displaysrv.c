@@ -532,7 +532,7 @@ static void clock_update_task(void) {
 void ptid(void) {
 	printf("Displayserver tid: %d"EOL, tid());
 }
-void displaysrv_start(void) {
+void displaysrv(void) {
 	register_as(DISPLAYSRV_NAME);
 	ptid();
 	create(PRIORITY_DISPLAYSRV_CLOCK_UPDATE, clock_update_task);
@@ -587,8 +587,8 @@ void displaysrv_start(void) {
 	}
 }
 
-void displaysrv(void) {
-	int tid = create(PRIORITY_DISPLAYSRV, displaysrv_start);
+void displaysrv_start(void) {
+	int tid = create(PRIORITY_DISPLAYSRV, displaysrv);
 	// block until displaysrv has registered itself with the nameserver
 	signal_send(tid);
 }

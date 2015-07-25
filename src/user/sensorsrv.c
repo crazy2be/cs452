@@ -54,7 +54,7 @@ static void tc_send_sensor_poll(void) {
 #endif
 }
 
-void start_sensorsrv(void) {
+void sensorsrv(void) {
 	// discard sensor input stuck in the train controller from the last run
 	delay(100);
 	char buf[80];
@@ -108,6 +108,6 @@ void start_sensorsrv(void) {
 	/* printf("%d bytes in the buffer after stop" EOL, fbuflen(COM1)); */
 }
 
-void sensorsrv(void) {
-	create(HIGHER(PRIORITY_MIN, 6), start_sensorsrv);
+void sensorsrv_start(void) {
+	create(PRIORITY_SENSORSRV, sensorsrv);
 }

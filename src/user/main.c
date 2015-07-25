@@ -53,15 +53,15 @@ void init(void) {
 	start_servers();
 
 #if CALIBRATE
-	calibratesrv();
+	calibratesrv_start();
 #else
-	displaysrv();
-	commandsrv();
+	displaysrv_start();
+	commandsrv_start();
 	trains_start();
 	routesrv_start();
 	heartbeat_start();
 #endif
-	sensorsrv();
+	sensorsrv_start();
 }
 
 int main(int argc, char *argv[]) {
