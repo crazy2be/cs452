@@ -512,7 +512,7 @@ static void clock_update_task(void) {
 			// had a chance to start up. We could fix this by properly ordering
 			// our task startups, but this is easier and faster and seems to
 			// work just fine thank you very much.
-			trainsrv = whois("trains");
+			trainsrv = try_whois("trains");
 			continue;
 		}
 
