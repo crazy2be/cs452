@@ -333,7 +333,7 @@ void track_tests(void) {
 	init_tracka(track);
 	test_next_sensor();
 	test_actual_velocity();
-	/* test_estimated_distance_travelled(); */
+	(void)test_estimated_distance_travelled; // Not a real test says Peter
 	test_travel_forwards();
 	test_calculate_stopping_position();
 }
