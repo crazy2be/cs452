@@ -19,10 +19,8 @@ struct conductor_req {
 		struct {
 			int switch_num;
 			enum sw_direction dir;
-			int time;
 		} switch_timeout;
 		struct {
-			int time;
 		} stop_timeout;
 	} u;
 };

@@ -89,7 +89,6 @@ void clockserver(void) {
 				int courier_tid = create(PRIORITY_CLOCKSRV_COURIER, courier);
 				if (qreq.buf_tick_offset >= 0) {
 					int *tick_p = (int*)(qreq.buf + qreq.buf_tick_offset);
-					kprintf("writing to pointer %p" EOL, tick_p);
 					*tick_p = num_ticks;
 				}
 				send(courier_tid, &qreq, sizeof(qreq), NULL, 0);

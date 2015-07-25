@@ -52,6 +52,7 @@ static void poi_from_node(struct astar_node *path, int index, struct point_of_in
 	}
 	poi->sensor_num = -1;
 	poi->displacement = 0;
+	poi->path_index = 0;
 }
 
 static bool poi_lte(struct point_of_interest *a, struct point_of_interest *b) {
@@ -105,6 +106,7 @@ struct point_of_interest get_next_poi(struct astar_node *path, int path_len,
 	}
 
 	if (switch_poi.type == NONE) {
+		ASSERT(index == path_len);
 		context->poi_index = path_len;
 	}
 
@@ -125,17 +127,19 @@ struct point_of_interest get_next_poi(struct astar_node *path, int path_len,
 		context->poi_index = index + 1;
 	}
 
-	// add delay to chosen_poi
-	// TODO: this should account for acceleration, and will get more complex later
-	chosen_poi->delay = chosen_poi->displacement * 1000 / velocity;
+	if (chosen_poi != NULL) {
+		// add delay to chosen_poi
+		// TODO: this should account for acceleration, and will get more complex later
+		chosen_poi->delay = chosen_poi->displacement * 1000 / velocity;
 
-	char repr[4] = "N/A";
-	if (chosen_poi->sensor_num > 0) {
-		sensor_repr(chosen_poi->sensor_num, repr);
+		char repr[4] = "N/A";
+		if (chosen_poi->sensor_num > 0) {
+			sensor_repr(chosen_poi->sensor_num, repr);
+		}
+		logf("Next POI is sensor %s + %d mm / %d ticks, type = %d, target = %s",
+				repr, chosen_poi->displacement, chosen_poi->delay, chosen_poi->type,
+				chosen_poi->original->name);
 	}
-	logf("Next POI is sensor %s + %d mm / %d ticks, type = %d, target = %s",
-			repr, chosen_poi->displacement, chosen_poi->delay, chosen_poi->type,
-			chosen_poi->original->name);
 
 	return *chosen_poi;
 }
@@ -154,24 +158,24 @@ static void handle_switch_timeout(int switch_num, enum sw_direction dir) {
 static void handle_poi(struct conductor_state *state, int time) {
 	struct conductor_req req;
 
-	int offset;
+	/* int offset; */
 	switch (state->poi.type) {
 	case STOPPING_POINT:
 		req.type = CND_STOP_TIMEOUT;
-		offset = offsetof(struct conductor_req, u.stop_timeout.time);
+		/* offset = offsetof(struct conductor_req, u.stop_timeout.time); */
 		break;
 	case SWITCH:
 		req.type = CND_STOP_TIMEOUT;
 		req.type = CND_SWITCH_TIMEOUT;
 		req.u.switch_timeout.switch_num = state->poi.u.switch_info.num;
 		req.u.switch_timeout.dir = state->poi.u.switch_info.dir;
-		offset = offsetof(struct conductor_req, u.switch_timeout.time);
+		/* offset = offsetof(struct conductor_req, u.switch_timeout.time); */
 		break;
 	default:
 		WTF("No such case");
 	}
-	logf("For POI of type %d, offset = %d", state->poi.type, offset);
-	delay_async(state->poi.delay, &req, sizeof(req), offset);
+	logf("For POI of type %d", state->poi.type);
+	delay_async(state->poi.delay, &req, sizeof(req), -1);
 }
 
 const int max_speed = 14;
@@ -267,9 +271,9 @@ static void handle_sensor_hit(int sensor_num, int time, struct conductor_state *
 		logf("We've diverged from our desired path at sensor %s", repr);
 		// TODO: later, we should reroute when we error out like this
 		return;
-	}
-
-	if (state->poi.type != NONE && i >= state->poi.path_index) {
+	} else if (i >= state->path_len) {
+		return;
+	} else if (state->poi.type != NONE && i >= state->poi.path_index) {
 		logf("Approaching poi at sensor %s", repr);
 		handle_poi(state, time);
 		state->poi.type = NONE;
@@ -278,7 +282,7 @@ static void handle_sensor_hit(int sensor_num, int time, struct conductor_state *
 		logf("On track at sensor %s", repr);
 	}
 
-	state->path_index = MIN(state->path_len, i + 1);
+	state->path_index = i + 1;
 }
 
 static void run_conductor(int train_id) {
@@ -310,12 +314,12 @@ static void run_conductor(int train_id) {
 		case CND_SWITCH_TIMEOUT:
 			logf("Conductor got switch timeout request");
 			handle_switch_timeout(req.u.switch_timeout.switch_num, req.u.switch_timeout.dir);
-			set_next_poi(req.u.switch_timeout.time, &state);
+			set_next_poi(time(), &state);
 			break;
 		case CND_STOP_TIMEOUT:
 			logf("Conductor got stop timeout request");
 			handle_stop_timeout(&state);
-			set_next_poi(req.u.stop_timeout.time, &state);
+			set_next_poi(time(), &state);
 			break;
 		default:
 			WTF("Unknown request to conductor");
