@@ -482,7 +482,7 @@ static void update_train_states(int active_trains, struct display_train_state *a
 			const int displacement = active_train_states[i].state.position.displacement;
 			const char *pos_name = active_train_states[i].state.position.edge->src->name;
 			const int velocity = active_train_states[i].state.velocity;
-			const int stopping_distance = active_train_states[i].state.velocity;
+			const int stopping_distance = active_train_states[i].est_stopping_distance;
 			const int error = active_train_states[i].error;
 
 			char buf[78];
