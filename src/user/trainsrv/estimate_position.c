@@ -274,7 +274,6 @@ static void log_position_estimation_error(const struct trainsrv_state *state,
 	// being very near to the tripped sensor when this happens
 	// we will calculate how far away from the sensor we thought we were
 	if (train_state->next_sensor != NULL) {
-		char feedback[80];
 		char sens_name[4];
 		sensor_repr(sensor_node->num, sens_name);
 		ASSERTF(train_state->next_sensor->type == NODE_SENSOR, "sensor node was %x from %x, track = %x", (unsigned) train_state->next_sensor, (unsigned) train_state, (unsigned) track);
@@ -290,9 +289,8 @@ static void log_position_estimation_error(const struct trainsrv_state *state,
 			// I'm not going to fix this for now, since this is just for debugging purposes
 			char exp_sens_name[4];
 			sensor_repr(train_state->next_sensor->num, exp_sens_name);
-			snprintf(feedback, sizeof(feedback), "Train was expected to hit sensor %s, actually hit %s",
+			logf("Train was expected to hit sensor %s, actually hit %s",
 			         exp_sens_name, sens_name);
-			displaysrv_console_feedback(state->displaysrv_tid, feedback);
 		}
 	}
 	struct switch_state switches = switch_historical_get_current(&state->switch_history);
@@ -400,12 +398,10 @@ static void sensor_cb(int sensor, void *ctx) {
 	const struct internal_train_state *train = attr.train;
 	char sensor_pretty[4];
 	sensor_repr(sensor, sensor_pretty);
-	char feedback[80];
 
 	// spurious sensor signal
 	if (train == NULL) {
-		snprintf(feedback, sizeof(feedback), "Ignoring spurious sensor hit %s", sensor_pretty);
-		displaysrv_console_feedback(context->state->displaysrv_tid, feedback);
+		logf("Ignoring spurious sensor hit %s", sensor_pretty);
 		return;
 	}
 
@@ -418,9 +414,7 @@ static void sensor_cb(int sensor, void *ctx) {
 	if (context->train_already_hit[index] & mask) return;
 	context->train_already_hit[index] |= mask;
 
-	snprintf(feedback, sizeof(feedback), "Attributing sensor hit %s to %d", sensor_pretty, train->train_id);
-	displaysrv_console_feedback(context->state->displaysrv_tid, feedback);
-
+	logf("Attributing sensor hit %s to %d", sensor_pretty, train->train_id);
 
 	if (attr.changed_switch != -1) {
 		struct switch_state switches = switch_historical_get_current(&context->state->switch_history);
