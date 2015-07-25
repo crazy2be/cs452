@@ -10,6 +10,7 @@
 #include "routesrv.h"
 #include "calibrate.h"
 #include "track.h"
+#include "tracksrv.h"
 
 static int whois_poll(const char *name) {
 	int tid;
@@ -55,6 +56,7 @@ void init(void) {
 #if CALIBRATE
 	calibratesrv_start();
 #else
+	tracksrv_start();
 	displaysrv_start();
 	commandsrv_start();
 	trains_start();
