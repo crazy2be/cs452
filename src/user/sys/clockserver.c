@@ -77,7 +77,7 @@ void clockserver(void) {
 			// we shouldn't be skipping any ticks
 			// a weaker form of this assertion would be to check that time never goes backwards
 			if (num_ticks + 1 != req.ticks) {
-				logf("num_ticks = %d, req.ticks = %d" EOL, num_ticks, req.ticks);
+				printf("num_ticks = %d, req.ticks = %d", num_ticks, req.ticks);
 			}
 			//ASSERT(num_ticks + 1 == req.ticks);
 			num_ticks = req.ticks;
