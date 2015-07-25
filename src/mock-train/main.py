@@ -69,9 +69,10 @@ def main():
 			self.num = num
 
 		def update(self):
-			e = g.edge(self.edge.src.i, self.edge.dest.i)
 			self.edge_dist += self.speed
-			if self.edge_dist > e_dist[e]:
+			while True:
+				e = g.edge(self.edge.src.i, self.edge.dest.i)
+				if self.edge_dist < e_dist[e]: break
 				if self.edge.dest.typ == track.NODE_SENSOR:
 					conn.set_sensor_tripped(self.edge.dest.num)
 				self.edge = self.edge.dest.edge[self.edge.dest.switch_direction]
