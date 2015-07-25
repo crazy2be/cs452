@@ -12,6 +12,10 @@ case "$1" in
 		com1="stdio"
 		com2="stdio"
 		;;
+	console)
+		com1="null"
+		com2="stdio"
+		;;
 	*)
 		com1="telnet:localhost:1230,server"
 		com2="telnet:localhost:1231,server"
@@ -26,7 +30,7 @@ base="qemu-system-arm -M versatilepb -m 32M -nographic -nodefaults
 echo $base
 
 case "$1" in
-	run|print)
+	run|print|console)
 		echo "Press Ctrl-C to quit."
 		exec $base
 		;;

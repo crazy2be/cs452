@@ -28,11 +28,19 @@
 #define RBUF_DROP PASTER(RBUF_PREFIX, rbuf_drop)
 #define RBUF_EMPTY PASTER(RBUF_PREFIX, rbuf_empty)
 #define RBUF_FULL PASTER(RBUF_PREFIX, rbuf_full)
+#define RBUF_CONSISTENT PASTER(RBUF_PREFIX, rbuf_consistent)
+
 RBUF_T {
 	int i; /**< index offset */
 	int l; /**< length of data */
 	RBUF_ELE buf[RBUF_SIZE];
 };
+
+
+static inline bool RBUF_CONSISTENT(const RBUF_T *rbuf) {
+	return rbuf->l >= 0 && rbuf->l < RBUF_SIZE
+		&& rbuf->i >= 0 && rbuf->i < RBUF_SIZE;
+}
 
 /**
  * Intializes the buffer to an empty state

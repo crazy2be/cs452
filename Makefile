@@ -212,7 +212,7 @@ qemu-fast-test: $(TEST_BIN)
 	./scripts/qemu print $<
 
 qemu-run-test: $(TEST_BIN)
-	./scripts/qemu run $<
+	./scripts/qemu console $<
 
 qemu-start-test: $(TEST_BIN)
 	./scripts/qemu start $<

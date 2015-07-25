@@ -119,7 +119,7 @@ static void rx_notifier(void) {
 	}
 }
 
-static void io_server_run() {
+static void io_server_run(int channel) {
 	// buffers to accumulate data
 	struct char_rbuf tx_buf, rx_buf;
 
@@ -158,7 +158,13 @@ static void io_server_run() {
 			reply(tid, &resp, sizeof(resp));
 
 			for (int i = 0; i < msg_len; i++) {
-				ASSERT(!char_rbuf_full(&tx_buf));
+				if (!char_rbuf_consistent(&tx_buf)) {
+					// print out some debug info
+					req.u.buf[i] = '\0';
+					KASSERTF(0, "Buffer for %s became inconsistent (i = %d, l = %d, str = %s)",
+							(channel == COM1) ? "COM1" : "COM2", tx_buf.i, tx_buf.l, req.u.buf);
+				}
+				KASSERT(!char_rbuf_full(&tx_buf));
 				char_rbuf_put(&tx_buf, req.u.buf[i]);
 			}
 
@@ -257,7 +263,7 @@ static void io_server_init(void) {
 		send(tid, &channel, sizeof(channel), NULL, 0);
 	}
 
-	io_server_run();
+	io_server_run(channel);
 }
 
 void ioserver(const int channel) {
