@@ -247,6 +247,7 @@ static void initial_draw(void) {
 
 #define MAX_FEEDBACK_LEN 80
 #define MAX_LOG_LEN 60
+#define LOG_LINE_BUFSIZE (MAX_LOG_LEN + 2) // +2 for ellipsis
 #define MAX_LOG_LINES 36
 enum displaysrv_req_type {
 	UPDATE_SWITCH, UPDATE_SENSOR, UPDATE_TIME, UPDATE_TRACK,
@@ -287,11 +288,43 @@ struct displaysrv_req {
 			struct display_train_state active_train_states[MAX_ACTIVE_TRAINS];
 		} time;
 		struct {
-			char msg[MAX_LOG_LEN + 2]; // +2 for ellipsis
+			char msg[LOG_LINE_BUFSIZE];
 		} log;
 	} data;
 };
 
+static int current_log_line = 0;
+static void log_print(char *buf, const char *fmt, va_list va) {
+	int n = snprintf(buf, MAX_LOG_LEN, "%6d ", time());
+	n += vsnprintf(buf + n, MAX_LOG_LEN - n, fmt, va);
+	if (n > MAX_LOG_LEN) {
+		// ... character http://www.fileformat.info/info/unicode/char/2026/index.htm
+		buf[LOG_LINE_BUFSIZE - 4] = 0b11100010;
+		buf[LOG_LINE_BUFSIZE - 3] = 0b10000000;
+		buf[LOG_LINE_BUFSIZE - 2] = 0b10100110;
+		buf[LOG_LINE_BUFSIZE - 1] = '\0';
+	} else {
+		for (int i = n; i < MAX_LOG_LEN; i++) {
+			buf[i] = ' ';
+		}
+		buf[MAX_LOG_LEN] = '\0';
+	}
+}
+static void handle_log(char *msg) {
+	printf("\e[s");
+	printf("\e[%d;%dH%s", current_log_line + 2, 82, msg);
+	current_log_line = (current_log_line + 1) % MAX_LOG_LINES;
+	printf("\e[u");
+}
+// For logging internal to displaysrv.
+void dlogf(const char *fmt, ...) {
+	va_list va;
+	va_start(va,fmt);
+	char buf[LOG_LINE_BUFSIZE];
+	log_print(buf, fmt, va);
+	handle_log(buf);
+	va_end(va);
+}
 #define SENSOR_BUF_SIZE (TRACK_DISPLAY_HEIGHT + 2 - 3)
 struct sensor_reads {
 	int start, len;
@@ -576,7 +609,6 @@ void displaysrv(void) {
 	struct displaysrv_req req;
 	int tid;
 
-	int log_line = 0;
 
 	printf("\e[s\e[1;82H------LOG:-----\e[u");
 
@@ -612,10 +644,7 @@ void displaysrv(void) {
 			console_feedback(req.data.feedback.feedback);
 			break;
 		case CONSOLE_LOG:
-			printf("\e[s");
-			printf("\e[%d;%dH%s", log_line + 2, 82, req.data.log.msg);
-			log_line = (log_line + 1) % MAX_LOG_LINES;
-			printf("\e[u");
+			handle_log(req.data.log.msg);
 			break;
 		case QUIT:
 			return;
@@ -687,21 +716,7 @@ void displaysrv_log(const char *fmt, ...) {
 	va_list va;
 	va_start(va,fmt);
 	struct displaysrv_req req;
-	char *buf = req.data.log.msg;
-	int n = snprintf(buf, MAX_LOG_LEN, "%6d ", time());
-	n += vsnprintf(buf + n, MAX_LOG_LEN - n, fmt, va);
-	if (n > MAX_LOG_LEN) {
-		// ... character http://www.fileformat.info/info/unicode/char/2026/index.htm
-		buf[MAX_LOG_LEN - 2] = 0b11100010;
-		buf[MAX_LOG_LEN - 1] = 0b10000000;
-		buf[MAX_LOG_LEN + 0] = 0b10100110;
-		buf[MAX_LOG_LEN + 1] = '\0';
-	} else {
-		for (int i = n; i < MAX_LOG_LEN; i++) {
-			buf[i] = ' ';
-		}
-		buf[MAX_LOG_LEN] = '\0';
-	}
+	log_print(req.data.log.msg, fmt, va);
 	int tid = whois(DISPLAYSRV_NAME);
 	displaysrv_send(tid, CONSOLE_LOG, &req);
 	va_end(va);
