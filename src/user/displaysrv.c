@@ -378,7 +378,7 @@ static void update_single_2switch(int sw, enum sw_direction pos) {
 			filler_char = (pos == STRAIGHT) ? '_' : ' ';
 			last_x += (disp.cr == '/') ? 1 : -1;
 		}
-		printf("\e[s\e[%d;%dH\e[1;31m%c\e[0m\e[%d;%dH%c\e[u",
+		printf("\e[s\e[%d;%dH\e[1;33m%c\e[0m\e[%d;%dH%c\e[u",
 		       current_y + TRACK_Y_OFFSET, current_x + TRACK_X_OFFSET, switch_char,
 		       last_y + TRACK_Y_OFFSET, last_x + TRACK_X_OFFSET, filler_char);
 	} else {
@@ -421,7 +421,7 @@ static void update_single_3switch(int first_switch, enum sw_direction s1, enum s
 		b2x = coords->rx;
 		b2y = coords->ry;
 	}
-	printf("\e[s\e[%d;%dH\e[1;31m%c\e[0m\e[%d;%dH \e[%d;%dH \e[u",
+	printf("\e[s\e[%d;%dH\e[1;33m%c\e[0m\e[%d;%dH \e[%d;%dH \e[u",
 	       ty + TRACK_Y_OFFSET, tx + TRACK_X_OFFSET, switch_char,
 	       b1y + TRACK_Y_OFFSET, b1x + TRACK_X_OFFSET,
 	       b2y + TRACK_Y_OFFSET, b2x + TRACK_Y_OFFSET);
