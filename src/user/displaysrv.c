@@ -596,7 +596,8 @@ void displaysrv_start(void) {
 }
 
 // external interface to displaysrv
-
+// TODO: These functions should probably be async/fire and forget for the most
+// part, but no time to fix it right now.
 static void displaysrv_send(int displaysrv, enum displaysrv_req_type type, struct displaysrv_req *req) {
 	req->type = type;
 	send(displaysrv, req, sizeof(*req), NULL, 0);
