@@ -53,12 +53,11 @@ int astar_find_path(const struct track_node *start, const struct track_node *end
 		ASSERT(min_i >= 0 && min_i < TRACK_MAX);
 		const struct track_node *q = &track[min_i];
 		ASSERT(idx(q) == min_i);
-		int edges = q->type == NODE_MERGE ? 3 : 2;
-		for (int i = 0; i < edges; i++) {
+		for (int i = 0; i < 4; i++) {
 			int cost = 0;
 			const struct track_edge *edge;
-			if (i > 0 && q->type == NODE_MERGE) {
-				edge = &q->reverse->edge[i - 1];
+			if (i >= 2) {
+				edge = &q->reverse->edge[i - 2];
 				cost = 1000; // fudge factor penalty for reverses
 			} else {
 				edge = &q->edge[i];
@@ -66,7 +65,8 @@ int astar_find_path(const struct track_node *start, const struct track_node *end
 			const struct track_node *suc = edge->dest;
 			cost += edge->dist;
 
-			if (!suc) continue;
+			if (!suc) continue; // no such edge
+
 			ASSERT(idx(suc) >= 0 && idx(suc) < TRACK_MAX);
 			int suc_g = node_g[idx(q)] + cost;
 			int suc_f = suc_g + h(suc, end);
