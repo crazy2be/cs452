@@ -5,7 +5,10 @@
 #include "request_type.h"
 #include "sys.h"
 #include "signal.h"
-#define idx TRACK_NODE_INDEX
+#define idx(node) ({ \
+	int ix = TRACK_NODE_INDEX(node); \
+	ASSERTF(ix >= 0 && ix < TRACK_MAX, "%d", ix); \
+	ix; })
 
 struct tracksrv_request {
 	enum request_type type;
@@ -40,7 +43,8 @@ static void reserve_forwards(int tid, int *desired, const struct track_node *sta
 	const struct track_node *cur = start;
 	int rem_dist = dist;
 	for (;;) {
-		desired[TRACK_NODE_INDEX(cur)] = 1;
+		desired[idx(cur)] = 1;
+		desired[idx(cur->reverse)] = 1;
 
 		if (rem_dist <= 0) return;
 		else if (cur->type == NODE_EXIT) return;
@@ -66,8 +70,7 @@ static int reserve_path(int tid, struct astar_node *path,
 						int len, int stopping_distance) {
 	ASSERT(len >= 0);
 	for (int i = 0; i < len; i++) {
-		ASSERTF(idx(path[i].node) >= 0 && idx(path[i].node) < TRACK_MAX,
-			"%d %d", idx(path[i].node), len);
+		idx(path[i].node); // Validate
 	}
 	int total_path_length = 0;
 	for (int i = 0; i < len - 1; i++) {
@@ -78,9 +81,8 @@ static int reserve_path(int tid, struct astar_node *path,
 	const struct track_node *prev = NULL;
 	for (int i = 0; i < len; i++) {
 		const struct track_node *cur = path[i].node;
-		int j = TRACK_NODE_INDEX(cur);
-		ASSERT(j >= 0 && j < TRACK_MAX);
-		desired[j] = 1;
+		desired[idx(cur)] = 1;
+		desired[idx(cur->reverse)] = 1;
 		if (prev) remaining_path_length -= edge_btwn(prev, cur)->dist;
 		if (prev && (cur->type == NODE_BRANCH) && (i < len - 1)) {
 			int rem_dist = MIN(stopping_distance, remaining_path_length);
