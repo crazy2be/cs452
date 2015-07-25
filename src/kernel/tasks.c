@@ -18,9 +18,7 @@ void tasks_init(void) {
 	struct prng prng;
 	prng_init(&prng, STACK_SEED);
 	for (int i = 0; i < NUM_TD; i++) {
-		for (int j = 0; j < USER_STACK_SIZE; j++) {
-			stacks[i][j] = prng_gen(&prng);
-		}
+		prng_gen_buf(&prng, stacks[i], USER_STACK_SIZE);
 	}
 #endif
 
