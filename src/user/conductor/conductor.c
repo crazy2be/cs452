@@ -33,6 +33,7 @@ struct point_of_interest {
 	int delay;
 
 	int path_index; // internal use only, for ease of comparing poi
+	int displacement; // internal use only, this is cheaper to compute than the delay
 
 	enum poi_type type;
 	union {
@@ -44,9 +45,9 @@ struct point_of_interest {
 };
 
 static void poi_from_node(struct astar_node *path, int index, struct point_of_interest *poi,
-		int velocity, int lead_dist, int lead_time) {
-	ASSERT(velocity > 0);
-	int displacement = lead_dist + velocity * lead_time / 1000;
+		int lead_dist) {
+
+	int displacement = lead_dist;
 	while (index >= 0) {
 		const struct track_node *node;
 		int sensor_gap = 0;
@@ -60,7 +61,7 @@ static void poi_from_node(struct astar_node *path, int index, struct point_of_in
 			break;
 		} else if (sensor_gap >= displacement) {
 			poi->sensor_num = node->num;
-			poi->delay = (sensor_gap - displacement) * 1000 / velocity;
+			poi->displacement = displacement;
 			poi->path_index = index;
 			ASSERT(poi->delay >= 0);
 			return;
@@ -69,6 +70,7 @@ static void poi_from_node(struct astar_node *path, int index, struct point_of_in
 		}
 	}
 	poi->sensor_num = -1;
+	poi->displacement = 0;
 }
 
 static bool poi_lte(struct point_of_interest *a, struct point_of_interest *b) {
@@ -95,50 +97,64 @@ static struct point_of_interest get_next_poi(struct astar_node *path, int path_l
 
 	int index;
 	const struct track_node *node = NULL;
-	struct point_of_interest poi;
-	poi.type = NONE;
+	struct point_of_interest switch_poi, stopping_poi;
+	switch_poi.type = NONE;
+	stopping_poi.type = NONE;
 
-	struct point_of_interest stopping_point;
-	stopping_point.type = NONE;
 
 	// initialize to poi for stopping point
 
 	if (!context->stopped) {
-		poi_from_node(path, path_len - 1, &stopping_point, velocity, stopping_distance, 0);
-		stopping_point.type = STOPPING_POINT;
+		poi_from_node(path, path_len - 1, &stopping_poi, stopping_distance);
+		stopping_poi.type = STOPPING_POINT;
 	}
 
 	// next, check for switch poi that come before it, overwriting if
 	for (index = context->poi_index; index < path_len; index++) {
 		node = path[index].node;
 		if (node->type == NODE_BRANCH && index > 0 && index < path_len - 1) {
-			poi_from_node(path, index, &poi, velocity, 0, 40);
+			poi_from_node(path, index, &switch_poi, 300);
 
-			poi.type = SWITCH;
-			poi.u.switch_info.num = node->num;
-			poi.u.switch_info.dir = (node->edge[0].dest == path[index + 1].node) ? STRAIGHT : CURVED;
+			switch_poi.type = SWITCH;
+			switch_poi.u.switch_info.num = node->num;
+			switch_poi.u.switch_info.dir = (node->edge[0].dest == path[index + 1].node) ? STRAIGHT : CURVED;
 
 			break;
 		}
 	}
 
-	// chose which poi we want to use, and then set the state so we won't repeat it
-	if (stopping_point.type == NONE && poi.type == NONE) {
-		context->stopped = true;
+	if (switch_poi.type == NONE) {
 		context->poi_index = path_len;
-		return poi;
-	} else if (poi_lte(&stopping_point, &poi)) {
+	}
+
+	struct point_of_interest *chosen_poi = &stopping_poi;
+	struct point_of_interest *candidates[] = { &switch_poi };
+
+	for (unsigned i = 0; i < sizeof(candidates) / sizeof(candidates[0]); i++) {
+		if (poi_lte(candidates[i], chosen_poi)) {
+			chosen_poi = candidates[i];
+		}
+	}
+
+	// chose which poi we want to use, and then set the state so we won't repeat it
+	if (chosen_poi == &stopping_poi) {
 		ASSERT(!context->stopped);
-		poi = stopping_point;
 		context->stopped = true;
-	} else {
+	} else if (chosen_poi == &switch_poi) {
 		context->poi_index = index + 1;
 	}
 
-	char repr[4];
-	sensor_repr(poi.sensor_num, repr);
-	printf("\e[s\e[15;90HNext POI is sensor %s + %d ticks, real target is %s\e[u", repr, poi.delay, (node != NULL) ? node->name : "(NULL)");
-	return poi;
+	// add delay to chosen_poi
+	// TODO: this should account for acceleration, and will get more complex later
+	chosen_poi->delay = chosen_poi->displacement * 1000 / velocity;
+
+	char repr[4] = "N/A";
+	if (chosen_poi->sensor_num > 0) {
+		sensor_repr(chosen_poi->sensor_num, repr);
+	}
+	printf("\e[s\e[15;90HNext POI is sensor %s + %d mm / %d ticks\e[u", repr, chosen_poi->displacement, chosen_poi->delay);
+
+	return *chosen_poi;
 }
 
 struct conductor_state {
@@ -200,9 +216,9 @@ static void handle_set_destination(const struct track_node *dest, struct conduct
 	struct train_state train_state;
 	trains_query_spatials(state->train_id, &train_state);
 
-	state->path_len = routesrv_plan(train_state.position.edge->src, dest, state->path);
-	state->path_index = 1; // drop the first node in the route, since we've already rolled over it
-	state->poi_context.poi_index = 1;
+	state->path_len = routesrv_plan(train_state.position.edge->dest, dest, state->path);
+	state->path_index = 0; // drop the first node in the route, since we've already rolled over it
+	state->poi_context.poi_index = 0;
 	state->poi_context.stopped = false;
 
 	if (state->path_len <= 0) return; // no such path
