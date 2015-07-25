@@ -84,10 +84,10 @@ def main():
 			alpha = self.edge_dist / e_dist[e]
 			pos = start + alpha*(end - start)
 			dp = win.graph.pos_to_device(pos) # dp: device position
-			cr.rectangle(dp[0], dp[1], 20, 20)
+			cr.rectangle(dp[0]-10, dp[1]-10, 20, 20)
 			cr.set_source_rgb(102. / 256, 102. / 256, 102. / 256)
 			cr.fill()
-			cr.move_to(dp[0], dp[1] + 20 - 12./2)
+			cr.move_to(dp[0]-10, dp[1] + 10 - 12./2)
 			cr.set_source_rgb(1., 1., 1.)
 			cr.set_font_size(12)
 			cr.show_text("%d" % self.num)
