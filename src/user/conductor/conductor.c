@@ -150,11 +150,16 @@ struct conductor_state {
 
 	struct point_of_interest poi;
 	struct poi_context poi_context;
+	int last_sensor_time;
 
 	// this is a hack so we can find poi that happen after we start stopping the train
 	// we assume that the train is still travelling at the old speed, which doesn't matter
 	// too much, since it just means the switches will get flipped a bit early
 	int last_velocity;
+
+	// keep track of current velocity & prev velocity
+	// in order to do acceleration curves
+	/* int cur_velocity, prev_velocity; */
 };
 
 // these are event driven
@@ -171,32 +176,22 @@ static void handle_switch_timeout(int switch_num, enum sw_direction dir) {
 static void handle_poi(struct conductor_state *state, int time) {
 	struct conductor_req req;
 
-	char *kind;
-
 	switch (state->poi.type) {
 	case STOPPING_POINT:
-		kind = "stopping point";
 		req.type = CND_STOP_TIMEOUT;
+		delay_async(state->poi.delay, &req, sizeof(req), offsetof(struct conductor_req, u.stop_timeout.time));
 		break;
 	case SWITCH:
-		kind = "switch";
 		req.type = CND_STOP_TIMEOUT;
 		req.type = CND_SWITCH_TIMEOUT;
 		req.u.switch_timeout.switch_num = state->poi.u.switch_info.num;
 		req.u.switch_timeout.dir = state->poi.u.switch_info.dir;
+		delay_async(state->poi.delay, &req, sizeof(req), offsetof(struct conductor_req, u.switch_timeout.time));
 		break;
 	default:
 		WTF("No such case");
 		return;
 	}
-
-	int delay = state->poi.delay;
-	char repr[4];
-	sensor_repr(state->poi.sensor_num, repr);
-	printf("\e[s\e[17;90HWe're approaching POI %s (%s), delay_async for %d\e[u",
-			repr, kind, delay);
-
-	delay_async(delay, &req, sizeof(req), -1);
 }
 
 const int max_speed = 14;
@@ -240,6 +235,33 @@ static void handle_set_destination(const struct track_node *dest, struct conduct
 			train_state.position.edge->src->name, dest->name, state->path_len);
 }
 
+static void set_next_poi(int time, struct conductor_state *state) {
+	struct train_state train_state;
+	trains_query_spatials(state->train_id, &train_state);
+	int velocity = train_state.velocity;
+	if (velocity == 0) {
+		velocity = state->last_velocity;
+	} else {
+		state->last_velocity = velocity;
+	}
+
+	int stopping_distance = trains_get_stopping_distance(state->train_id);
+	int last_sensor = state->poi.sensor_num;
+	state->poi = get_next_poi(state->path, state->path_len, &state->poi_context,
+			stopping_distance, velocity);
+	if (state->poi.type != NONE) {
+		if (state->poi.sensor_num == last_sensor) {
+			// account for time passed we hit the last sensor
+			state->poi.delay -= time - state->last_sensor_time;
+			handle_poi(state, time);
+		} else if (state->poi.path_index < state->path_index) {
+			// fuck - we've passed this already - just kick off the event immediately
+			state->poi.delay = 0;
+			handle_poi(state, time);
+		}
+	}
+}
+
 static void handle_sensor_hit(int sensor_num, int time, struct conductor_state *state) {
 	// check if we've gone off the projected path
 	const unsigned error_tolerance = 2;
@@ -262,26 +284,11 @@ static void handle_sensor_hit(int sensor_num, int time, struct conductor_state *
 		return;
 	}
 
-	if (state->poi.type == NONE) {
-		return;
-	} else if (sensor_num == state->poi.sensor_num) {
+	if (state->poi.type != NONE && i >= state->poi.path_index) {
 		printf("\e[s\e[16;90HApproaching poi at sensor %s\e[u", repr);
-
-		struct train_state train_state;
-		trains_query_spatials(state->train_id, &train_state);
-		int velocity = train_state.velocity;
-		if (velocity == 0) {
-			velocity = state->last_velocity;
-		} else {
-			state->last_velocity = velocity;
-		}
-
-		int stopping_distance = trains_get_stopping_distance(state->train_id);
-		while (state->poi.type != NONE && state->poi.sensor_num == sensor_num) {
-			handle_poi(state, time);
-			state->poi = get_next_poi(state->path, state->path_len, &state->poi_context,
-					stopping_distance, velocity);
-		}
+		handle_poi(state, time);
+		state->poi.type = NONE;
+		state->last_sensor_time = time;
 	} else {
 		printf("\e[s\e[16;90HOn track at sensor %s\e[u", repr);
 	}
@@ -318,10 +325,12 @@ static void run_conductor(int train_id) {
 		case CND_SWITCH_TIMEOUT:
 			printf("\e[s\e[13;90HConductor got switch timeout request\e[u");
 			handle_switch_timeout(req.u.switch_timeout.switch_num, req.u.switch_timeout.dir);
+			set_next_poi(req.u.switch_timeout.time, &state);
 			break;
 		case CND_STOP_TIMEOUT:
 			printf("\e[s\e[13;90HConductor got stop timeout request\e[u");
 			handle_stop_timeout(&state);
+			set_next_poi(req.u.stop_timeout.time, &state);
 			break;
 		default:
 			WTF("Unknown request to conductor");
