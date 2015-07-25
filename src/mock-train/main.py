@@ -71,7 +71,7 @@ def main():
 		def update(self):
 			self.edge_dist += self.speed
 			while True:
-				e = g.edge(self.edge.src.i, self.edge.dest.i)
+				e = self.e()
 				if self.edge_dist < e_dist[e]: break
 				if self.edge.dest.typ == track.NODE_SENSOR:
 					conn.set_sensor_tripped(self.edge.dest.num)
@@ -79,7 +79,7 @@ def main():
 				self.edge_dist -= e_dist[e]
 
 		def draw(self, n_pos, da, cr):
-			e = g.edge(self.edge.src.i, self.edge.dest.i)
+			e = self.e()
 			start, end = np.array(n_pos[e.source()]), np.array(n_pos[e.target()])
 			alpha = self.edge_dist / e_dist[e]
 			pos = start + alpha*(end - start)
@@ -92,11 +92,11 @@ def main():
 			cr.set_font_size(12)
 			cr.show_text("%d" % self.num)
 			cr.fill()
-
+		def e(self): return g.edge(self.edge.src.i, self.edge.dest.i)
 		def set_speed(self, speed): self.speed = speed
 		def toggle_reverse(self):
 			self.edge = self.edge.reverse
-			self.edge_dist = e_dist[self.edge] - self.edge_dist
+			self.edge_dist = e_dist[self.e()] - self.edge_dist
 
 	def find_train(train_number):
 		for train in trains:
