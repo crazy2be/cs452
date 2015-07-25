@@ -8,6 +8,7 @@
 #include "../trainsrv.h"
 #include "../sys.h"
 #include "../routesrv.h"
+#include "conductor_internal.h"
 
 static const struct track_edge *edge_between(const struct track_node *prev, const struct track_node *cur) {
 	ASSERT(prev->type != NODE_EXIT); // this wouldn't make any sense
@@ -20,29 +21,6 @@ static const struct track_edge *edge_between(const struct track_node *prev, cons
 	ASSERT(edge->dest == cur);
 	return edge;
 }
-
-enum poi_type { NONE, SWITCH, STOPPING_POINT };
-// A point of interest is a sensor number, and a displacement.
-// We're assuming that the train is travelling only on the specified path.
-// If the sensor is negative, this means that the point of interest is
-// before the first sensor on our path, and should be triggered immediately.
-// Clearly, this doesn't work for the stopping position (ie: short moves don't
-// work)
-struct point_of_interest {
-	int sensor_num;
-	int delay;
-
-	int path_index; // internal use only, for ease of comparing poi
-	int displacement; // internal use only, this is cheaper to compute than the delay
-
-	enum poi_type type;
-	union {
-		struct {
-			int num;
-			enum sw_direction dir;
-		} switch_info;
-	} u;
-};
 
 static void poi_from_node(struct astar_node *path, int index, struct point_of_interest *poi,
 		int lead_dist) {
@@ -83,16 +61,11 @@ static bool poi_lte(struct point_of_interest *a, struct point_of_interest *b) {
 	}
 }
 
-struct poi_context {
-	bool stopped;
-	int poi_index; // for switches
-};
-
 static inline bool poi_context_finished(struct poi_context pc, int path_len) {
 	return pc.poi_index >= path_len && pc.stopped;
 }
 
-static struct point_of_interest get_next_poi(struct astar_node *path, int path_len,
+struct point_of_interest get_next_poi(struct astar_node *path, int path_len,
 		struct poi_context *context, int stopping_distance, int velocity) {
 
 	int index;
@@ -110,10 +83,15 @@ static struct point_of_interest get_next_poi(struct astar_node *path, int path_l
 	}
 
 	// next, check for switch poi that come before it, overwriting if
-	for (index = context->poi_index; index < path_len; index++) {
+	for (index = context->poi_index; index < path_len - 1; index++) {
 		node = path[index].node;
-		if (node->type == NODE_BRANCH && index > 0 && index < path_len - 1) {
-			poi_from_node(path, index, &switch_poi, 300);
+		if (node->type == NODE_BRANCH) {
+			if (index == 0) {
+				switch_poi.sensor_num = -1;
+				switch_poi.displacement = 0;
+			} else {
+				poi_from_node(path, index, &switch_poi, 300);
+			}
 
 			switch_poi.type = SWITCH;
 			switch_poi.u.switch_info.num = node->num;
@@ -156,27 +134,6 @@ static struct point_of_interest get_next_poi(struct astar_node *path, int path_l
 
 	return *chosen_poi;
 }
-
-struct conductor_state {
-	int train_id;
-
-	struct astar_node path[ASTAR_MAX_PATH];
-	int path_len;
-	int path_index;
-
-	struct point_of_interest poi;
-	struct poi_context poi_context;
-	int last_sensor_time;
-
-	// this is a hack so we can find poi that happen after we start stopping the train
-	// we assume that the train is still travelling at the old speed, which doesn't matter
-	// too much, since it just means the switches will get flipped a bit early
-	int last_velocity;
-
-	// keep track of current velocity & prev velocity
-	// in order to do acceleration curves
-	/* int cur_velocity, prev_velocity; */
-};
 
 // these are event driven
 static void handle_stop_timeout(struct conductor_state *state) {
