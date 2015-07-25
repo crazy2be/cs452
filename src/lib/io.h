@@ -1,5 +1,7 @@
 #pragma once
 
+#include "vargs.h"
+
 #define COM1 0
 #define COM2 1
 #define COM2_DEBUG 2 // kernel debug channel, uses BWIO
@@ -24,6 +26,7 @@ int fgetsnb(char *buf, int len, const int channel);
 int fgetc(const int channel);
 
 int fprintf(int channel, const char *format, ...);
+int vsnprintf(char *buf, unsigned size, const char *fmt, va_list va);
 int snprintf(char *buf, unsigned size, const char *fmt, ...);
 
 // shorthand for all the above

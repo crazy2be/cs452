@@ -10,5 +10,5 @@ enum request_type {
     QUERY_ERROR, // Trains server
 
 	CND_DEST, CND_SENSOR, CND_SWITCH_TIMEOUT, CND_STOP_TIMEOUT, // Conductor
-	TRK_RESERVE, TRK_SET_ID, // tracksrv
+	TRK_RESERVE, TRK_SET_ID, TRK_TABLE, // tracksrv
 };

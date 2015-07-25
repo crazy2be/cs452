@@ -1,3 +1,5 @@
+#pragma once
+
 #include "../user/track.h"
 
 struct astar_node {
@@ -7,6 +9,6 @@ struct astar_node {
 #define ASTAR_MAX_PATH 100
 
 int astar_find_path(const struct track_node *start, const struct track_node *end,
-					struct astar_node *path_out);
+					struct astar_node *path_out, bool *blocked_table);
 
 void astar_print_path(struct astar_node *path, int l);

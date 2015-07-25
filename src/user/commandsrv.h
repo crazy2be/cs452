@@ -1,3 +1,3 @@
 #pragma once
 
-void commandsrv(void);
+void commandsrv_start(void);

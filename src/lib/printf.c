@@ -1,6 +1,5 @@
 #include <io.h>
 #include <util.h>
-#include "vargs.h"
 
 // printf buffers internally to a buffer allocated on the stack, and flushes this
 // buffer with puts when it fills up, since putc incurs a lot of overhead to only
@@ -172,13 +171,17 @@ static void produce_string(char c, void *s) {
 	}
 }
 
+int vsnprintf(char *buf, unsigned size, const char *fmt, va_list va) {
+	struct produce_string_state state = {size, 0, buf};
+	format(produce_string, &state, fmt, va);
+	*state.buf = '\0';
+	return state.total;
+}
+
 int snprintf(char *buf, unsigned size, const char *fmt, ...) {
 	va_list va;
 	va_start(va,fmt);
-	struct produce_string_state state = {size, 0, buf};
-	format(produce_string, &state, fmt, va);
+	int n = vsnprintf(buf, size, fmt, va);
 	va_end(va);
-
-	*state.buf = '\0';
-	return state.total;
+	return n;
 }

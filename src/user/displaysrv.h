@@ -6,9 +6,11 @@
 #define DISPLAYSRV_NAME "displaysrv"
 
 // spawns a new display server task
-void displaysrv(void);
+void displaysrv_start(void);
 void displaysrv_update_switch(int displaysrv, struct switch_state *state);
 void displaysrv_update_sensor(int displaysrv, struct sensor_state *state, unsigned avg_delay);
+void displaysrv_log(const char *fmt, ...);
+#define logf(...) displaysrv_log(__VA_ARGS__)
 void displaysrv_console_clear(int displaysrv);
 void displaysrv_console_backspace(int displaysrv);
 void displaysrv_console_input(int displaysrv, char c);

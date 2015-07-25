@@ -351,7 +351,7 @@ void run_acc_calibration(void) {
 }
 
 
-void calibratesrv(void) {
+void calibratesrv_start(void) {
 	/* int tid = create(PRIORITY_CALIBRATE, start_calibrate); */
 	int tid = create(PRIORITY_CALIBRATE, run_acc_calibration);
 	signal_send(tid);

@@ -15,12 +15,13 @@
 static void get_command(char *buf, int buflen, int displaysrv) {
 	int i = 0;
 	static int parsing_esc = 0;
+	const char DELETE = 127;
 	for (;;) {
 		char c = getc();
 		if (c == '\r') {
 			displaysrv_console_clear(displaysrv);
 			break;
-		} else if (c == '\b') {
+		} else if (c == '\b' || c == DELETE) {
 			if (i > 0) {
 				i--;
 				displaysrv_console_backspace(displaysrv);
@@ -483,8 +484,7 @@ unknown:
 	displaysrv_console_feedback(displaysrv, "Unknown command");
 }
 
-void commandsrv_main(void) {
-	char buf[80];
+void commandsrv(void) {
 	register_as("commandsrv");
 	signal_recv();
 
@@ -492,12 +492,13 @@ void commandsrv_main(void) {
 	ASSERT(displaysrv >= 0);
 
 	for (;;) {
+		char buf[80];
 		get_command(buf, sizeof(buf), displaysrv);
 		process_command(buf, displaysrv);
 	}
 }
 
-void commandsrv(void) {
-	int tid = create(PRIORITY_COMMANDSRV, commandsrv_main);
+void commandsrv_start(void) {
+	int tid = create(PRIORITY_COMMANDSRV, commandsrv);
 	signal_send(tid);
 }

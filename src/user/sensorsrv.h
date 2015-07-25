@@ -16,4 +16,4 @@ typedef void (*sensor_new_handler)(int sensor, void *ctx);
 void sensor_each_new(struct sensor_state *old, struct sensor_state *new,
                      sensor_new_handler cb, void *ctx);
 
-void sensorsrv(void);
+void sensorsrv_start(void);
