@@ -237,7 +237,7 @@ static void initial_draw(void) {
 
 #define MAX_FEEDBACK_LEN 80
 #ifdef QEMU
-#define MAX_LOG_LEN 63
+#define MAX_LOG_LEN 69
 #else
 #define MAX_LOG_LEN 100
 #endif
@@ -311,6 +311,10 @@ static void log_print(char *buf, const char *fmt, va_list va) {
 static void handle_log(char *msg) {
 	printf("\e[s");
 	printf("\e[%d;%dH%s", current_log_line + 2, 82, msg);
+	char empty[LOG_LINE_BUFSIZE];
+	memset(empty, ' ', sizeof(empty));
+	empty[MAX_LOG_LEN] = '\0';
+	printf("\e[%d;%dH%s", current_log_line + 3, 82, empty);
 	current_log_line = (current_log_line + 1) % MAX_LOG_LINES;
 	printf("\e[u");
 }
