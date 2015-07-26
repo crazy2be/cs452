@@ -540,13 +540,15 @@ struct node_display {
 };
 
 static const struct node_display node_display_info[] = {
+	{"EN3", "EX3", 4, 0},
 	{"C3", "C4", 9, 0},
 	{"MR5", "BR5", 14, 0},
 	{"MR18", "BR18", 29, 0},
 	{"C7", "C8", 34, 0},
 	{"MR3", "BR3", 38, 0},
 	{"A5", "A6", 43, 0},
-	{"B9", "B10", 52, 0},
+	{"B9", "B10", 50, 0},
+	{"EN9", "EX9", 54, 0},
 	{"E11", "E12", 8, 3},
 	{"MR7", "BR7", 11, 4},
 	{"D11", "D12", 18, 3},
@@ -556,15 +558,21 @@ static const struct node_display node_display_info[] = {
 	{"MR2", "BR2", 41, 4},
 	{"A7", "A8", 45, 3},
 	{"B11", "B12", 50, 3},
+	{"EN10", "EX10", 54, 3},
 	{"MR1", "BR1", 44, 7},
 	{"A9", "A10", 47, 6},
-	{"B7", "B8", 53, 6},
+	{"B7", "B8", 50, 6},
+	{"EN7", "EX7", 54, 6},
 	{"A11", "A12", 48, 10},
+	{"EN8", "EX8", 54, 10},
 	{"A15", "A16", 48, 18},
+	{"EN6", "EX6", 54, 18},
 	{"MR4", "BR4", 44, 21},
-	{"A13", "A14", 52, 21},
+	{"A13", "A14", 50, 21},
+	{"EN4", "EX4", 54, 21},
 	{"MR12", "BR12", 42, 25},
-	{"A1", "A2", 52, 24},
+	{"A1", "A2", 50, 24},
+	{"EN5", "EX5", 54, 24},
 	{"MR11", "BR11", 36, 25},
 	{"C13", "C14", 30, 24},
 	{"E7", "E8", 13, 24},
@@ -586,12 +594,24 @@ static const struct node_display node_display_info[] = {
 	{"E5", "E6", 12, 21},
 	{"MR154", "BR154", 21, 12},
 	{"MR153", "BR153", 23, 12},
+	{"EN1", "EX1", 22, 8},
 	{"MR155", "BR155", 21, 16},
 	{"MR156", "BR156", 23, 16},
+	{"EN2", "EX2", 22, 20},
 	{"MR17", "BR17", 16, 6},
 	{"MR16", "BR16", 28, 6},
 	{"MR10", "BR10", 16, 21},
 	{"MR13", "BR13", 28, 21},
+	{"B1", "B2", 24, 6},
+	{"D13", "D14", 20, 6},
+	{"B5", "B6", 24, 21},
+	{"D3", "D4", 20, 21},
+	{"C9", "C10", 32, 6},
+	{"C11", "C12", 32, 21},
+	{"MR14", "BR14", 41, 17},
+	{"MR15", "BR15", 41, 11},
+	{"A3", "A4", 40, 15},
+	{"B15", "B16", 40, 13},
 	// TODO: Fill in the rest of this table
 };
 bool find_track_node_pos(const char *name, int *x, int *y) {
@@ -604,7 +624,7 @@ bool find_track_node_pos(const char *name, int *x, int *y) {
 				return true;
 		}
 	}
-	//dlogf("Could not find track node %s", name);
+	dlogf("Could not find track node %s", name);
 	return false;
 }
 static void update_track(int *track_table) {
