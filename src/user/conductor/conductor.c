@@ -98,7 +98,7 @@ struct point_of_interest get_next_poi(struct astar_node *path, int path_len,
 				switch_poi.sensor_num = -1;
 				switch_poi.displacement = 0;
 			} else {
-				poi_from_node(path, path_len, index, &switch_poi, 300);
+				poi_from_node(path, path_len, index, &switch_poi, 500);
 			}
 
 			switch_poi.type = SWITCH;
