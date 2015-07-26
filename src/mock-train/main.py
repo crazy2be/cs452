@@ -61,7 +61,8 @@ def main():
 
 	class Train():
 		num = -1
-		speed = 0
+		vel = 0.
+		speed = 0.
 		edge = cur_track[0].edge[0]
 		edge_dist = 0
 
@@ -69,7 +70,9 @@ def main():
 			self.num = num
 
 		def update(self):
-			self.edge_dist += self.speed
+			# Super shitty deacceleration model
+			self.vel = self.vel + 0.02*(self.speed - self.vel)
+			self.edge_dist += self.vel
 			while True:
 				e = self.e()
 				if self.edge_dist < e_dist[e]: break
