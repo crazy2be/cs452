@@ -569,6 +569,21 @@ static const struct node_display node_display_info[] = {
 	{"C13", "C14", 30, 24},
 	{"E7", "E8", 13, 24},
 	{"D7", "D8", 4, 21},
+	{"MR9", "BR9", 3, 17},
+	{"MR8", "BR8", 3, 11},
+	{"D9", "D10", 4, 7},
+	{"E9", "E10", 7, 9},
+	{"E13", "E14", 12, 6},
+	{"D15", "D16", 18, 8},
+	{"B13", "B14", 20, 10},
+	{"C1", "C2", 24, 10},
+	{"B3", "B4", 26, 8},
+	{"E1", "E2", 24, 18},
+	{"E15", "E16", 26, 20},
+	{"D1", "D2", 20, 18},
+	{"E3", "E4", 18, 20},
+	{"D5", "D6", 7, 19},
+	{"E5", "E6", 12, 21},
 	// TODO: Fill in the rest of this table
 };
 bool find_track_node_pos(const char *name, int *x, int *y) {
