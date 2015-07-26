@@ -65,13 +65,14 @@ def main():
 		speed = 0.
 		edge = cur_track[0].edge[0]
 		edge_dist = 0
+		SPEEDX = 1.
 
 		def __init__(self, num):
 			self.num = num
 
 		def update(self):
 			# Super shitty deacceleration model
-			self.vel = self.vel + 0.02*(self.speed - self.vel)
+			self.vel = self.vel + (0.02/self.SPEEDX)*(self.speed - self.vel)
 			self.edge_dist += self.vel
 			while True:
 				e = self.e()
@@ -96,7 +97,7 @@ def main():
 			cr.show_text("%d" % self.num)
 			cr.fill()
 		def e(self): return g.edge(self.edge.src.i, self.edge.dest.i)
-		def set_speed(self, speed): self.speed = speed
+		def set_speed(self, speed): self.speed = speed/self.SPEEDX
 		def toggle_reverse(self):
 			self.edge = self.edge.reverse
 			self.edge_dist = e_dist[self.e()] - self.edge_dist
