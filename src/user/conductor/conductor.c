@@ -59,7 +59,8 @@ static void poi_from_node(struct astar_node *path, int path_len, int index, stru
 }
 
 static bool poi_lte(struct point_of_interest *a, struct point_of_interest *b) {
-	if (a->type == NONE || b->type == NONE) { // reject NONE if there's an alternative
+	// reject NONE if there's an alternative
+	if (a->type == NONE || b->type == NONE) {
 		return b->type == NONE;
 	} else if (a->path_index == b->path_index) {
 		// TODO: This should really compare delays (although it seems like
@@ -162,7 +163,7 @@ static void handle_switch_timeout(int switch_num, enum sw_direction dir) {
 }
 
 static void handle_poi(struct conductor_state *state, int time) {
-	struct conductor_req req;
+	struct conductor_req req = {};
 
 	/* int offset; */
 	switch (state->poi.type) {
@@ -190,7 +191,7 @@ static void handle_poi(struct conductor_state *state, int time) {
 const int max_speed = 14;
 
 static void handle_set_destination(const struct track_node *dest, struct conductor_state *state) {
-	struct train_state train_state;
+	struct train_state train_state = {};
 	trains_query_spatials(state->train_id, &train_state);
 
 	state->path_len = routesrv_plan(train_state.position.edge->src, dest, state->path);
@@ -229,7 +230,7 @@ static void handle_set_destination(const struct track_node *dest, struct conduct
 }
 
 static void set_next_poi(int time, struct conductor_state *state) {
-	struct train_state train_state;
+	struct train_state train_state = {};
 	trains_query_spatials(state->train_id, &train_state);
 	int velocity = train_state.velocity;
 	if (velocity == 0) {
@@ -262,7 +263,7 @@ static void handle_sensor_hit(int sensor_num, int time, struct conductor_state *
 	// check if we've gone off the projected path
 	const unsigned error_tolerance = 2;
 	unsigned errors = 0;
-	int i;
+	int i = -1;
 	for (i = state->path_index; errors < error_tolerance && i < state->path_len; i++) {
 		const struct track_node *node = state->path[i].node;
 		if (node->type != NODE_SENSOR) continue;
@@ -295,13 +296,12 @@ static void handle_sensor_hit(int sensor_num, int time, struct conductor_state *
 }
 
 static void run_conductor(int train_id) {
-	struct conductor_state state;
-	memzero(&state);
+	struct conductor_state state = {};
 	state.train_id = train_id;
 
 	for (;;) {
-		struct conductor_req req;
-		int tid;
+		struct conductor_req req = {};
+		int tid = -1;
 		receive(&tid, &req, sizeof(req));
 		reply(tid, NULL, 0);
 
@@ -346,7 +346,7 @@ struct conductor_params {
 };
 
 static void init_conductor(void) {
-	int tid;
+	int tid = -1;
 	struct conductor_params params;
 	receive(&tid, &params, sizeof(params));
 
