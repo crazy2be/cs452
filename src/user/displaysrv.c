@@ -528,7 +528,20 @@ struct node_display {
 };
 
 static const struct node_display node_display_info[] = {
-	{"C3", "C4", 9, 0}
+	{"C3", "C4", 9, 0},
+	{"MR5", "BR5", 14, 0},
+	{"MR18", "BR18", 29, 0},
+	{"C7", "C8", 34, 0},
+	{"MR3", "BR3", 38, 0},
+	{"A5", "A6", 43, 0},
+	{"B9", "B10", 52, 0},
+	{"E11", "E12", 8, 3},
+	{"MR7", "BR7", 11, 4},
+	{"D11", "D12", 18, 3},
+	{"C15", "C16", 26, 3},
+	{"MR6", "BR6", 32, 4},
+	{"C5", "C6", 35, 3},
+	// TODO: Fill in the rest of this table
 };
 bool find_track_node_pos(const char *name, int *x, int *y) {
 	for (int i = 0; i < ARRAY_LENGTH(node_display_info); i++) {
@@ -540,7 +553,7 @@ bool find_track_node_pos(const char *name, int *x, int *y) {
 				return true;
 		}
 	}
-	dlogf("Could not find track node %s", name);
+	//dlogf("Could not find track node %s", name);
 	return false;
 }
 static void update_track(int *track_table) {
@@ -553,6 +566,9 @@ static void update_track(int *track_table) {
 			printf("\e[%d;%dH\e[1;31m#\e[0m", y + 2, x + 2);
 			puts("\e[u");
 		}
+// 			puts("\e[s");
+// 			printf("\e[%d;%dH\e[1;31m%c\e[0m", y + 2, x + 2, track_repr[y][x]);
+// 			puts("\e[u");
 	}
 }
 
@@ -629,6 +645,8 @@ void displaysrv(void) {
 
 
 	printf("\e[s\e[1;82H------LOG:-----\e[u");
+	int mock_table[TRACK_MAX] = {}; // For testing.
+	update_track(mock_table);
 
 	for (;;) {
 		receive(&tid, &req, sizeof(req));
