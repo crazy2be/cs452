@@ -1,7 +1,7 @@
 #pragma once
 #include "../routesrv.h"
 
-enum poi_type { NONE, SWITCH, STOPPING_POINT };
+enum poi_type { NONE = 0, SWITCH, STOPPING_POINT };
 
 // A point of interest is a sensor number, and a displacement.
 // We're assuming that the train is travelling only on the specified path.

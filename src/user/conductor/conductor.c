@@ -77,15 +77,12 @@ static inline bool poi_context_finished(struct poi_context pc, int path_len) {
 struct point_of_interest get_next_poi(struct astar_node *path, int path_len,
 		struct poi_context *context, int stopping_distance, int velocity) {
 
-	int index;
+	int index = -1;
 	const struct track_node *node = NULL;
-	struct point_of_interest switch_poi, stopping_poi;
-	switch_poi.type = NONE;
-	stopping_poi.type = NONE;
+	struct point_of_interest switch_poi = {};
+	struct point_of_interest stopping_poi = {};
 
-
-	// initialize to poi for stopping point
-
+	// initialize poi for stopping point
 	if (!context->stopped) {
 		poi_from_node(path, path_len, path_len - 1, &stopping_poi, stopping_distance);
 		stopping_poi.type = STOPPING_POINT;
@@ -131,9 +128,12 @@ struct point_of_interest get_next_poi(struct astar_node *path, int path_len,
 		context->stopped = true;
 	} else if (chosen_poi == &switch_poi) {
 		context->poi_index = index + 1;
+		logf("Switch poi chosen (stopping: %d)", stopping_poi.displacement);
 	}
 
-	if (chosen_poi != NULL) {
+	if (chosen_poi->type == NONE) {
+		logf("Next POI: [None]");
+	} else {
 		// add delay to chosen_poi
 		// TODO: this should account for acceleration, and will get more complex later
 		chosen_poi->delay = chosen_poi->displacement * 1000 / velocity;
@@ -142,7 +142,7 @@ struct point_of_interest get_next_poi(struct astar_node *path, int path_len,
 		if (chosen_poi->sensor_num > 0) {
 			sensor_repr(chosen_poi->sensor_num, repr);
 		}
-		logf("Next POI is sensor %s + %d mm / %d ticks, type = %d, target = %s",
+		logf("Next POI: %s + %d mm / %d ticks, type %d, targ %s",
 				repr, chosen_poi->displacement, chosen_poi->delay, chosen_poi->type,
 				chosen_poi->original->name);
 	}
