@@ -79,7 +79,6 @@ struct point_of_interest get_next_poi(struct astar_node *path, int path_len,
 		struct poi_context *context, int stopping_distance, int velocity) {
 
 	int index = -1;
-	const struct track_node *node = NULL;
 	struct point_of_interest switch_poi = {};
 	struct point_of_interest stopping_poi = {};
 
@@ -92,21 +91,22 @@ struct point_of_interest get_next_poi(struct astar_node *path, int path_len,
 	// next, check for switch poi that come before it, overwriting if
 	for (index = context->poi_index; index + 1 < path_len; index++) {
 		ASSERT(index >= 0 && index + 1 < path_len);
-		node = path[index].node;
-		if (node->type == NODE_BRANCH) {
-			if (index == 0) {
-				switch_poi.sensor_num = -1;
-				switch_poi.displacement = 0;
-			} else {
-				poi_from_node(path, path_len, index, &switch_poi, 500);
-			}
+		const struct track_node *node = path[index].node;
+		if (node->type != NODE_BRANCH) continue;
 
-			switch_poi.type = SWITCH;
-			switch_poi.u.switch_info.num = node->num;
-			switch_poi.u.switch_info.dir = (node->edge[0].dest == path[index + 1].node) ? STRAIGHT : CURVED;
-
-			break;
+		if (index == 0) {
+			switch_poi.sensor_num = -1;
+			switch_poi.displacement = 0;
+		} else {
+			poi_from_node(path, path_len, index, &switch_poi, 1000);
 		}
+
+		switch_poi.type = SWITCH;
+		switch_poi.u.switch_info.num = node->num;
+		switch_poi.u.switch_info.dir =
+			(node->edge[0].dest == path[index + 1].node) ? STRAIGHT : CURVED;
+
+		break;
 	}
 
 	if (switch_poi.type == NONE) {
