@@ -23,6 +23,7 @@ put: @ Local utility "function". Put string to put in r1
 	ldr r1, =\msg
 	bl put
 	ldr r1, =bsod_string
+    mov r2, lr
 	bl put
 	b .
 .endm
@@ -55,7 +56,7 @@ bsod_string:
 .ascii "\x1B[44;37;22m"
 .ascii "\r\n\x1B[2K"
 .ascii "\r\n\x1B[2K"
-.ascii "    An exception ?? has occured at ????:???????? in ????. It may be possible to continue normally.\r\n\x1B[2K"
+.ascii "    An exception ?? has occured at %08x in ????. It may be possible to continue normally.\r\n\x1B[2K"
 .ascii "\r\n\x1B[2K"
 .ascii "        * Press any key to attempt to continue\r\n\x1B[2K"
 .ascii "        * Press CTRL+ALT+DELETE to reset your trains. You will lose any unsaved trains.\r\n\x1B[2K"

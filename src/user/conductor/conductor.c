@@ -176,6 +176,9 @@ static void handle_poi(struct conductor_state *state, int time) {
 	}
 	logf("For POI of type %d", state->poi.type);
 	delay_async(state->poi.delay, &req, sizeof(req), -1);
+
+	// prevent the poi from being handled twice
+	state->poi.type = NONE;
 }
 
 const int max_speed = 14;
@@ -238,6 +241,7 @@ static void set_next_poi(int time, struct conductor_state *state) {
 			// account for time passed we hit the last sensor
 			logf("We passed this POI already, begin event now");
 			state->poi.delay -= time - state->last_sensor_time;
+			if (state->poi.delay < 0) state->poi.delay = 0;
 			handle_poi(state, time);
 		} else if (state->poi.path_index < state->path_index) {
 			logf("We passed this POI already, begin event now");
@@ -276,7 +280,6 @@ static void handle_sensor_hit(int sensor_num, int time, struct conductor_state *
 	} else if (state->poi.type != NONE && i >= state->poi.path_index) {
 		logf("Approaching poi at sensor %s", repr);
 		handle_poi(state, time);
-		state->poi.type = NONE;
 		state->last_sensor_time = time;
 	} else {
 		logf("On track at sensor %s", repr);
