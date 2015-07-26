@@ -3,6 +3,7 @@
 #include "../sys.h"
 #include "../track.h"
 #include "../buffer.h"
+#include "../displaysrv.h"
 
 // Other tasks can message this service, and request to be woken up
 // when a train is at a particular point
@@ -121,13 +122,13 @@ static void check_if_train_on_final_approach(struct alert_request_state *state,
 	position_repr(*current_position, current_repr);
 	position_repr(*target_position, target_repr);
 
-	printf("\e[s\e[13;90HChecking if train %d (%s) on final approach to %s\e[u",
+	logf("Checking if train %d (%s) on final approach to %s",
 			state->request.train_id, current_repr, target_repr);
 
 	// special case to handle us having *just* passed that point
 	if (current_position->edge == target_position->edge
 	        && current_position->displacement > target_position->displacement) {
-		printf("\e[s\e[14;90HWe just passed that point\e[u");
+		logf("We just passed that point");
 		return;
 	}
 
@@ -137,10 +138,10 @@ static void check_if_train_on_final_approach(struct alert_request_state *state,
 
 	track_go_forwards(current_position->edge->src, switches, break_for_final_approach, &context);
 	if (!context.success) {
-		printf("\e[s\e[14;90HNot on final approach\e[u");
+		logf("Not on final approach");
 		return;
 	}
-	printf("\e[s\e[14;90HOn final approach\e[u");
+	logf("On final approach");
 
 	// find distance until we hit the target position, accounting for displacements
 	// of the source & target positions
