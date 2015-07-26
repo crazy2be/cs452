@@ -18,13 +18,15 @@ put: @ Local utility "function". Put string to put in r1
 	bl fprintf
 	ldmfd sp!, {pc}
 
+@ 0x201802c
 .macro exception_occured_m msg
 	stmfd sp!, {r0-r12, r14, r15} @ All but sp
 	ldr r1, =\msg
 	bl put
 	ldr r1, =bsod_string
-    mov r2, lr
-	bl put
+    bl put
+    mov r1, sp
+    bl print_stacked_registers
 	b .
 .endm
 

@@ -12,6 +12,17 @@
 #include "track.h"
 #include "tracksrv.h"
 
+void print_stacked_registers(int *sp) {
+	int p = 0;
+	int *pp = &p;
+	kprintf("Here: %p"EOL, pp);
+	for (int i = 0; i < 32; i++) {
+		kprintf("+/-: %p %p"EOL, pp + i, pp - i);
+		if (pp - i >= 0 && pp - i < (int*)0x2021800) kprintf("*+: %d %x"EOL, i, pp[i]);
+		if (pp + i >= 0 && pp - i < (int*)0x2021800) kprintf("*-: %d %x"EOL, -i, pp[-i]);
+	}
+}
+
 static int whois_poll(const char *name) {
 	int tid;
 	while ((tid = try_whois(name)) < 0) {
