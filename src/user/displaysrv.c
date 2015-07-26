@@ -571,7 +571,7 @@ bool find_track_node_pos(const char *name, int *x, int *y) {
 			strcmp(name, node_display_info[i].name_r) == 0) {
 				*x = node_display_info[i].x;
 				*y = node_display_info[i].y;
-				dlogf("Found track node %s", name);
+				//dlogf("Found track node %s", name);
 				return true;
 		}
 	}
