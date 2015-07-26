@@ -17,7 +17,7 @@
 // this will need to change if we want to make parts of the train blink
 // to representa a train's position
 
-static const char track_repr[TRACK_DISPLAY_HEIGHT][TRACK_DISPLAY_WIDTH] = {
+static const char track_repr[TRACK_DISPLAY_HEIGHT+1][TRACK_DISPLAY_WIDTH] = {
 	"    ___________________________________________________  ",
 	"             /                \\        \\                 ",
 	"            /                  \\        \\                ",
@@ -42,7 +42,8 @@ static const char track_repr[TRACK_DISPLAY_HEIGHT][TRACK_DISPLAY_WIDTH] = {
 	"    |    \\_______/_________\\_______/   /     /_________  ",
 	"     \\                                /     /            ",
 	"      \\                              /     /             ",
-	"       \\____________________________/_____/____________  "
+	"       \\____________________________/_____/____________  ",
+	"                                                         ",
 };
 
 // this doesn't handle the 3-way switches in the middle
@@ -627,20 +628,46 @@ bool find_track_node_pos(const char *name, int *x, int *y) {
 	dlogf("Could not find track node %s", name);
 	return false;
 }
+static int int_idx(int *a, int l, int n) {
+	for (int i = 0; i < l; i++) {
+		if (a[i] == n) {
+			//dlogf("%d %d", a[i], n);
+			return i;
+		}
+	}
+	return -1;
+}
 static void update_track(int *track_table) {
-	dlogf("Update_track called");
+	//dlogf("Update_track called");
+	static int colors[] = {32, 34, 35, 36, 31};
+	int ids[ARRAY_LENGTH(colors)] = {};
+	int id_i = 0;
+	for (int i = 0; i < TRACK_MAX; i++) {
+		if (track_table[i] == 0) continue;
+		//dlogf("%d", track_table[i]);
+		if (int_idx(ids, id_i, track_table[i]) >= 0) continue;
+		//dlogf("Found train %d", track_table[i]);
+		ids[id_i] = track_table[i];
+		id_i++;
+		ASSERT(id_i < ARRAY_LENGTH(colors));
+	}
+	dlogf("Found %d different trains reserving.", id_i);
+	puts("\e[s");
 	for (int i = 0; i < TRACK_MAX; i++) {
 		int x = -1, y = -1;
-		bool exists = find_track_node_pos(track[i].name, &x, &y);
-		if (exists) {
-			puts("\e[s");
-			printf("\e[%d;%dH\e[1;31m#\e[0m", y + 2, x + 2);
-			puts("\e[u");
+		find_track_node_pos(track[i].name, &x, &y);
+		if (track_table[i] > 0) {
+			printf("\e[%d;%dH\e[1;%dm#\e[0m", y + 2, x + 2,
+				   colors[int_idx(ids, id_i, track_table[i])]);
+		} else {
+			ASSERTF(x >= 0 && y >= 0, "%d %d", x, y);
+			printf("\e[%d;%dH%c", y + 2, x + 2, track_repr[y][x]);
 		}
 // 			puts("\e[s");
 // 			printf("\e[%d;%dH\e[1;31m%c\e[0m", y + 2, x + 2, track_repr[y][x]);
 // 			puts("\e[u");
 	}
+	puts("\e[u");
 }
 
 static void console_input(char c) {
@@ -716,7 +743,7 @@ void displaysrv(void) {
 
 
 	printf("\e[s\e[1;82H------LOG:-----\e[u");
-	int mock_table[TRACK_MAX] = {}; // For testing.
+	int mock_table[TRACK_MAX] = {77, 77, 77, 77, 77, 77, 77, 77, 88, 88, 88, 88, 88, 88, 88, 88, 88, 88, 88, 88, 88, 88}; // For testing.
 	update_track(mock_table);
 
 	for (;;) {
