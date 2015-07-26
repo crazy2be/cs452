@@ -62,7 +62,9 @@ static bool poi_lte(struct point_of_interest *a, struct point_of_interest *b) {
 	if (a->type == NONE || b->type == NONE) { // reject NONE if there's an alternative
 		return b->type == NONE;
 	} else if (a->path_index == b->path_index) {
-		return a->delay < b->delay;
+		// TODO: This should really compare delays (although it seems like
+		// comparing displacements may be equivelent?)
+		return a->displacement < b->displacement;
 	} else {
 		return a->path_index < b->path_index;
 	}
