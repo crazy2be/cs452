@@ -1,5 +1,7 @@
 #include "astar.h"
 
+#include "../user/displaysrv.h"
+
 #include <util.h>
 #define MIN_HEAP_PREFIX int
 #define MIN_HEAP_VALUE int
@@ -38,6 +40,7 @@ static int reconstruct_path(int *node_parents, int start, struct astar_node *pat
 
 int astar_find_path(const struct track_node *start, const struct track_node *end,
 					struct astar_node *path_out, bool *blocked_table) {
+	logf("Astar called between %s %s", start->name, end->name);
 	memset(path_out, 0, sizeof(*path_out)*ASTAR_MAX_PATH);
 	struct int_min_heap mh;
 	int_min_heap_init(&mh);
