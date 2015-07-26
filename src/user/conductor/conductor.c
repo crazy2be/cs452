@@ -309,7 +309,7 @@ static void run_conductor(int train_id) {
 
 		// if the conductor is idling, discard events other than new dest events
 		if (req.type == CND_SENSOR && state.poi.type == NONE) {
-			logf("Conductor got %d request, but ignored it", req.type);
+			//logf("Conductor got %d request, but ignored it", req.type);
 			continue;
 		}
 
