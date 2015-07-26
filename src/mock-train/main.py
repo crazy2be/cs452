@@ -72,7 +72,7 @@ def main():
 
 		def update(self):
 			# Super shitty deacceleration model
-			self.vel = self.vel + (0.02/self.SPEEDX)*(self.speed - self.vel)
+			self.vel = self.vel + (0.018/self.SPEEDX)*(self.speed - self.vel)
 			self.edge_dist += self.vel
 			while True:
 				e = self.e()
