@@ -246,12 +246,14 @@ static void set_next_poi(int time, struct conductor_state *state) {
 	if (state->poi.type != NONE) {
 		if (state->poi.sensor_num == last_sensor) {
 			// account for time passed we hit the last sensor
-			logf("We passed this POI already, begin event now");
 			state->poi.delay -= time - state->last_sensor_time;
+			logf("We passed (%d ticks late) this POI already, begin event now",
+				state->poi.delay);
 			if (state->poi.delay < 0) state->poi.delay = 0;
 			handle_poi(state, time);
 		} else if (state->poi.path_index < state->path_index) {
-			logf("We passed this POI already, begin event now");
+			logf("We passed [path_index] (%d ticks late) this POI already, begin event now",
+				state->poi.delay);
 			// fuck - we've passed this already - just kick off the event immediately
 			state->poi.delay = 0;
 			handle_poi(state, time);
