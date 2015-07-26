@@ -553,6 +553,12 @@ static const struct node_display node_display_info[] = {
 	{"C15", "C16", 26, 3},
 	{"MR6", "BR6", 32, 4},
 	{"C5", "C6", 35, 3},
+	{"MR2", "BR2", 40, 4},
+	{"A7", "A8", 45, 3},
+	{"B11", "B12", 50, 3},
+	{"MR1", "BR1", 43, 7},
+	{"A9", "A10", 47, 6},
+	{"B7", "B8", 53, 6},
 	// TODO: Fill in the rest of this table
 };
 bool find_track_node_pos(const char *name, int *x, int *y) {
