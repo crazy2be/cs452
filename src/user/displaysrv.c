@@ -136,16 +136,6 @@ static const struct sensor_display sensor_display_info[] = {
 	{ 28, 20 },
 };
 
-struct node_display {
-	const char *name;
-	const char *name_r;
-	unsigned char x, y;
-};
-
-static const struct node_display node_display_info[] = {
-	{"C3", "C4", 10, 3}
-};
-
 #define HLINE "\xe2\x94\x80"
 #define VLINE "\xe2\x94\x82"
 #define ULCORNER "\xe2\x94\x8c"
@@ -531,11 +521,39 @@ static void update_train_states(int active_trains, struct display_train_state *a
 	}
 	puts("\e[u");
 }
+struct node_display {
+	const char *name;
+	const char *name_r;
+	unsigned char x, y;
+};
 
+static const struct node_display node_display_info[] = {
+	{"C3", "C4", 9, 0}
+};
+bool find_track_node_pos(const char *name, int *x, int *y) {
+	for (int i = 0; i < ARRAY_LENGTH(node_display_info); i++) {
+		if (strcmp(name, node_display_info[i].name) == 0 ||
+			strcmp(name, node_display_info[i].name_r) == 0) {
+				*x = node_display_info[i].x;
+				*y = node_display_info[i].y;
+				dlogf("Found track node %s", name);
+				return true;
+		}
+	}
+	dlogf("Could not find track node %s", name);
+	return false;
+}
 static void update_track(int *track_table) {
-	puts("\e[s");
-
-	puts("\e[u");
+	dlogf("Update_track called");
+	for (int i = 0; i < TRACK_MAX; i++) {
+		int x = -1, y = -1;
+		bool exists = find_track_node_pos(track[i].name, &x, &y);
+		if (exists) {
+			puts("\e[s");
+			printf("\e[%d;%dH\e[1;31m#\e[0m", y + 2, x + 2);
+			puts("\e[u");
+		}
+	}
 }
 
 static void console_input(char c) {
