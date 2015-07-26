@@ -64,7 +64,8 @@ void sensorsrv(void) {
 	struct sensor_state sensors;
 #if CALIBRATE
 	int calibratesrv = whois(CALIBRATESRV_NAME);
-#else
+#endif
+#if 0
 	// Test just to try and crash everything.
 	delay(100);
 	char test[10] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x10, 0x00, 0x00, 0x00, 0x00};

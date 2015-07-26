@@ -237,10 +237,12 @@ static void initial_draw(void) {
 
 #define MAX_FEEDBACK_LEN 80
 #define MAX_LOG_LEN 60
+#define LOG_LINE_BUFSIZE (MAX_LOG_LEN + 2) // +2 for ellipsis
 #define MAX_LOG_LINES 36
-enum displaysrv_req_type { UPDATE_SWITCH, UPDATE_SENSOR, UPDATE_TIME, CONSOLE_INPUT,
-                           CONSOLE_BACKSPACE, CONSOLE_CLEAR, CONSOLE_FEEDBACK,
-						   CONSOLE_LOG, QUIT};
+enum displaysrv_req_type {
+	UPDATE_SWITCH, UPDATE_SENSOR, UPDATE_TIME, UPDATE_TRACK,
+	CONSOLE_INPUT, CONSOLE_BACKSPACE, CONSOLE_CLEAR, CONSOLE_FEEDBACK,
+	CONSOLE_LOG, QUIT};
 
 struct display_train_state {
 	int train_id;
@@ -261,6 +263,9 @@ struct displaysrv_req {
 			unsigned avg_delay;
 		} sensor;
 		struct {
+			int *table;
+		} track;
+		struct {
 			char input;
 		} console_input;
 		// nothing for console clear, backspace, or quit
@@ -273,11 +278,43 @@ struct displaysrv_req {
 			struct display_train_state active_train_states[MAX_ACTIVE_TRAINS];
 		} time;
 		struct {
-			char msg[MAX_LOG_LEN + 2]; // +2 for ellipsis
+			char msg[LOG_LINE_BUFSIZE];
 		} log;
 	} data;
 };
 
+static int current_log_line = 0;
+static void log_print(char *buf, const char *fmt, va_list va) {
+	int n = snprintf(buf, MAX_LOG_LEN, "%6d ", time());
+	n += vsnprintf(buf + n, MAX_LOG_LEN - n, fmt, va);
+	if (n > MAX_LOG_LEN) {
+		// ... character http://www.fileformat.info/info/unicode/char/2026/index.htm
+		buf[LOG_LINE_BUFSIZE - 4] = 0b11100010;
+		buf[LOG_LINE_BUFSIZE - 3] = 0b10000000;
+		buf[LOG_LINE_BUFSIZE - 2] = 0b10100110;
+		buf[LOG_LINE_BUFSIZE - 1] = '\0';
+	} else {
+		for (int i = n; i < MAX_LOG_LEN; i++) {
+			buf[i] = ' ';
+		}
+		buf[MAX_LOG_LEN] = '\0';
+	}
+}
+static void handle_log(char *msg) {
+	printf("\e[s");
+	printf("\e[%d;%dH%s", current_log_line + 2, 82, msg);
+	current_log_line = (current_log_line + 1) % MAX_LOG_LINES;
+	printf("\e[u");
+}
+// For logging internal to displaysrv.
+void dlogf(const char *fmt, ...) {
+	va_list va;
+	va_start(va,fmt);
+	char buf[LOG_LINE_BUFSIZE];
+	log_print(buf, fmt, va);
+	handle_log(buf);
+	va_end(va);
+}
 #define SENSOR_BUF_SIZE (TRACK_DISPLAY_HEIGHT + 2 - 3)
 struct sensor_reads {
 	int start, len;
@@ -364,7 +401,7 @@ static void update_single_2switch(int sw, enum sw_direction pos) {
 			filler_char = (pos == STRAIGHT) ? '_' : ' ';
 			last_x += (disp.cr == '/') ? 1 : -1;
 		}
-		printf("\e[s\e[%d;%dH\e[1;31m%c\e[0m\e[%d;%dH%c\e[u",
+		printf("\e[s\e[%d;%dH\e[1;33m%c\e[0m\e[%d;%dH%c\e[u",
 		       current_y + TRACK_Y_OFFSET, current_x + TRACK_X_OFFSET, switch_char,
 		       last_y + TRACK_Y_OFFSET, last_x + TRACK_X_OFFSET, filler_char);
 	} else {
@@ -407,7 +444,7 @@ static void update_single_3switch(int first_switch, enum sw_direction s1, enum s
 		b2x = coords->rx;
 		b2y = coords->ry;
 	}
-	printf("\e[s\e[%d;%dH\e[1;31m%c\e[0m\e[%d;%dH \e[%d;%dH \e[u",
+	printf("\e[s\e[%d;%dH\e[1;33m%c\e[0m\e[%d;%dH \e[%d;%dH \e[u",
 	       ty + TRACK_Y_OFFSET, tx + TRACK_X_OFFSET, switch_char,
 	       b1y + TRACK_Y_OFFSET, b1x + TRACK_X_OFFSET,
 	       b2y + TRACK_Y_OFFSET, b2x + TRACK_Y_OFFSET);
@@ -484,6 +521,56 @@ static void update_train_states(int active_trains, struct display_train_state *a
 	}
 	puts("\e[u");
 }
+struct node_display {
+	const char *name;
+	const char *name_r;
+	unsigned char x, y;
+};
+
+static const struct node_display node_display_info[] = {
+	{"C3", "C4", 9, 0},
+	{"MR5", "BR5", 14, 0},
+	{"MR18", "BR18", 29, 0},
+	{"C7", "C8", 34, 0},
+	{"MR3", "BR3", 38, 0},
+	{"A5", "A6", 43, 0},
+	{"B9", "B10", 52, 0},
+	{"E11", "E12", 8, 3},
+	{"MR7", "BR7", 11, 4},
+	{"D11", "D12", 18, 3},
+	{"C15", "C16", 26, 3},
+	{"MR6", "BR6", 32, 4},
+	{"C5", "C6", 35, 3},
+	// TODO: Fill in the rest of this table
+};
+bool find_track_node_pos(const char *name, int *x, int *y) {
+	for (int i = 0; i < ARRAY_LENGTH(node_display_info); i++) {
+		if (strcmp(name, node_display_info[i].name) == 0 ||
+			strcmp(name, node_display_info[i].name_r) == 0) {
+				*x = node_display_info[i].x;
+				*y = node_display_info[i].y;
+				dlogf("Found track node %s", name);
+				return true;
+		}
+	}
+	//dlogf("Could not find track node %s", name);
+	return false;
+}
+static void update_track(int *track_table) {
+	dlogf("Update_track called");
+	for (int i = 0; i < TRACK_MAX; i++) {
+		int x = -1, y = -1;
+		bool exists = find_track_node_pos(track[i].name, &x, &y);
+		if (exists) {
+			puts("\e[s");
+			printf("\e[%d;%dH\e[1;31m#\e[0m", y + 2, x + 2);
+			puts("\e[u");
+		}
+// 			puts("\e[s");
+// 			printf("\e[%d;%dH\e[1;31m%c\e[0m", y + 2, x + 2, track_repr[y][x]);
+// 			puts("\e[u");
+	}
+}
 
 static void console_input(char c) {
 	putc(c);
@@ -556,9 +643,10 @@ void displaysrv(void) {
 	struct displaysrv_req req;
 	int tid;
 
-	int log_line = 0;
 
 	printf("\e[s\e[1;82H------LOG:-----\e[u");
+	int mock_table[TRACK_MAX] = {}; // For testing.
+	update_track(mock_table);
 
 	for (;;) {
 		receive(&tid, &req, sizeof(req));
@@ -576,6 +664,9 @@ void displaysrv(void) {
 			update_time(req.data.time.millis);
 			update_train_states(req.data.time.active_trains, req.data.time.active_train_states, &old_switches);
 			break;
+		case UPDATE_TRACK:
+			update_track(req.data.track.table);
+			break;
 		case CONSOLE_INPUT:
 			console_input(req.data.console_input.input);
 			break;
@@ -589,8 +680,7 @@ void displaysrv(void) {
 			console_feedback(req.data.feedback.feedback);
 			break;
 		case CONSOLE_LOG:
-			printf("\e[s\e[%d;%dH%s\e[u", log_line + 2, 82, req.data.log.msg);
-			log_line = (log_line + 1) % MAX_LOG_LINES;
+			handle_log(req.data.log.msg);
 			break;
 		case QUIT:
 			return;
@@ -652,25 +742,17 @@ void displaysrv_update_switch(int displaysrv, struct switch_state *state) {
 	displaysrv_send(displaysrv, UPDATE_SWITCH, &req);
 }
 
+void displaysrv_update_track_table(int displaysrv, int *track_table) {
+	struct displaysrv_req req;
+	req.data.track.table = track_table;
+	displaysrv_send(displaysrv, UPDATE_TRACK, &req);
+}
+
 void displaysrv_log(const char *fmt, ...) {
 	va_list va;
 	va_start(va,fmt);
 	struct displaysrv_req req;
-	char *buf = req.data.log.msg;
-	int n = snprintf(buf, MAX_LOG_LEN, "%6d ", time());
-	n += vsnprintf(buf + n, MAX_LOG_LEN - n, fmt, va);
-	if (n > MAX_LOG_LEN) {
-		// ... character http://www.fileformat.info/info/unicode/char/2026/index.htm
-		buf[MAX_LOG_LEN - 2] = 0b11100010;
-		buf[MAX_LOG_LEN - 1] = 0b10000000;
-		buf[MAX_LOG_LEN + 0] = 0b10100110;
-		buf[MAX_LOG_LEN + 1] = '\0';
-	} else {
-		for (int i = n; i < MAX_LOG_LEN; i++) {
-			buf[i] = ' ';
-		}
-		buf[MAX_LOG_LEN] = '\0';
-	}
+	log_print(req.data.log.msg, fmt, va);
 	int tid = whois(DISPLAYSRV_NAME);
 	displaysrv_send(tid, CONSOLE_LOG, &req);
 	va_end(va);
