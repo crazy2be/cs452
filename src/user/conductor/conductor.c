@@ -23,19 +23,22 @@ static const struct track_edge *edge_between(const struct track_node *prev, cons
 	return edge;
 }
 
-static void poi_from_node(struct astar_node *path, int index, struct point_of_interest *poi,
+static void poi_from_node(struct astar_node *path, int path_len, int index, struct point_of_interest *poi,
 		int lead_dist) {
-
+	ASSERT(index >= 0 && index < path_len);
 	poi->original = path[index].node;
 
 	int displacement = lead_dist;
 	while (index >= 0) {
-		const struct track_node *node;
+		const struct track_node *node = NULL;
 		int sensor_gap = 0;
-		while (--index >= 0) {
+		index--;
+		while (index >= 0) {
+			ASSERT(index >= 0 && index + 1 < path_len);
 			node = path[index].node;
 			sensor_gap += edge_between(node, path[index + 1].node)->dist;
 			if (node->type == NODE_SENSOR) break;
+			index--;
 		}
 
 		if (index < 0) {
@@ -82,19 +85,20 @@ struct point_of_interest get_next_poi(struct astar_node *path, int path_len,
 	// initialize to poi for stopping point
 
 	if (!context->stopped) {
-		poi_from_node(path, path_len - 1, &stopping_poi, stopping_distance);
+		poi_from_node(path, path_len, path_len - 1, &stopping_poi, stopping_distance);
 		stopping_poi.type = STOPPING_POINT;
 	}
 
 	// next, check for switch poi that come before it, overwriting if
-	for (index = context->poi_index; index < path_len - 1; index++) {
+	for (index = context->poi_index; index + 1 < path_len; index++) {
+		ASSERT(index >= 0 && index + 1 < path_len);
 		node = path[index].node;
 		if (node->type == NODE_BRANCH) {
 			if (index == 0) {
 				switch_poi.sensor_num = -1;
 				switch_poi.displacement = 0;
 			} else {
-				poi_from_node(path, index, &switch_poi, 300);
+				poi_from_node(path, path_len, index, &switch_poi, 300);
 			}
 
 			switch_poi.type = SWITCH;
@@ -113,7 +117,7 @@ struct point_of_interest get_next_poi(struct astar_node *path, int path_len,
 	struct point_of_interest *chosen_poi = &stopping_poi;
 	struct point_of_interest *candidates[] = { &switch_poi };
 
-	for (unsigned i = 0; i < sizeof(candidates) / sizeof(candidates[0]); i++) {
+	for (int i = 0; i < ARRAY_LENGTH(candidates); i++) {
 		if (poi_lte(candidates[i], chosen_poi)) {
 			chosen_poi = candidates[i];
 		}
