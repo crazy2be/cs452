@@ -242,8 +242,6 @@ static void bisect_task(void) {
 	int hi = 1500;
 	int guess;
 
-	char buf[80];
-
 	const int target_sensor = target.edge->src->num;;
 	char target_repr[4];
 	sensor_repr(target_sensor, target_repr);
@@ -267,13 +265,11 @@ static void bisect_task(void) {
 		if (position_distance_apart(&current_position, &target, &switches) < position_distance_apart(&target, &current_position, &switches)) {
 			// undershot - stopping distance is less than we think it is
 			hi = guess;
-			snprintf(buf, sizeof(buf), "Undershot, target_sensor = %s, current_sensor = %s, lo = %d, hi = %d", target_repr, current_repr, lo, hi);
-			displaysrv_console_feedback(params.displaysrv, buf);
+			logf("Undershot, target_sensor = %s, current_sensor = %s, lo = %d, hi = %d", target_repr, current_repr, lo, hi);
 		} else {
 			// overshot - stopping distance is more than we think it is
 			lo = guess;
-			snprintf(buf, sizeof(buf), "Overshot, target_sensor = %s, current_sensor = %s, lo = %d, hi = %d", target_repr, current_repr, lo, hi);
-			displaysrv_console_feedback(params.displaysrv, buf);
+			logf("Overshot, target_sensor = %s, current_sensor = %s, lo = %d, hi = %d", target_repr, current_repr, lo, hi);
 		}
 
 		trains_set_speed(params.train, speed_setting);
@@ -288,9 +284,7 @@ static void bisect_task(void) {
 	guess = (lo + hi) / 2;
 	trains_set_stopping_distance(params.train, guess);
 
-	snprintf(buf, sizeof(buf), "Bisected stopping distance to find stopping distance of %d mm", guess);
-	displaysrv_console_feedback(params.displaysrv, buf);
-
+	logf("Bisected stopping distance to find stopping distance of %d mm", guess);
 }
 
 static void handle_bisect(int displaysrv, int train) {
