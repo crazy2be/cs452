@@ -236,9 +236,17 @@ static void initial_draw(void) {
 }
 
 #define MAX_FEEDBACK_LEN 80
-#define MAX_LOG_LEN 60
+#ifdef QEMU
+#define MAX_LOG_LEN 63
+#else
+#define MAX_LOG_LEN 100
+#endif
 #define LOG_LINE_BUFSIZE (MAX_LOG_LEN + 2) // +2 for ellipsis
-#define MAX_LOG_LINES 36
+#ifdef QEMU
+#define MAX_LOG_LINES 38
+#else
+#define MAX_LOG_LINES 60
+#endif
 enum displaysrv_req_type {
 	UPDATE_SWITCH, UPDATE_SENSOR, UPDATE_TIME, UPDATE_TRACK,
 	CONSOLE_INPUT, CONSOLE_BACKSPACE, CONSOLE_CLEAR, CONSOLE_FEEDBACK,
