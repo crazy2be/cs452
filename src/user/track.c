@@ -63,3 +63,13 @@ const struct track_node *track_next_sensor(const struct track_node *cur,
 	*distance_out = distance;
 	return next;
 }
+
+const struct track_node *find_track_node(const char *name) {
+	for (int i = 0; i < ARRAY_LENGTH(track); i++) {
+		if (strcmp(name, track[i].name) == 0) {
+			return &track[i];
+		}
+	}
+	WTF("Could not find track node %s", name);
+	return NULL;
+}

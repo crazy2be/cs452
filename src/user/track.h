@@ -16,3 +16,4 @@ const struct track_node *track_go_forwards(const struct track_node *cur,
         const struct switch_state *sw, break_cond cb, void *ctx);
 const struct track_node *track_go_forwards_cycle(const struct track_node *cur,
         const struct switch_state *sw, break_cond cb, void *ctx);
+const struct track_node *find_track_node(const char *name); // O(n) search

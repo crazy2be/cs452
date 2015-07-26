@@ -37,6 +37,17 @@ static int edge_num_btwn(const struct track_node *a, const struct track_node *b)
 	else if (a->edge[1].dest == b) return 1;
 	else {WTF("Discontinuous path! %p %p %p %p", a, b, a->edge[0].dest, a->edge[1].dest); return -1;}
 }
+static void desire_i(int *desired, const struct track_node *node) {
+	desired[idx(node)] = 1;
+	desired[idx(node->reverse)] = 1;
+}
+static void desire(int *desired, const struct track_node *node) {
+	desire_i(desired, node);
+	if (node->num == 153) desire_i(desired, find_track_node("BR154"));
+	if (node->num == 154) desire_i(desired, find_track_node("BR153"));
+	if (node->num == 155) desire_i(desired, find_track_node("BR156"));
+	if (node->num == 156) desire_i(desired, find_track_node("BR155"));
+}
 #define edge_btwn(a, b) (&a->edge[edge_num_btwn(a, b)])
 static void reserve_forwards(int tid, int *desired, const struct track_node *start, int dist) {
 	int iterations = 0;
@@ -44,9 +55,7 @@ static void reserve_forwards(int tid, int *desired, const struct track_node *sta
 	const struct track_node *cur = start;
 	int rem_dist = dist;
 	for (;;) {
-		desired[idx(cur)] = 1;
-		desired[idx(cur->reverse)] = 1;
-
+		desire(desired, cur);
 		if (rem_dist <= 0) return;
 		else if (cur->type == NODE_EXIT) return;
 		else if (iterations++ > TRACK_MAX) {WTF("Cycle");}
@@ -82,8 +91,7 @@ static int reserve_path(int tid, struct astar_node *path,
 	const struct track_node *prev = NULL;
 	for (int i = 0; i < len; i++) {
 		const struct track_node *cur = path[i].node;
-		desired[idx(cur)] = 1;
-		desired[idx(cur->reverse)] = 1;
+		desire(desired, cur);
 		if (prev) remaining_path_length -= edge_btwn(prev, cur)->dist;
 		if (prev && (cur->type == NODE_BRANCH) && (i < len - 1)) {
 			int rem_dist = MIN(stopping_distance, remaining_path_length);
