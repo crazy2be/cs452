@@ -114,7 +114,8 @@ struct task_descriptor *task_from_tid(int tid) {
 
 void tasks_print_runtime(int total_runtime_us) {
 	int tasks_runtime_us = 0;
-	for (int i = 0; i < NUM_TD; i++) {
+	int i = 0;
+	for (; i < 30; i++) { // First ~30 are real tasks
 		int runtime = tasks[i].user_time_useconds;
 		if (runtime == 0) continue;
 		kprintf("Task ");
@@ -125,7 +126,14 @@ void tasks_print_runtime(int total_runtime_us) {
 		kprintf(" ran for %d us" EOL, runtime);
 		tasks_runtime_us += runtime;
 	}
-	kprintf("Kernel ran for %d us" EOL, total_runtime_us - tasks_runtime_us);
+	int ephemeral_runtime_us = 0;
+	for (; i < NUM_TD; i++) { // Rest are assumed to be ephemeral.
+		int runtime = tasks[i].user_time_useconds;
+		ephemeral_runtime_us += runtime;
+	}
+	kprintf("Ephemeral tasks ran for %d us"EOL, ephemeral_runtime_us);
+	kprintf("Kernel ran for %d us" EOL, total_runtime_us -
+		tasks_runtime_us - ephemeral_runtime_us);
 	kprintf("Ran for %d us total" EOL, total_runtime_us);
 }
 
