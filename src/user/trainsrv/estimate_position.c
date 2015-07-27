@@ -288,8 +288,8 @@ static void log_position_estimation_error(const struct trainsrv_state *state,
 		if (train_state->next_sensor == sensor_node) {
 			const int delta_d = train_state->mm_to_next_sensor - get_estimated_distance_travelled(train_state, time());
 			train_state->measurement_error = delta_d;
-			/* snprintf(feedback, sizeof(feedback), "Train was estimated at %d mm away from sensor %s when tripped (%d total)", */
-			/*          delta_d, sens_name, train_state->mm_to_next_sensor); */
+			//logf("Train was estimated at %d mm away from sensor %s when tripped (%%%d  error)",
+		          //delta_d, sens_name, (delta_d*100)/train_state->mm_to_next_sensor);
 			/* displaysrv_console_feedback(state->displaysrv_tid, feedback); */
 		} else {
 			// TODO: this doesn't quite do what we want, since we don't recalculate next sensor
