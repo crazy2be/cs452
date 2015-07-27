@@ -23,6 +23,13 @@ static const struct track_edge *edge_between(const struct track_node *prev, cons
 	return edge;
 }
 
+static const char *poi_type_desc(enum poi_type pt) {
+	static const char *type_desc[NUM_POI_TYPE] = {
+		"none", "switch", "stopping_point"};
+	ASSERT(pt >= 0 && pt < NUM_POI_TYPE);
+	return type_desc[pt];
+}
+
 static void poi_from_node(struct astar_node *path, int path_len, int index, struct point_of_interest *poi,
 		int lead_dist) {
 	ASSERT(index >= 0 && index < path_len);
@@ -84,7 +91,7 @@ struct point_of_interest get_next_poi(struct astar_node *path, int path_len,
 
 	// initialize poi for stopping point
 	if (!context->stopped) {
-		logf("Stopping at %s, distance: %d", path[path_len - 1].node->name, stopping_distance);
+		//logf("Stopping at %s, distance: %d", path[path_len - 1].node->name, stopping_distance);
 		poi_from_node(path, path_len, path_len - 1, &stopping_poi, stopping_distance);
 		stopping_poi.type = STOPPING_POINT;
 	}
@@ -132,7 +139,7 @@ struct point_of_interest get_next_poi(struct astar_node *path, int path_len,
 		context->stopped = true;
 	} else if (chosen_poi == &switch_poi) {
 		context->poi_index = index + 1;
-		logf("Switch poi chosen (stopping: %d)", stopping_poi.displacement);
+		//logf("Switch poi chosen (stopping: %d)", stopping_poi.displacement);
 	}
 
 	if (chosen_poi->type == NONE) {
@@ -146,9 +153,14 @@ struct point_of_interest get_next_poi(struct astar_node *path, int path_len,
 		if (chosen_poi->sensor_num > 0) {
 			sensor_repr(chosen_poi->sensor_num, repr);
 		}
-		logf("Next POI: %s + %d mm / %d ticks, type %d, targ %s",
-				repr, chosen_poi->displacement, chosen_poi->delay, chosen_poi->type,
-				chosen_poi->original->name);
+		const char *targ = "[NULL]";
+		if (chosen_poi->original != NULL) {
+			targ = chosen_poi->original->name;
+		}
+		logf("Next POI [%d]: %s + %d mm / %d ticks, type %s, targ %s",
+				context->poi_index,
+				repr, chosen_poi->displacement, chosen_poi->delay,
+				poi_type_desc(chosen_poi->type), targ);
 	}
 
 	return *chosen_poi;
@@ -185,7 +197,9 @@ static void handle_poi(struct conductor_state *state, int _) {
 	default:
 		WTF("No such case");
 	}
-	logf("For POI of type %d", state->poi.type);
+	logf("Delaying %d ticks until poi of type %s",
+		 state->poi.delay,
+		 poi_type_desc(state->poi.type));
 	delay_async(state->poi.delay, &req, sizeof(req), -1);
 
 	// prevent the poi from being handled twice
@@ -203,6 +217,9 @@ static void handle_set_destination(const struct track_node *dest, struct conduct
 	state->poi_context.poi_index = 0;
 	state->poi_context.stopped = false;
 
+	logf("We're routing from %s to %s, found a path of length %d",
+			train_state.position.edge->dest->name, dest->name, state->path_len);
+
 	if (state->path_len <= 0) return; // no such path
 	// NOTE: this is a bit of a hack - we really just want to check for poi whose sensor we've already passed over
 	// we don't know the train's speed yet, so we just fudge it with a value that shouldn't matter anyway
@@ -215,22 +232,19 @@ static void handle_set_destination(const struct track_node *dest, struct conduct
 	state->last_velocity = velocity;
 
 	int stopping_distance = trains_get_stopping_distance(state->train_id);
+	logf("Calculating inital pois...");
 	state->poi = get_next_poi(state->path, state->path_len, &state->poi_context, stopping_distance, velocity);
 	ASSERT(state->poi.type != NONE);
 	ASSERT(state->poi.type != STOPPING_POINT);
-	logf("We're routing from %s to %s, found a path of length %d, first poi is for sensor %d + %d ticks",
-			train_state.position.edge->src->name, dest->name, state->path_len, state->poi.sensor_num, state->poi.delay);
 
-	while (state->poi.type != NONE &&
-			(state->poi.sensor_num == -1 ||
-			(state->path[0].node->type == NODE_SENSOR && state->poi.sensor_num == state->path[0].node->num))) {
+	// Fire off any events that are before the first sensor on our route.
+	while (state->poi.type != NONE && state->poi.sensor_num == -1) {
 		ASSERT(state->poi.type != STOPPING_POINT);
 		handle_switch_timeout(state->poi.u.switch_info.num, state->poi.u.switch_info.dir);
 		state->poi = get_next_poi(state->path, state->path_len, &state->poi_context, stopping_distance, velocity);
 	}
 
-	logf("We're routing from %s to %s, found a path of length %d",
-			train_state.position.edge->src->name, dest->name, state->path_len);
+	logf("Waiting to hit first sensor...");
 }
 
 static void set_next_poi(int time, struct conductor_state *state) {
@@ -277,7 +291,7 @@ static void handle_sensor_hit(int sensor_num, int time, struct conductor_state *
 		if (node->type != NODE_SENSOR) continue;
 		char repr[4];
 		sensor_repr(node->num, repr);
-		logf("Checking hit against sensor %s, index = %d", repr, i);
+// 		logf("Checking hit against sensor %s, index = %d", repr, i);
 		if (node->num == sensor_num) break;
 		else errors++;
 	}
@@ -325,7 +339,7 @@ static void run_conductor(int train_id) {
 			handle_set_destination(req.u.dest.dest, &state);
 			break;
 		case CND_SENSOR:
-			logf("Conductor got sensor request");
+			//logf("Conductor got sensor request");
 			handle_sensor_hit(req.u.sensor.sensor_num, req.u.sensor.time, &state);
 			break;
 		case CND_SWITCH_TIMEOUT: {
