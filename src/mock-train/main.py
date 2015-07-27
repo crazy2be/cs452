@@ -112,6 +112,8 @@ def main():
 
 	trains = [Train(12)]
 	startup_time = time.time()
+	accumulated_error = [0.]
+	last_time = [time.time()]
 	last_sensor_poll = [0]
 	def my_draw(da, cr):
 		(typ, a1, a2) = conn.next_cmd()
@@ -121,14 +123,20 @@ def main():
 		elif typ == 'switch': set_switch(a1, a2)
 		elif typ == 'sensor': last_sensor_poll[0] = round((time.time() - startup_time) * 1000)/1000
 		else: print "Ignoring command %s" % typ
+		cur_time = time.time()
+		dt = cur_time - last_time[0] + accumulated_error[0]
+		num_steps = int(dt/ 0.05)
+		accumulated_error[0] = dt - num_steps*0.05
+		print dt, cur_time, last_time[0], num_steps, accumulated_error[0]
 		for train in trains:
-			train.update()
+			for _ in range(0, num_steps): train.update()
 			train.draw(n_pos, da, cr)
 			cr.move_to(10., 10.)
 			cr.set_source_rgb(0., 0., 0.)
 			cr.set_font_size(12)
 			cr.show_text("Last polled at %.3f" % last_sensor_poll[0])
 		da.queue_draw()
+		last_time[0] = cur_time
 
 	win.connect("delete_event", destroy_callback)
 	win.graph.connect("draw", my_draw)

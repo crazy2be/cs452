@@ -168,8 +168,8 @@ static void initialize_train_velocity_table(struct internal_train_state *train_s
 	// nasty hack to help speed up calibration
 	switch (train_id) {
 	case 12:
-		train_state->est_velocities[27] = 7500;
-		train_state->est_stopping_distances[27] = 781;
+		train_state->est_velocities[27] = 2880;
+		train_state->est_stopping_distances[27] = 682;
 		break;
 	case 58:
 		train_state->est_stopping_distances[15] = train_state->est_stopping_distances[16] = 166;
