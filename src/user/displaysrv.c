@@ -776,6 +776,10 @@ void displaysrv(void) {
 	create(PRIORITY_DISPLAYSRV_CLOCK_UPDATE, clock_update_task);
 	signal_recv();
 
+#ifdef QEMU
+	// http://invisible-island.net/xterm/ctlseqs/ctlseqs.html#h2-The-Alternate-Screen-Buffer
+	printf("\e[?1049h");
+#endif
 	initial_draw();
 
 	struct sensor_state old_sensors;
@@ -832,6 +836,10 @@ void displaysrv(void) {
 			handle_log(req.data.log.msg);
 			break;
 		case QUIT:
+#ifdef QEMU
+			// http://invisible-island.net/xterm/ctlseqs/ctlseqs.html#h2-The-Alternate-Screen-Buffer
+			printf("\e[?1049l");
+#endif
 			return;
 		default:
 			printf("Got request type %d" EOL, req.type);
