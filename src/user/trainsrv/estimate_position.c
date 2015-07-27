@@ -297,7 +297,7 @@ static void log_position_estimation_error(const struct trainsrv_state *state,
 			// I'm not going to fix this for now, since this is just for debugging purposes
 			char exp_sens_name[4];
 			sensor_repr(train_state->next_sensor->num, exp_sens_name);
-			logf("Train was expected to hit sensor %s, actually hit %s",
+			logf("Train was [maybe] expected to hit sensor %s, actually hit %s",
 			         exp_sens_name, sens_name);
 		}
 	}
