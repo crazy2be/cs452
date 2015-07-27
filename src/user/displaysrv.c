@@ -251,7 +251,8 @@ static void initial_draw(void) {
 #define MAX_LOG_LINES 60
 #endif
 enum displaysrv_req_type {
-	UPDATE_SWITCH, UPDATE_SENSOR, UPDATE_TIME, UPDATE_TRACK,
+	UPDATE_SWITCH, UPDATE_SENSOR, UPDATE_SENSOR_ATTRIBUTION,
+	UPDATE_TIME, UPDATE_TRACK,
 	CONSOLE_INPUT, CONSOLE_BACKSPACE, CONSOLE_CLEAR, CONSOLE_FEEDBACK,
 	CONSOLE_LOG, QUIT};
 
@@ -273,6 +274,10 @@ struct displaysrv_req {
 			struct sensor_state state;
 			unsigned avg_delay;
 		} sensor;
+		struct {
+			int sensor;
+			int train;
+		} sensor_attribution;
 		struct {
 			int *table;
 		} track;
@@ -331,14 +336,37 @@ void dlogf(const char *fmt, ...) {
 	va_end(va);
 }
 #define SENSOR_BUF_SIZE (TRACK_DISPLAY_HEIGHT + 2 - 3)
+struct sensor_record {
+	int sensor;
+	int train;
+	int time;
+};
 struct sensor_reads {
 	int start, len;
-	unsigned char sensors[SENSOR_BUF_SIZE];
+	struct sensor_record sensors[SENSOR_BUF_SIZE];
 };
-
-static void record_sensor_read(struct sensor_reads *reads, int sensor) {
+static void update_sensor_list_display(struct sensor_reads *reads) {
+	printf("\e[s");
+	for (int j = reads->len - 1; j >= 0; j--) {
+		char buf[4];
+		int i = (reads->start + j) % SENSOR_BUF_SIZE;
+		sensor_repr(reads->sensors[i].sensor, buf);
+		if (buf[2] == '\0') {
+			buf[2] = ' '; buf[3] = '\0'; // Super ghetto padding
+		}
+		int tr = reads->sensors[i].train;
+		char attr[20];
+		if (tr == -1) snprintf(attr, sizeof(attr), "[!!]"); // Spurious sensor
+		else if (tr == 0) snprintf(attr, sizeof(attr), "[??]"); // Unknown/no data
+		else snprintf(attr, sizeof(attr), "[%2d]", tr);
+		printf("\e[%d;%dH%6d: %s %s", SENSORS_Y_OFFSET + reads->len - 1 - j,
+			   SENSORS_X_OFFSET, reads->sensors[i].time, buf, attr);
+	}
+	printf("\e[u");
+}
+static void record_sensor_read(struct sensor_reads *reads, int ticks, int sensor) {
 	int last = (reads->start + reads->len) % SENSOR_BUF_SIZE;
-	reads->sensors[last] = sensor;
+	reads->sensors[last] = (struct sensor_record) {.sensor = sensor, .time = ticks};
 
 	if (reads->len < SENSOR_BUF_SIZE) {
 		reads->len++;
@@ -346,14 +374,6 @@ static void record_sensor_read(struct sensor_reads *reads, int sensor) {
 		ASSERT(reads->start == last); // we should have wrapped around to the right spot
 		reads->start = (reads->start + 1) % SENSOR_BUF_SIZE;
 	}
-
-	printf("\e[s");
-	for (int j = reads->len - 1; j >= 0; j--) {
-		char buf[4];
-		sensor_repr(reads->sensors[(reads->start + j) % SENSOR_BUF_SIZE], buf);
-		printf("\e[%d;%dH%s ", SENSORS_Y_OFFSET + reads->len - 1 - j, SENSORS_X_OFFSET, buf);
-	}
-	printf("\e[u");
 }
 
 static void update_sensor_display(int sensor, int blank) {
@@ -372,6 +392,19 @@ static void update_sensor_display(int sensor, int blank) {
 	       coords.x + TRACK_X_OFFSET, buf);
 }
 
+static void update_sensor_attribution(int sensor, int train,
+									  struct sensor_reads *reads) {
+	for (int j = reads->len - 1; j >= 0; j--) {
+		int i = (reads->start + j) % SENSOR_BUF_SIZE;
+		if (reads->sensors[i].sensor != sensor) continue;
+
+		ASSERT(reads->sensors[i].train == 0);
+		reads->sensors[i].train = train;
+		update_sensor_list_display(reads);
+		return;
+	}
+	WTF("Attempted to attribute nonexistent sensor %d to train %d!", sensor, train);
+}
 static void update_sensor(struct sensor_state *sensors, struct sensor_state *old_sensors, struct sensor_reads *reads, unsigned delay_time) {
 	// update displayed sensor delay time
 	printf("\e[s\e[%d;%dH%03d\e[u", CLOCK_Y_OFFSET, CLOCK_X_OFFSET + 17, delay_time);
@@ -381,7 +414,8 @@ static void update_sensor(struct sensor_state *sensors, struct sensor_state *old
 		if (s1 != sensor_get(old_sensors, i) || s2 != sensor_get(old_sensors, i + 1)) {
 			int to_draw = s1 ? i : i + 1;
 			update_sensor_display(to_draw, !(s1 || s2));
-			if (s1 || s2) record_sensor_read(reads, to_draw);
+			if (s1 || s2) record_sensor_read(reads, sensors->ticks, to_draw);
+			update_sensor_list_display(reads);
 		}
 	}
 	*old_sensors = *sensors;
@@ -760,6 +794,11 @@ void displaysrv(void) {
 		case UPDATE_SENSOR:
 			update_sensor(&req.data.sensor.state, &old_sensors, &sensor_reads, req.data.sensor.avg_delay);
 			break;
+		case UPDATE_SENSOR_ATTRIBUTION:
+			update_sensor_attribution(req.data.sensor_attribution.sensor,
+									  req.data.sensor_attribution.train,
+								&sensor_reads);
+			break;
 		case UPDATE_TIME:
 			update_time(req.data.time.millis);
 			update_train_states(req.data.time.active_trains, req.data.time.active_train_states, &old_switches);
@@ -834,6 +873,12 @@ void displaysrv_update_sensor(int displaysrv, struct sensor_state *state, unsign
 	req.data.sensor.state = *state;
 	req.data.sensor.avg_delay = avg_delay;
 	displaysrv_send(displaysrv, UPDATE_SENSOR, &req);
+}
+void displaysrv_update_sensor_attribution(int displaysrv, int sensor, int train) {
+	struct displaysrv_req req;
+	req.data.sensor_attribution.sensor = sensor;
+	req.data.sensor_attribution.train = train;
+	displaysrv_send(displaysrv, UPDATE_SENSOR_ATTRIBUTION, &req);
 }
 
 void displaysrv_update_switch(int displaysrv, struct switch_state *state) {

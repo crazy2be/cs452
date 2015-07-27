@@ -422,6 +422,7 @@ static void sensor_cb(int sensor, void *ctx) {
 	if (context->train_already_hit[index] & mask) return;
 	context->train_already_hit[index] |= mask;
 
+	displaysrv_update_sensor_attribution(whois("displaysrv"), sensor, train->train_id);
 	logf("Attributing sensor hit %s to %d", sensor_pretty, train->train_id);
 
 	if (attr.changed_switch != -1) {
