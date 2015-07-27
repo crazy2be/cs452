@@ -115,6 +115,7 @@ def main():
 	accumulated_error = [0.]
 	last_time = [time.time()]
 	last_sensor_poll = [0]
+	FPS = 30.
 	def my_draw(da, cr):
 		(typ, a1, a2) = conn.next_cmd()
 		if typ is None: pass
@@ -125,9 +126,8 @@ def main():
 		else: print "Ignoring command %s" % typ
 		cur_time = time.time()
 		dt = cur_time - last_time[0] + accumulated_error[0]
-		num_steps = int(dt/ 0.05)
-		accumulated_error[0] = dt - num_steps*0.05
-		print dt, cur_time, last_time[0], num_steps, accumulated_error[0]
+		num_steps = int(dt*FPS)
+		accumulated_error[0] = dt - num_steps/FPS
 		for train in trains:
 			for _ in range(0, num_steps): train.update()
 			train.draw(n_pos, da, cr)
