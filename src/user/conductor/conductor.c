@@ -84,6 +84,7 @@ struct point_of_interest get_next_poi(struct astar_node *path, int path_len,
 
 	// initialize poi for stopping point
 	if (!context->stopped) {
+		logf("Stopping at %s, distance: %d", path[path_len - 1].node->name, stopping_distance);
 		poi_from_node(path, path_len, path_len - 1, &stopping_poi, stopping_distance);
 		stopping_poi.type = STOPPING_POINT;
 	}
