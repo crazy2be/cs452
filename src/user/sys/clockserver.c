@@ -77,7 +77,9 @@ void clockserver(void) {
 			// we shouldn't be skipping any ticks
 			// a weaker form of this assertion would be to check that time never goes backwards
 			if (num_ticks + 1 != req.ticks) {
+#ifndef QEMU
 				printf("num_ticks = %d, req.ticks = %d", num_ticks, req.ticks);
+#endif
 			}
 			//ASSERT(num_ticks + 1 == req.ticks);
 			num_ticks = req.ticks;
