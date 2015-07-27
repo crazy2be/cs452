@@ -260,11 +260,10 @@ static void set_next_poi(int time, struct conductor_state *state) {
 	}
 
 	int stopping_distance = trains_get_stopping_distance(state->train_id);
-	int last_sensor = state->poi.sensor_num;
 	state->poi = get_next_poi(state->path, state->path_len, &state->poi_context,
 			stopping_distance, velocity);
 	if (state->poi.type != NONE) {
-		if (state->poi.sensor_num == last_sensor) {
+		if (state->poi.path_index == state->path_index - 1) {
 			// account for time passed we hit the last sensor
 			state->poi.delay -= time - state->last_sensor_time;
 			if (state->poi.delay < 0) {
@@ -309,7 +308,7 @@ static void handle_sensor_hit(int sensor_num, int time, struct conductor_state *
 	} else if (i >= state->path_len) {
 		return;
 	} else if (state->poi.type != NONE && i >= state->poi.path_index) {
-		logf("Approaching poi at sensor %s", repr);
+		logf("Approaching poi %s %d at sensor %s", state->poi.original->name, state->poi.delay, repr);
 		handle_poi(state, time);
 		state->last_sensor_time = time;
 	} else {
@@ -328,12 +327,6 @@ static void run_conductor(int train_id) {
 		int tid = -1;
 		receive(&tid, &req, sizeof(req));
 		reply(tid, NULL, 0);
-
-		// if the conductor is idling, discard events other than new dest events
-		if (req.type == CND_SENSOR && state.poi.type == NONE) {
-			//logf("Conductor got %d request, but ignored it", req.type);
-			continue;
-		}
 
 		switch (req.type) {
 		case CND_DEST:
