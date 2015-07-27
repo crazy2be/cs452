@@ -361,11 +361,16 @@ static void update_sensor_list_display(struct sensor_reads *reads) {
 		}
 		int tr = reads->sensors[i].train;
 		char attr[20];
-		if (tr == -1) snprintf(attr, sizeof(attr), "[!!]"); // Spurious sensor
-		else if (tr == 0) snprintf(attr, sizeof(attr), "[??]"); // Unknown/no data
-		else snprintf(attr, sizeof(attr), "[%2d]", tr);
-		printf("\e[%d;%dH%6d: %s %s", SENSORS_Y_OFFSET + reads->len - 1 - j,
+		if (tr == -1) snprintf(attr, sizeof(attr), "!!"); // Spurious sensor
+		else if (tr == 0) snprintf(attr, sizeof(attr), "??"); // Unknown/no data
+		else snprintf(attr, sizeof(attr), "%2d", tr);
+		printf("\e[%d;%dH%6d %s     tr%s", SENSORS_Y_OFFSET + i,
 			   SENSORS_X_OFFSET, reads->sensors[i].time, buf, attr);
+	}
+	if (reads->len == SENSOR_BUF_SIZE && reads->start > 0) {
+		printf("\e[%d;%dH                    ",
+			SENSORS_Y_OFFSET + (reads->start % SENSOR_BUF_SIZE),
+			SENSORS_X_OFFSET);
 	}
 	printf("\e[u");
 }
