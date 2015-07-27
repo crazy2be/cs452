@@ -238,13 +238,15 @@ static void initial_draw(void) {
 
 #define MAX_FEEDBACK_LEN 80
 #ifdef QEMU
-#define MAX_LOG_LEN 69
+//#define MAX_LOG_LEN 69
+#define MAX_LOG_LEN 100
 #else
 #define MAX_LOG_LEN 100
 #endif
 #define LOG_LINE_BUFSIZE (MAX_LOG_LEN + 2) // +2 for ellipsis
 #ifdef QEMU
-#define MAX_LOG_LINES 38
+//#define MAX_LOG_LINES 38
+#define MAX_LOG_LINES 60
 #else
 #define MAX_LOG_LINES 60
 #endif
