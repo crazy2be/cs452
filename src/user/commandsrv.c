@@ -80,8 +80,8 @@ static void consume_whitespace(char *cmd, int *ip) {
 	*ip = i;
 };
 
-enum command_type { TR, SW, RV, QUIT, STOP, BSW, BISECT, ROUTE, INVALID };
-char *command_listing[] = { "tr", "sw", "rv", "q", "stp", "bsw", "bisect", "route", ""  };
+enum command_type { TR, SW, RV, QUIT, STOP, BSW, BISECT, ROUTE, FREEZE, INVALID };
+char *command_listing[] = { "tr", "sw", "rv", "q", "stp", "bsw", "bisect", "route", "f", "" };
 
 static enum command_type get_command_type(char *cmd, int *ip) {
 	int i = *ip;
@@ -469,6 +469,9 @@ static void process_command(char *cmd, int displaysrv) {
 
 		send(tid, &req, sizeof(req), NULL, 0);
 		return;
+	}
+	case FREEZE: {
+		displaysrv_console_freeze();
 	}
 	default:
 		break;

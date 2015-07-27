@@ -254,7 +254,7 @@ enum displaysrv_req_type {
 	UPDATE_SWITCH, UPDATE_SENSOR, UPDATE_SENSOR_ATTRIBUTION,
 	UPDATE_TIME, UPDATE_TRACK,
 	CONSOLE_INPUT, CONSOLE_BACKSPACE, CONSOLE_CLEAR, CONSOLE_FEEDBACK,
-	CONSOLE_LOG, QUIT};
+	CONSOLE_LOG, CONSOLE_FREEZE, QUIT};
 
 struct display_train_state {
 	int train_id;
@@ -351,6 +351,9 @@ struct sensor_reads {
 	struct sensor_record sensors[SENSOR_BUF_SIZE];
 };
 static void update_sensor_list_display(struct sensor_reads *reads) {
+	// TODO: It's pretty abusrdly wastefull how we reprint this whole sensor
+	// buffer every time an update comes in- we can just reprint the necessary
+	// line(s).
 	printf("\e[s");
 	for (int j = reads->len - 1; j >= 0; j--) {
 		char buf[4];
@@ -790,7 +793,7 @@ void displaysrv(void) {
 	memset(&old_switches, 0, sizeof(old_switches));
 	struct displaysrv_req req;
 	int tid;
-
+	bool console_frozen = false;
 
 	printf("\e[s\e[1;82H------LOG:-----\e[u");
 	int mock_table[TRACK_MAX] = {77, 77, 77, 77, 77, 77, 77, 77, 88, 88, 88, 88, 88, 88, 88, 88, 88, 88, 88, 88, 88, 88}; // For testing.
@@ -800,6 +803,8 @@ void displaysrv(void) {
 		receive(&tid, &req, sizeof(req));
 		// requests are fire and forget, and provide no feedback
 		reply(tid, NULL, 0);
+
+		if (console_frozen && req.type != CONSOLE_FREEZE) continue;
 
 		switch (req.type) {
 		case UPDATE_SWITCH:
@@ -831,6 +836,11 @@ void displaysrv(void) {
 			break;
 		case CONSOLE_FEEDBACK:
 			console_feedback(req.data.feedback.feedback);
+			break;
+		case CONSOLE_FREEZE:
+			console_frozen = !console_frozen;
+			dlogf("Console %sfrozen.%s", console_frozen? "": "un",
+				console_frozen? " Type 'f' again to unfreeze." : "");
 			break;
 		case CONSOLE_LOG:
 			handle_log(req.data.log.msg);
@@ -884,6 +894,10 @@ void displaysrv_console_feedback(int displaysrv, char *fb) {
 	struct displaysrv_req req;
 	strcpy(req.data.feedback.feedback, fb);
 	displaysrv_send(displaysrv, CONSOLE_FEEDBACK, &req);
+}
+void displaysrv_console_freeze(void) {
+	struct displaysrv_req req;
+	displaysrv_send(whois("displaysrv"), CONSOLE_FREEZE, &req);
 }
 
 void displaysrv_update_sensor(int displaysrv, struct sensor_state *state, unsigned avg_delay) {
