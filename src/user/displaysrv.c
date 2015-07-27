@@ -246,7 +246,7 @@ static void initial_draw(void) {
 #define LOG_LINE_BUFSIZE (MAX_LOG_LEN + 2) // +2 for ellipsis
 #ifdef QEMU
 //#define MAX_LOG_LINES 38
-#define MAX_LOG_LINES 60
+#define MAX_LOG_LINES 58
 #else
 #define MAX_LOG_LINES 60
 #endif
@@ -302,6 +302,7 @@ struct displaysrv_req {
 static int current_log_line = 0;
 static void log_print(char *buf, const char *fmt, va_list va) {
 	int n = snprintf(buf, MAX_LOG_LEN, "%6d ", time());
+	//n += snprintf(buf + n, MAX_LOG_LEN - n, "%2d ", current_log_line);
 	n += vsnprintf(buf + n, MAX_LOG_LEN - n, fmt, va);
 	if (n > MAX_LOG_LEN) {
 		// ... character http://www.fileformat.info/info/unicode/char/2026/index.htm
@@ -318,11 +319,15 @@ static void log_print(char *buf, const char *fmt, va_list va) {
 }
 static void handle_log(char *msg) {
 	printf("\e[s");
+	// +2 => 1 for 0->1 based index translation, 1 for header line.
 	printf("\e[%d;%dH%s", current_log_line + 2, 82, msg);
-	char empty[LOG_LINE_BUFSIZE];
-	memset(empty, ' ', sizeof(empty));
-	empty[MAX_LOG_LEN] = '\0';
-	printf("\e[%d;%dH%s", current_log_line + 3, 82, empty);
+	if (current_log_line < MAX_LOG_LINES - 1) {
+		// Print black line after current line to make log easier to follow.
+		char empty[LOG_LINE_BUFSIZE];
+		memset(empty, ' ', sizeof(empty));
+		empty[MAX_LOG_LEN] = '\0';
+		printf("\e[%d;%dH%s", current_log_line + 3, 82, empty);
+	}
 	current_log_line = (current_log_line + 1) % MAX_LOG_LINES;
 	printf("\e[u");
 }
