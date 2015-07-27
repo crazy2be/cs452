@@ -409,6 +409,7 @@ static void sensor_cb(int sensor, void *ctx) {
 
 	// spurious sensor signal
 	if (train == NULL) {
+		displaysrv_update_sensor_attribution(whois("displaysrv"), sensor, -1);
 		logf("Ignoring spurious sensor hit %s", sensor_pretty);
 		return;
 	}
