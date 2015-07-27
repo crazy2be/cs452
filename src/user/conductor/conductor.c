@@ -165,20 +165,21 @@ static void handle_switch_timeout(int switch_num, enum sw_direction dir) {
 	trains_switch(switch_num, dir);
 }
 
-static void handle_poi(struct conductor_state *state, int time) {
+static void handle_poi(struct conductor_state *state, int _) {
 	struct conductor_req req = {};
 
 	/* int offset; */
 	switch (state->poi.type) {
 	case STOPPING_POINT:
 		req.type = CND_STOP_TIMEOUT;
+		req.u.stop_timeout.expected_time = time() + state->poi.delay;
 		/* offset = offsetof(struct conductor_req, u.stop_timeout.time); */
 		break;
 	case SWITCH:
-		req.type = CND_STOP_TIMEOUT;
 		req.type = CND_SWITCH_TIMEOUT;
 		req.u.switch_timeout.switch_num = state->poi.u.switch_info.num;
 		req.u.switch_timeout.dir = state->poi.u.switch_info.dir;
+		req.u.switch_timeout.expected_time = time() + state->poi.delay;
 		/* offset = offsetof(struct conductor_req, u.switch_timeout.time); */
 		break;
 	default:
@@ -327,16 +328,28 @@ static void run_conductor(int train_id) {
 			logf("Conductor got sensor request");
 			handle_sensor_hit(req.u.sensor.sensor_num, req.u.sensor.time, &state);
 			break;
-		case CND_SWITCH_TIMEOUT:
-			logf("Conductor got switch timeout request");
+		case CND_SWITCH_TIMEOUT: {
+			//logf("Conductor got switch timeout request");
+			int now = time();
+			if (req.u.switch_timeout.expected_time != now) {
+				logf("Got switch timeout at %d, expected at %d", now,
+					 req.u.switch_timeout.expected_time);
+			}
 			handle_switch_timeout(req.u.switch_timeout.switch_num, req.u.switch_timeout.dir);
 			set_next_poi(time(), &state);
 			break;
-		case CND_STOP_TIMEOUT:
+		}
+		case CND_STOP_TIMEOUT: {
 			logf("Conductor got stop timeout request");
+			int now = time();
+			if (req.u.stop_timeout.expected_time != now) {
+				logf("Got stop timeout at %d, expected at %d", now,
+					 req.u.stop_timeout.expected_time);
+			}
 			handle_stop_timeout(&state);
 			set_next_poi(time(), &state);
 			break;
+		}
 		default:
 			WTF("Unknown request to conductor");
 			break;
