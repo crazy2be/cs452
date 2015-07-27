@@ -45,7 +45,7 @@ static void poi_from_node(struct astar_node *path, int path_len, int index, stru
 			break;
 		} else if (sensor_gap >= displacement) {
 			poi->sensor_num = node->num;
-			poi->displacement = displacement;
+			poi->displacement = sensor_gap - displacement;
 			poi->path_index = index;
 			ASSERT(poi->delay >= 0);
 			return;
