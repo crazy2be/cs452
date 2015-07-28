@@ -797,6 +797,9 @@ void displaysrv(void) {
 
 	printf("\e[s\e[1;82H------LOG:-----\e[u");
 	int mock_table[TRACK_MAX] = {77, 77, 77, 77, 77, 77, 77, 77, 88, 88, 88, 88, 88, 88, 88, 88, 88, 88, 88, 88, 88, 88}; // For testing.
+	for (int i = 0; i < ARRAY_LENGTH(mock_table); i++) {
+		if (mock_table[i] == 0) mock_table[i] = 1;
+	}
 	update_track(mock_table);
 
 	for (;;) {
