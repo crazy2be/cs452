@@ -127,7 +127,7 @@ static int reserve_path(int tid, struct astar_node *path,
 	for (int i = first_sensor_i; i < len - 1; i++) {
 		stopping_path_length += edge_btwn(path[i].node, path[i+1].node)->dist;
 		if (stopping_path_length > stopping_distance) {
-			len = i + 1;
+			len = i + 2; // +1 to include dest node, +1 for index->length
 			break;
 		}
 	}
