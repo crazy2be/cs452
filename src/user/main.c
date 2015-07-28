@@ -32,7 +32,7 @@ static int whois_poll(const char *name) {
 }
 
 static void heartbeat(void) {
-	int count = 0;
+	//int count = 0;
 	int trains_tid = whois_poll("trains");
 	int display_tid = whois_poll("displaysrv");
 	int command_tid = whois_poll("commandsrv");
@@ -43,11 +43,11 @@ static void heartbeat(void) {
 		task_status(display_tid, &display_info);
 		task_status(command_tid, &command_info);
 
-		printf("\e[s\e[1;100H%d"
-			   "\e[1;110Hts %d"
-			   "\e[1;120Hds %d"
-			   "\e[1;130Hcs %d"
-			   "\e[u", count++, trains_info.state, display_info.state, command_info.state);
+// 		printf("\e[s\e[1;100H%d"
+// 			   "\e[1;110Hts %d"
+// 			   "\e[1;120Hds %d"
+// 			   "\e[1;130Hcs %d"
+// 			   "\e[u", count++, trains_info.state, display_info.state, command_info.state);
 	}
 }
 
