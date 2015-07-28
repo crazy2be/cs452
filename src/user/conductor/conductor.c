@@ -323,8 +323,8 @@ static void handle_sensor_hit(int sensor_num, int time, struct conductor_state *
 	}
 
 	int stopping_distance = trains_get_stopping_distance(state->train_id);
-	int num_seg = tracksrv_reserve_path(state->path + state->path_index, state->path_len - state->path_index, stopping_distance);
-	logf("Reserved %d segments from %s, max length %d", num_seg, state->path[state->path_index].node->name, state->path_len - state->path_index);
+	int num_seg = tracksrv_reserve_path(state->path + i, state->path_len - i, stopping_distance);
+	logf("Reserved %d segments from %s, max length %d", num_seg, state->path[i].node->name, state->path_len - i);
 	if (state->poi.type != NONE && i >= state->poi.path_index) {
 		logf("Approaching poi %s %d at sensor %s", state->poi.original->name, state->poi.delay, repr);
 		handle_poi(state, time);
