@@ -20,5 +20,10 @@ void tracksrv_get_reservation_table(int *table_out);
 // error code < 0 will be returned.
 int tracksrv_reserve_path(struct astar_node *path, int len, int stopping_distance);
 
+// desired is a desired bitmap of size TRACK_MAX. Replaces previous reservations
+// associated with this tid. Returns number of reserved segments on success,
+// -number of conflicts on failure.
+int tracksrv_reserve(int tid, bool *desired);
+
 // For tests only
 int tracksrv_reserve_path_test(struct astar_node *path, int len, int stopping_distance, int tid);

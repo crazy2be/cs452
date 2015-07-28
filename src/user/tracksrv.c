@@ -24,6 +24,10 @@ struct tracksrv_request {
 			int tid;
 		} reserve_path;
 		struct {
+			int tid;
+			bool *desired;
+		} reserve;
+		struct {
 			int *table_out;
 		} table;
 	} u;
@@ -32,16 +36,43 @@ struct tracksrv_request {
 static int conductor_train_ids[256] = {}; // Just for debugging
 static int reservation_table[TRACK_MAX] = {};
 
+// Either replaces tid's reservation bitmap with desired, or returns < 0.
+static int reserve_desired(int tid, bool *desired) {
+	int unreservable = 0;
+	for (int i = 0; i < TRACK_MAX; i++) {
+		if (desired[i] && reservation_table[i] && (reservation_table[i] != tid)) {
+			unreservable++;
+		}
+	}
+	if (unreservable > 0) return -unreservable;
+
+	int reserved = 0;
+	for (int i = 0; i < TRACK_MAX; i++) {
+		if (reservation_table[i] == tid) {
+			reservation_table[i] = 0;
+		}
+		if (desired[i]) {
+			reservation_table[i] = tid;
+			reserved++;
+		}
+	}
+	return reserved;
+}
+
+// Everything below here a) Aught to be in conductor or some other util file,
+// and b) really aught to run on the conductor task. It doesn't need any access
+// to the internal state of tracksrv as far as I know. But I'm sure as hell
+// not moving it at this point.
 static int edge_num_btwn(const struct track_node *a, const struct track_node *b) {
 	if (a->edge[0].dest == b) return 0;
 	else if (a->edge[1].dest == b) return 1;
 	else {WTF("Discontinuous path! %p %p %p %p", a, b, a->edge[0].dest, a->edge[1].dest); return -1;}
 }
-static void desire_i(int *desired, const struct track_node *node) {
+static void desire_i(bool *desired, const struct track_node *node) {
 	desired[idx(node)] = 1;
 	desired[idx(node->reverse)] = 1;
 }
-static void desire(int *desired, const struct track_node *node) {
+static void desire(bool *desired, const struct track_node *node) {
 	desire_i(desired, node);
 	if (node->num == 153) desire_i(desired, find_track_node("BR154"));
 	if (node->num == 154) desire_i(desired, find_track_node("BR153"));
@@ -49,7 +80,7 @@ static void desire(int *desired, const struct track_node *node) {
 	if (node->num == 156) desire_i(desired, find_track_node("BR155"));
 }
 #define edge_btwn(a, b) (&a->edge[edge_num_btwn(a, b)])
-static void reserve_forwards(int tid, int *desired, const struct track_node *start, int dist) {
+static void reserve_forwards(int tid, bool *desired, const struct track_node *start, int dist) {
 	int iterations = 0;
 	const struct track_node *prev = NULL;
 	const struct track_node *cur = start;
@@ -104,7 +135,7 @@ static int reserve_path(int tid, struct astar_node *path,
 	for (int i = 0; i < len - 1; i++) {
 		total_path_length += edge_btwn(path[i].node, path[i+1].node)->dist;
 	}
-	int desired[TRACK_MAX] = {};
+	bool desired[TRACK_MAX] = {};
 	int remaining_path_length = total_path_length;
 	const struct track_node *prev = NULL;
 	for (int i = 0; i < len; i++) {
@@ -121,25 +152,7 @@ static int reserve_path(int tid, struct astar_node *path,
 		}
 		prev = cur;
 	}
-	int unreservable = 0;
-	for (int i = 0; i < TRACK_MAX; i++) {
-		if (desired[i] && reservation_table[i] && (reservation_table[i] != tid)) {
-			unreservable++;
-		}
-	}
-	if (unreservable > 0) return -unreservable;
-
-	int reserved = 0;
-	for (int i = 0; i < TRACK_MAX; i++) {
-		if (reservation_table[i] == tid) {
-			reservation_table[i] = 0;
-		}
-		if (desired[i]) {
-			reservation_table[i] = tid;
-			reserved++;
-		}
-	}
-	return reserved;
+	return reserve_desired(tid, desired);
 }
 
 void tracksrv(void) {
@@ -150,7 +163,7 @@ void tracksrv(void) {
 		int tid = -1;
 		recv(&tid, &req, sizeof(req));
 		switch (req.type) {
-		case TRK_RESERVE: {
+		case TRK_RESERVE_PATH: {
 			int res = reserve_path(req.u.reserve_path.tid,
 								   req.u.reserve_path.path,
 								   req.u.reserve_path.len,
@@ -197,11 +210,22 @@ void tracksrv_set_train_id(int train_id) {
 
 int tracksrv_reserve_path_test(struct astar_node *path, int len, int stopping_distance, int tid) {
 	struct tracksrv_request req = (struct tracksrv_request) {
-		.type = TRK_RESERVE,
+		.type = TRK_RESERVE_PATH,
 		.u.reserve_path.path = path,
 		.u.reserve_path.len = len,
 		.u.reserve_path.stopping_distance = stopping_distance,
 		.u.reserve_path.tid = tid,
+	};
+	int resp = -1;
+	send(tracksrv_tid(), &req, sizeof(req), &resp, sizeof(resp));
+	return resp;
+}
+
+int tracksrv_reserve(int tid, bool *desired) {
+	struct tracksrv_request req = (struct tracksrv_request) {
+		.type = TRK_RESERVE,
+		.u.reserve.tid = tid,
+		.u.reserve.desired = desired,
 	};
 	int resp = -1;
 	send(tracksrv_tid(), &req, sizeof(req), &resp, sizeof(resp));
