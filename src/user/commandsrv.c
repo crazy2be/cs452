@@ -265,11 +265,13 @@ static void bisect_task(void) {
 		if (position_distance_apart(&current_position, &target, &switches) < position_distance_apart(&target, &current_position, &switches)) {
 			// undershot - stopping distance is less than we think it is
 			hi = guess;
-			logf("Undershot, target_sensor = %s, current_sensor = %s, lo = %d, hi = %d", target_repr, current_repr, lo, hi);
+			logf("Round %d/%d, undershot, target %s, current %s, lo %d, hi %d",
+				 i+1, iterations, target_repr, current_repr, lo, hi);
 		} else {
 			// overshot - stopping distance is more than we think it is
 			lo = guess;
-			logf("Overshot, target_sensor = %s, current_sensor = %s, lo = %d, hi = %d", target_repr, current_repr, lo, hi);
+			logf("Round %d/%d, overshot, target %s, current %s, lo %d, hi %d",
+				 i+1, iterations, target_repr, current_repr, lo, hi);
 		}
 
 		trains_set_speed(params.train, speed_setting);
