@@ -213,22 +213,27 @@ static void handle_set_destination(const struct track_node *dest, struct conduct
 	struct train_state train_state = {};
 	trains_query_spatials(state->train_id, &train_state);
 
-	// TODO: We should really *reserve* from edge.src -> dest, but *route* from
-	// edge.dest -> src.
-	const struct track_node *start = train_state.position.edge->dest;
-	state->path_len = routesrv_plan(start, dest, state->path);
-
 	state->path_index = 0;
 	state->poi_context.poi_index = 0;
 	state->poi_context.stopped = false;
 
+	// TODO: We should really *reserve* from edge.src -> dest, but *route* from
+	// edge.dest -> src.
+	const struct track_node *start = train_state.position.edge->dest;
+	state->path_len = routesrv_plan(start, dest, state->path);
+	if (state->path_len < 0) {
+		start = train_state.position.edge->src->reverse;
+		state->path_len = routesrv_plan(start, dest, state->path);
+		if (state->path_len < 0) {
+			logf("Failed to find route from %s to %s", start->name, dest->name);
+			return;
+		}
+		trains_reverse_unsafe(state->train_id);
+	}
+
 	logf("We're routing from %s to %s, found a path of length %d",
 			start->name, dest->name, state->path_len);
 
-	if (state->path_len < 0) {
-		logf("Failed to find route from %s to %s", start->name, dest->name);
-		return;
-	}
 	// NOTE: this is a bit of a hack - we really just want to check for poi whose sensor we've already passed over
 	// we don't know the train's speed yet, so we just fudge it with a value that shouldn't matter anyway
 	// (the velocity is only used if we need to delay a long time ahead of the switch, but if we're at a dead
