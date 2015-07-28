@@ -132,12 +132,6 @@ static void check_if_train_on_final_approach(struct alert_request_state *state,
 		//logf("Not on final approach");
 		return;
 	}
-	char current_repr[20], target_repr[20];
-
-	position_repr(*current_position, current_repr);
-	position_repr(*target_position, target_repr);
-	logf("Train %d (%s) on final approach to %s",
-			state->request.train_id, current_repr, target_repr);
 
 	// find distance until we hit the target position, accounting for displacements
 	// of the source & target positions
@@ -145,6 +139,13 @@ static void check_if_train_on_final_approach(struct alert_request_state *state,
 	                          + target_position->displacement;
 
 	const int arrival_time = trains_query_arrival_time(state->request.train_id, distance_left);
+
+	char current_repr[20], target_repr[20];
+
+	position_repr(*current_position, current_repr);
+	position_repr(*target_position, target_repr);
+	logf("Train %d (at %s) on final approach to %s, %d ticks / %dmm left",
+		 state->request.train_id, current_repr, target_repr, arrival_time, distance_left);
 
 	request_wakeup_call(state, arrival_time, actually_delay);
 }
