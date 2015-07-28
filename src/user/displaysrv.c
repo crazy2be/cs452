@@ -785,14 +785,9 @@ void displaysrv(void) {
 #endif
 	initial_draw();
 
-	struct sensor_state old_sensors;
-	struct sensor_reads sensor_reads;
-	struct switch_state old_switches;
-	sensor_reads.len = sensor_reads.start = 0;
-	memset(&old_sensors, 0, sizeof(old_sensors));
-	memset(&old_switches, 0, sizeof(old_switches));
-	struct displaysrv_req req;
-	int tid;
+	struct sensor_state old_sensors = {};
+	struct sensor_reads sensor_reads = {};
+	struct switch_state old_switches = {};
 	bool console_frozen = false;
 
 	printf("\e[s\e[1;82H------LOG:-----\e[u");
@@ -803,6 +798,8 @@ void displaysrv(void) {
 	update_track(mock_table);
 
 	for (;;) {
+		struct displaysrv_req req = {};
+		int tid = -1;
 		receive(&tid, &req, sizeof(req));
 		// requests are fire and forget, and provide no feedback
 		reply(tid, NULL, 0);
