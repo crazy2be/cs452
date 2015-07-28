@@ -84,9 +84,25 @@ static int handle_query_active(struct trainsrv_state *state, int * const trains)
 	return len;
 }
 
+static void ensure_uncurved(struct trainsrv_state *state, int sw) {
+	struct switch_state switches = \
+		switch_historical_get_current(&state->switch_history);
+	if (switch_get(&switches, sw) == CURVED) {
+		tc_switch_switch(sw, STRAIGHT);
+		tc_deactivate_switch();
+		update_switch(state, sw, STRAIGHT);
+	}
+}
 static void handle_switch(struct trainsrv_state *state, int sw, enum sw_direction dir) {
 	tc_switch_switch(sw, dir);
 	tc_deactivate_switch();
+	// On the middle switches, curved curved == BAD BAD. Prevent this
+	// configuration by automatically rewriting it to curved straight, which
+	// is probably what you want.
+	if (sw == 153 && dir == CURVED) ensure_uncurved(state, 154);
+	if (sw == 154 && dir == CURVED) ensure_uncurved(state, 153);
+	if (sw == 155 && dir == CURVED) ensure_uncurved(state, 156);
+	if (sw == 156 && dir == CURVED) ensure_uncurved(state, 155);
 	update_switch(state, sw, dir);
 }
 
