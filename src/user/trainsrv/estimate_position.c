@@ -244,11 +244,12 @@ int update_train_speed(struct trainsrv_state *state, int train_id, int speed) {
 	// since it thinks they're already stopped.) 
 	/* if (train_state->current_speed_setting == speed) return 0; */
 
+	int now = time();
 	// only reanchor if we have history (otherwise it crashes)
 	if (train_state->speed_history.len > 0) {
 		reanchor(state, train_state);
 	}
-	speed_historical_set(&train_state->speed_history, speed, time());
+	speed_historical_set(&train_state->speed_history, speed, now);
 
 	ASSERT(train_state->speed_history.len > 0);
 	return 1;
