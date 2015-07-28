@@ -115,15 +115,7 @@ static void check_if_train_on_final_approach(struct alert_request_state *state,
         const struct position *current_position, const struct switch_state *switches,
         bool actually_delay) {
 	if (position_is_uninitialized(current_position)) return;
-	char current_repr[20], target_repr[20];
-
 	const struct position *target_position = &state->request.position;
-
-	position_repr(*current_position, current_repr);
-	position_repr(*target_position, target_repr);
-
-	logf("Checking if train %d (%s) on final approach to %s",
-			state->request.train_id, current_repr, target_repr);
 
 	// special case to handle us having *just* passed that point
 	if (current_position->edge == target_position->edge
@@ -132,16 +124,20 @@ static void check_if_train_on_final_approach(struct alert_request_state *state,
 		return;
 	}
 
-	struct final_approach_ctx context;
-	memzero(&context);
+	struct final_approach_ctx context = {};
 	context.target_edge = target_position->edge;
 
 	track_go_forwards(current_position->edge->src, switches, break_for_final_approach, &context);
 	if (!context.success) {
-		logf("Not on final approach");
+		//logf("Not on final approach");
 		return;
 	}
-	logf("On final approach");
+	char current_repr[20], target_repr[20];
+
+	position_repr(*current_position, current_repr);
+	position_repr(*target_position, target_repr);
+	logf("Train %d (%s) on final approach to %s",
+			state->request.train_id, current_repr, target_repr);
 
 	// find distance until we hit the target position, accounting for displacements
 	// of the source & target positions
