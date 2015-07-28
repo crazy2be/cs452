@@ -175,12 +175,25 @@ static void initialize_train_velocity_table(struct internal_train_state *train_s
 		train_state->est_stopping_distances[15] = train_state->est_stopping_distances[16] = 166;
 		train_state->est_stopping_distances[27] = 1273;
 		break;
-	case 62:
+	case 62: {
+		static int est_v[] = {0, 0, 0, 0, 0, 1150, 1150, 1825, 1825, 2350, 2350,
+			2800, 2800, 3500, 3500, 4000, 4000, 4500, 4500, 4900, 4900,
+			5400, 5400, 6000, 6000, 6100, 6100, 5900};
+		ASSERT_INTEQ(sizeof(est_v), sizeof(train_state->est_velocities));
+		memcpy(train_state->est_velocities, est_v, sizeof(est_v));
+		static int est_s[] = {0, 0, 0, 0, 0, 189, 189, 189, 189, 260, 260, 330,
+			330, 389, 389, 447, 447, 500, 500, 559, 559, 635, 635, 700, 700,
+			816, 816, 812};
+		ASSERT_INTEQ(sizeof(est_s), sizeof(train_state->est_stopping_distances));
+		memcpy(train_state->est_stopping_distances, est_s, sizeof(est_s));
 		// speed 8, both acceleration offsets
-		train_state->est_velocities[15] = train_state->est_velocities[16] = 3827;
-		train_state->est_stopping_distances[15] = train_state->est_stopping_distances[16] = 441;
-		train_state->est_stopping_distances[27] = 828;
+// 		train_state->est_velocities[15] =
+// 			train_state->est_velocities[16] = 3827;
+// 		train_state->est_stopping_distances[15] =
+// 			train_state->est_stopping_distances[16] = 441;
+// 		train_state->est_stopping_distances[27] = 828;
 		break;
+	}
 	case 64:
 		train_state->est_velocities[27] = 6454;
 		train_state->est_stopping_distances[27] = 928;
