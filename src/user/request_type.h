@@ -1,6 +1,8 @@
 #pragma once
 enum request_type {
-	WHOIS, REGISTER_AS, // Name server
+	INVALID_REQUEST, // Nobody
+
+	WHOIS, REGISTER_AS, DUMP_NAMES, // Name server
 
 	TICK_HAPPENED, DELAY, DELAY_UNTIL, DELAY_ASYNC, TIME, SHUTDOWN, // Clock server
 

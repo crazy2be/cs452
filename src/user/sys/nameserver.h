@@ -10,3 +10,5 @@ int try_whois(const char *name);
 
 #define RegisterAs
 void register_as(const char *name);
+
+void nameserver_dump_names(void);

@@ -846,6 +846,7 @@ void displaysrv(void) {
 			handle_log(req.data.log.msg);
 			break;
 		case QUIT:
+			nameserver_dump_names();
 #ifdef QEMU
 			// http://invisible-island.net/xterm/ctlseqs/ctlseqs.html#h2-The-Alternate-Screen-Buffer
 			printf("\e[?1049l");

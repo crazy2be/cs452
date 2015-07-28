@@ -29,6 +29,15 @@ void nameserver(void) {
 		case REGISTER_AS:
 			err = hashtable_set(&name_map, req.name, tid);
 			break;
+		case DUMP_NAMES:
+			for (int i = 0; i < BUCKET_COUNT; i++) {
+				struct hashtable_entry *p = name_map.buckets[i];
+				while (p) {
+					kprintf("tid %d, name %s"EOL, p->val, p->key);
+					p = p->next;
+				}
+			}
+			break;
 		default:
 			WTF("Nameserver got unknown request %d"EOL, req.type);
 			break;
@@ -61,4 +70,9 @@ void register_as(const char *name) {
 	strcpy(req.name, name);
 	send(NAMESERVER_TID, &req, sizeof(req), &rpy, sizeof(rpy));
 	ASSERTOK(rpy);
+}
+
+void nameserver_dump_names(void) {
+	struct nameserver_request req = { .type = DUMP_NAMES };
+	send(NAMESERVER_TID, &req, sizeof(req), NULL, 0);
 }

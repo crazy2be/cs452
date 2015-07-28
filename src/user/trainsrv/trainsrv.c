@@ -188,7 +188,8 @@ static void trains_server(void) {
 			break;
 		}
 		default:
-			WTF("UNKNOWN TRAINS REQ %d"EOL, req.type);
+			nameserver_dump_names();
+			WTF("UNKNOWN TRAINS REQ %d FROM %d"EOL, req.type, tid);
 			break;
 		}
 	}
