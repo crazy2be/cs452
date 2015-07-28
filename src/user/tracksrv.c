@@ -82,6 +82,24 @@ static int reserve_path(int tid, struct astar_node *path,
 	for (int i = 0; i < len; i++) {
 		idx(path[i].node); // Validate
 	}
+	// We need a path of at least stopping_distance after the next sensor,
+	// because we will not start reserving more path until we hit the next
+	// sensor.
+	int first_sensor_i = 0;
+	for (int i = 0; i < len; i++) {
+		if (path[i].node->type == NODE_SENSOR) {
+			first_sensor_i = i;
+			break;
+		}
+	}
+	int stopping_path_length = 0;
+	for (int i = first_sensor_i; i < len - 1; i++) {
+		stopping_path_length += edge_btwn(path[i].node, path[i+1].node)->dist;
+		if (stopping_path_length > stopping_distance) {
+			len = i + 1;
+			break;
+		}
+	}
 	int total_path_length = 0;
 	for (int i = 0; i < len - 1; i++) {
 		total_path_length += edge_btwn(path[i].node, path[i+1].node)->dist;

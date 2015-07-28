@@ -60,12 +60,5 @@ int routesrv_plan(const struct track_node *start, const struct track_node *end,
 	int result = -2;
 	send(route_tid, &req, sizeof(req), &result, sizeof(result));
 
-	// TODO: This should not be here, it should really be in conductor.
-	if (result < 0) {
-		logf("Failed to find route from %s to %s", start->name, end->name);
-	} else {
-		tracksrv_reserve_path(path_out, result, 500);
-	}
-
 	return result;
 }

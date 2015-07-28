@@ -8,6 +8,7 @@
 #include "../trainsrv.h"
 #include "../sys.h"
 #include "../routesrv.h"
+#include "../tracksrv.h"
 #include "conductor_internal.h"
 #include "../displaysrv.h"
 
@@ -214,15 +215,20 @@ static void handle_set_destination(const struct track_node *dest, struct conduct
 
 	// TODO: We should really *reserve* from edge.src -> dest, but *route* from
 	// edge.dest -> src.
-	state->path_len = routesrv_plan(train_state.position.edge->dest, dest, state->path);
-	state->path_index = 0; // drop the first node in the route, since we've already rolled over it
+	const struct track_node *start = train_state.position.edge->dest;
+	state->path_len = routesrv_plan(start, dest, state->path);
+
+	state->path_index = 0;
 	state->poi_context.poi_index = 0;
 	state->poi_context.stopped = false;
 
 	logf("We're routing from %s to %s, found a path of length %d",
-			train_state.position.edge->dest->name, dest->name, state->path_len);
+			start->name, dest->name, state->path_len);
 
-	if (state->path_len <= 0) return; // no such path
+	if (state->path_len < 0) {
+		logf("Failed to find route from %s to %s", start->name, dest->name);
+		return;
+	}
 	// NOTE: this is a bit of a hack - we really just want to check for poi whose sensor we've already passed over
 	// we don't know the train's speed yet, so we just fudge it with a value that shouldn't matter anyway
 	// (the velocity is only used if we need to delay a long time ahead of the switch, but if we're at a dead
@@ -234,6 +240,10 @@ static void handle_set_destination(const struct track_node *dest, struct conduct
 	state->last_velocity = velocity;
 
 	int stopping_distance = trains_get_stopping_distance(state->train_id);
+	// TODO: We should really *reserve* from edge.src -> dest, but *route* from
+	// edge.dest -> src.
+	tracksrv_reserve_path(state->path, state->path_len, stopping_distance);
+
 	logf("Calculating inital pois...");
 	state->poi = get_next_poi(state->path, state->path_len, &state->poi_context, stopping_distance, velocity);
 	ASSERT(state->poi.type != NONE);
@@ -305,9 +315,17 @@ static void handle_sensor_hit(int sensor_num, int time, struct conductor_state *
 		logf("We've diverged from our desired path at sensor %s", repr);
 		// TODO: later, we should reroute when we error out like this
 		return;
-	} else if (i >= state->path_len) {
+	}
+	if (i >= state->path_len) {
+		logf("At end of path, ignored sensor hit.");
+		tracksrv_reserve_path(NULL, 0, 0); // Release all track
 		return;
-	} else if (state->poi.type != NONE && i >= state->poi.path_index) {
+	}
+
+	int stopping_distance = trains_get_stopping_distance(state->train_id);
+	int num_seg = tracksrv_reserve_path(state->path + state->path_index, state->path_len - state->path_index, stopping_distance);
+	logf("Reserved %d segments from %s, max length %d", num_seg, state->path[state->path_index].node->name, state->path_len - state->path_index);
+	if (state->poi.type != NONE && i >= state->poi.path_index) {
 		logf("Approaching poi %s %d at sensor %s", state->poi.original->name, state->poi.delay, repr);
 		handle_poi(state, time);
 		state->last_sensor_time = time;
