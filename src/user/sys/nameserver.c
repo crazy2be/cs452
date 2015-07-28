@@ -37,7 +37,8 @@ void nameserver(void) {
 					p = p->next;
 				}
 			}
-			break;
+			reply(tid, NULL, 0);
+			continue; // WARNING
 		default:
 			WTF("Nameserver got unknown request %d"EOL, req.type);
 			break;
