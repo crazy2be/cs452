@@ -81,7 +81,7 @@ static void consume_whitespace(char *cmd, int *ip) {
 };
 
 enum command_type { TR, SW, RV, QUIT, STOP, BSW, BISECT, ROUTE, FREEZE, INVALID };
-char *command_listing[] = { "tr", "sw", "rv", "q", "stp", "bsw", "bisect", "route", "f", "" };
+char *command_listing[] = { "tr", "sw", "rv", "q", "stop", "bsw", "bisect", "route", "f", "" };
 
 static enum command_type get_command_type(char *cmd, int *ip) {
 	int i = *ip;
@@ -148,7 +148,7 @@ static const struct track_node* get_node(char *cmd, int *ip) {
 	}
 	buf[j] = '\0';
 
-	for (j = 0; j < sizeof(track) / sizeof(track[0]); j++) {
+	for (j = 0; j < ARRAY_LENGTH(track); j++) {
 		if (strcmp(track[j].name, buf) == 0) {
 			*ip = i;
 			return &track[j];
@@ -294,7 +294,33 @@ static void handle_bisect(int displaysrv, int train) {
 	struct bisect_params params = { displaysrv, train };
 	send(tid, &params, sizeof(params), NULL, 0);
 }
-
+static bool get_train_number(char *s, int *i, int *train) {
+	if (get_integer(s, i, train)) {
+		displaysrv_console_feedback(whois("displaysrv"), "Expected train number");
+		return false;
+	}
+	if (1 <= *train && *train <= 80) return true;
+	displaysrv_console_feedback(whois("displaysrv"), "Invalid train number");
+	return false;
+}
+static bool get_speed(char *s, int *i, int *speed) {
+	if (get_integer(s, i, speed)) {
+		displaysrv_console_feedback(whois("displaysrv"), "Expected speed");
+		return false;
+	}
+	if (0 <= *speed && *speed <= 14) return true;
+	displaysrv_console_feedback(whois("displaysrv"), "Invalid speed");
+	return false;
+}
+static bool get_switch_direction(char *s, int *i, enum sw_direction *dir) {
+	switch (s[(*i)++]) {
+	case 'C': case 'c': *dir = CURVED; return true;
+	case 'S': case 's': *dir = STRAIGHT; return true;
+	default:
+		displaysrv_console_feedback(whois("displaysrv"), "Invalid switch direction");
+		return false;
+	}
+}
 static void process_command(char *cmd, int displaysrv) {
 	int i = 0;
 	enum command_type type = get_command_type(cmd, &i);
@@ -302,67 +328,37 @@ static void process_command(char *cmd, int displaysrv) {
 	switch (type) {
 	case TR: {
 		int train, speed;
-		if (get_integer(cmd, &i, &train)) {
-			break;
-		}
+		if (!get_train_number(cmd, &i, &train)) return;
 		consume_whitespace(cmd, &i);
-		if (get_integer(cmd, &i, &speed)) {
-			break;
-		}
-		if (!(0 <= speed && speed <= 14)) {
-			displaysrv_console_feedback(displaysrv, "Invalid speed");
-		} else if (!(1 <= train && train <= 80)) {
-			displaysrv_console_feedback(displaysrv, "Invalid train number");
-		} else {
-			handle_tr(displaysrv, train, speed);
-		}
+		if (!get_speed(cmd, &i, &speed)) return;
+		handle_tr(displaysrv, train, speed);
 		return;
 	}
 	case SW: {
 		int sw;
-		enum sw_direction pos;
-		if (get_integer(cmd, &i, &sw)) {
-			break;
-		}
+		enum sw_direction dir;
+		if (get_integer(cmd, &i, &sw)) break;
 		consume_whitespace(cmd, &i);
-		switch (cmd[i++]) {
-		case 'C':
-		case 'c':
-			pos = CURVED;
-			break;
-		case 'S':
-		case 's':
-			pos = STRAIGHT;
-			break;
-		default:
-			goto unknown;
-		}
+		if (!get_switch_direction(cmd, &i, &dir)) return;
 		if (cmd[i] != '\0') break;
 		/* printf("Parsed command SW %d %d" EOL, sw, pos); */
 		if (!((1 <= sw && sw <= 18) || (145 <= sw && sw <= 156))) {
 			displaysrv_console_feedback(displaysrv, "Invalid switch");
 		} else {
-			handle_sw(displaysrv, sw, pos);
+			handle_sw(displaysrv, sw, dir);
 		}
 		return;
 	}
 	case RV: {
 		int train;
-		if (get_integer(cmd, &i, &train)) {
-			break;
-		}
-		if (!(1 <= train && train <= 80)) {
-			displaysrv_console_feedback(displaysrv, "Invalid train number");
-		} else {
-			handle_rv(displaysrv, train);
-		}
+		if (!get_train_number(cmd, &i, &train)) return;
+		handle_rv(displaysrv, train);
 		return;
 	}
-	break;
 	case QUIT:
 		displaysrv_quit(displaysrv);
 		stop_servers();
-		break;
+		return;
 	case STOP: {
 		// command can be in the form:
 		//     stp <train> <node> <edge choice> <displacement>
@@ -372,19 +368,16 @@ static void process_command(char *cmd, int displaysrv) {
 		int edge_choice = 0;
 		int displacement;
 		const struct track_node *node;
-		if (get_integer(cmd, &i, &train)) {
-			printf("failed to parse train" EOL);
-			break;
-		}
+		if (!get_train_number(cmd, &i, &train)) return;
 		consume_whitespace(cmd, &i);
 		if ((node = get_node(cmd, &i)) == NULL) {
-			printf("failed to parse node" EOL);
-			break;
+			displaysrv_console_feedback(displaysrv, "failed to parse node" EOL);
+			return;
 		}
 		consume_whitespace(cmd, &i);
 		if (get_integer(cmd, &i, &displacement)) {
-			printf("failed to parse displacement" EOL);
-			break;
+			displaysrv_console_feedback(displaysrv, "failed to parse displacement" EOL);
+			return;
 		}
 		consume_whitespace(cmd, &i);
 
@@ -392,8 +385,8 @@ static void process_command(char *cmd, int displaysrv) {
 		if (cmd[i] != '\0') {
 			edge_choice = displacement;
 			if (get_integer(cmd, &i, &displacement)) {
-				printf("failed to parse displacement (2)" EOL);
-				break;
+				displaysrv_console_feedback(displaysrv, "failed to parse displacement (2)" EOL);
+				return;
 			}
 		}
 
@@ -401,8 +394,6 @@ static void process_command(char *cmd, int displaysrv) {
 			displaysrv_console_feedback(displaysrv, "Invalid edge selection");
 		} else if (!(0 <= displacement && displacement <= node->edge[edge_choice].dist)) {
 			displaysrv_console_feedback(displaysrv, "Overlong displacement");
-		} else if (!(1 <= train && train <= 80)) {
-			displaysrv_console_feedback(displaysrv, "Invalid train number");
 		} else {
 			/* char buf[80]; */
 			/* snprintf(buf, sizeof(buf), "Got STP %d %s:%d + %d", train, node->name, edge_choice, displacement); */
@@ -414,47 +405,24 @@ static void process_command(char *cmd, int displaysrv) {
 		return;
 	}
 	case BSW: {
-		enum sw_direction pos;
+		enum sw_direction dir;
 		consume_whitespace(cmd, &i);
-		switch (cmd[i++]) {
-		case 'C':
-		case 'c':
-			pos = CURVED;
-			break;
-		case 'S':
-		case 's':
-			pos = STRAIGHT;
-			break;
-		default:
-			goto unknown;
-		}
+		if (!get_switch_direction(cmd, &i, &dir)) return;
 		if (cmd[i] != '\0') break;
 		struct switch_state switches;
-		memset(&switches, pos == CURVED ? 0xff : 0x00, sizeof(switches));
+		memset(&switches, dir == CURVED ? 0xff : 0x00, sizeof(switches));
 		tc_switch_switches_bulk(switches);
 		return;
 	}
 	case BISECT: {
 		int train;
-		if (get_integer(cmd, &i, &train)) {
-			break;
-		}
-		if (!(1 <= train && train <= 80)) {
-			displaysrv_console_feedback(displaysrv, "Invalid train number");
-		} else {
-			handle_bisect(displaysrv, train);
-		}
+		if (!get_train_number(cmd, &i, &train)) return;
+		handle_bisect(displaysrv, train);
 		return;
 	}
 	case ROUTE: {
 		int train = -1;
-		if (get_integer(cmd, &i, &train)) {
-			break;
-		}
-		if (!(1 <= train && train <= 80)) {
-			displaysrv_console_feedback(displaysrv, "Invalid train number");
-			return;
-		}
+		if (!get_train_number(cmd, &i, &train)) return;
 		consume_whitespace(cmd, &i);
 		const struct track_node *node = NULL;
 		if ((node = get_node(cmd, &i)) == NULL) {
@@ -464,7 +432,13 @@ static void process_command(char *cmd, int displaysrv) {
 		char conductor_name[CONDUCTOR_NAME_LEN];
 		conductor_get_name(train, &conductor_name);
 
-		int tid = whois(conductor_name);
+		int tid = try_whois(conductor_name);
+		if (tid < 0) {
+			char buf[80];
+			snprintf(buf, sizeof(buf), "No conductor for train %d (could not whois %s: %d)", train, conductor_name, tid);
+			displaysrv_console_feedback(displaysrv, buf);
+			return;
+		}
 		struct conductor_req req;
 		req.type = CND_DEST;
 		req.u.dest.dest = node;
@@ -478,7 +452,6 @@ static void process_command(char *cmd, int displaysrv) {
 	default:
 		break;
 	}
-unknown:
 	// TODO: we need to have sprintf so that we can pass proper feedback in
 	displaysrv_console_feedback(displaysrv, "Unknown command");
 }
