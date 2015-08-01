@@ -1,0 +1,194 @@
+\documentclass{article}
+\usepackage[utf8]{inputenc}
+
+\title{TC2 writeup}
+\author{Justin McGirr, Peter Raboud}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+
+\section{Design decisions}
+% overview of stuff we might like to talk about
+% X we've already discussed acceleration before - we may want to make reference to the fact that we've discussed the fundamentals,
+%   and then talk about only the new stuff (actually using the model in our code, for the sensor attribution & and position estimation after
+%   stopping). we should discuss that this is only a model for stopping, and we never generalized it to acceleration,
+%   although we probably could have
+% - overview of the routefinding - discuss a* (advantages over djikstra's), limitations of LRA*, difficulties with multi-agent pathfinding
+% X the POI system which drives the conductors
+% - track reservation
+% X sensor attribution
+% - the train simulator
+% X delay_async & send_async
+
+% - our instructions should explicitly describe the parts of the system that weren't completed
+
+\subsection{Sensor Attribution}
+The interface created for sensor attribution was an \texttt{attribute} function called when a sensor goes from low to high.
+It takes the sensor number, the time at which the sensor event happened, and a bundle of information about the track's current
+recorded state, and it attempts to attribute the event to a train, or mark it as spurious.
+The function attempts to find candidate trains which might have hit the sensor, based on the last
+known positions of each of the trains, and the orientation of the turnouts.
+
+We use depth-first search to traverse backwards from the sensor, in the direction that the train would have come from.
+When we arrive at a sensor node which a train was previously at, we mark it as a candidate, and stop.
+At a merge node, the train could have come from either side of the merge, so we continue down both
+paths.
+
+We are tolerant of at most one error from the track - either a single sensor which failed to read, or a single switch which
+was in the wrong orientation.
+If we arrive at a sensor without a train on it, we know that if the train is further down the search tree, it
+would have needed to pass over the sensor without tripping it.
+We prune off branches of the search tree that would need to pass through multiple sensors, so the search eventually terminates.
+If we pass over a branch, if a train should have gone the other way of the branch, we tally an additional error.
+Because the switches change orientation over time, we keep track of the history of the switches, compute the approximate
+time that the train should have been at that switch, and find the position of the switch at that time.
+Because the state of the switch is dependant on the position and speed of the train we think passed over it, we can't know
+if the switch should have been in the other orientation at the time we traverse through the switch node.
+We need to compute that after we have found a candidate for the train.
+Therefore, we maintain a record of the switches through on the search, and the directions we expect them to be in,
+and compute the number of errors from incorrect switches at the time we evaluate a train candidate.
+
+We reject train candidates which require assuming more than one error.
+If there are multiple candidates, we prefer the one with fewer assumed errors.
+After that, we prefer the candidate which travelled the distance between their last known position and the switch hit
+in the time closest to what we expect for how fast that train was going.
+
+We have to do a bit of special work to attribute sensors to trains that have just reversed.
+Normally, the last known position of a train is just the last sensor it hit.
+However, this doesn't work when the train reverses.
+When one or more of the trains has reversed recently, we calculate some possible positions for where
+we might expect the train to stop.
+We know how far the train would have travelled after the last sensor it hit, based on its velocity and stopping
+distance.
+We can therefore generate some candidate positions which account for possible switch or sensor failures.
+When doing the depth-first search as described above, we can attribute a sensor hit to one of these
+candidate positions in the same way that we would attribute a hit to the train travelling normally.
+We do need to carry over errors assumed in calculating the candidate position to errors assumed in
+the depth first search, in order to reject attributions which assume one error in the depth first search,
+and one error when calculating the stopping position of the train.
+
+There are some limitations of the approach that we took.
+It's entirely possible for this function to attribute the same train to two sensors across multiple different calls.
+We work around this issue by having a layer on top of the main sensor attribution function which rejects multiple
+attribution, but this is not ideal.
+In particular, it allows for two trains to both be candidates for the two sensor hits, and the same one to be picked for both.
+The layer above sensor attribution rejects the second attribution, and treats the second hit as though it were spurious,
+when in fact the better solution is to attribute one hit to each train.
+
+Another issue is that the sensor attribution can be sensitive to inaccuracies in the estimated velocity of the train,
+and doesn't tolerate poor estimates very well.
+If the velocity estimate is off, it can make it look like the train went through many switches the wrong way, because
+we miscalculate the time at which the train should be at the switch.
+This can cause the sensor hit to be dismissed as spurious.
+
+Moreover, when sensor attribution enters a bad state, it doesn't recover well.
+When a sensor read is rejected as spurious, the position of the train is not updated.
+If it wasn't really a spurious hit, then it's unlikely that the next sensor the train hits
+will be attributed to it, because the model believes the train to be frozen at an old position.
+This can cause all of the sensor hits of a train to be rejected as spurious, when a more sophisticated
+model would realize that so many spurious hits is unlikely, and there is probably a real train
+causing all of these hits.
+
+\subsection{Following routes}
+To drive a train down a route calculated by the routing server, we spawn a ``conductor'' task for each train.
+This task operates as a server, so its steady state is to be receive blocked, waiting for timeouts, or notifications from other tasks.
+The conductor's clients are the command server, which sends it destinations to route to; the train server, which
+sends it information about sensor hits attributed to the conductor's train; and time outs initiated by the conductor itself.
+
+It is notified by the command server that it should route that train to a particular position.
+It then asks the routing server for a route, and begins to follow it.
+As the train goes over the route, there are a series of positions of interest (POI) that the conductor needs to take
+action at.
+In our current implementation, there are points at which we want to switch a turnout, and one point where we want
+to stop the train at the end of the route.
+In the future, this approach could have been generalized to support reversing at a certain point, or stopping the train
+before the end of the reserved segment of track.
+
+The conductor calculates the next POI for each type of POI, and then selects the one which comes earliest in the route.
+Note that the switch POI occur some distance before the train hits the switch, and the stopping POI occurs in advance of
+the actual end of the route.
+The POI is represented as the last sensor hit before the train should hit that POI, plus a delay in ticks.
+As we pass that sensor, we spawn a task to wake the conductor after that delay by sending a request to the conductor.
+When the request comes in, the conductor responds to the POI by stopping, or switching the switch,
+then calculates the next POI.
+If the next POI is offset from the same sensor as previously, the timeout begins immediately.
+Otherwise, the conductor blocks until the right sensor is hit.
+
+Whenever the conductor is notified of a sensor hit, it verifies that the train is on the desired path, and stops
+the train if this is not the case.
+In the future, we might have done more robust recovery from such error conditions, such as plotting a new route towards
+the destination.
+
+While the conductor will avoid currently reserved sections of track when planning routes, and reserves the track
+that it needs, it doesn't currently handle stopping if it can't reserve the track neccesary.
+The POI system could be augmented to implement this - a POI could be created the length of the stopping distance before the
+end of the track reservation, at which point the conductor either needs to reserve more track, or stop the train.
+
+We also don't handle paths which require reversing during the middle of the path.
+This is because we could not get short moves to work reliably, and almost all reversing paths also involve short moves.
+
+\subsection{Acceleration Model}
+We made some more progress on our acceleration model from the state that we wrote about in the previous report.
+We had gathered time-series data about the position of the train, and were able to fit a 5th-order polynomial to
+the data.
+Normally, you'd fit the polynomial to minimize squared errors, but we also restricted the polynomial by clamping
+the derivatives at the extrema to zero.
+Because the train has zero acceleration at the start and end of
+the time period, a clamped curve is a more accurate model of reality.
+We noticed that this curve fits relatively well to velocity data
+when stopping from any speed, after scaling the curve in the x
+and y axes.
+This allows to generalize a single curve to any train running
+at any speed, as long as we know the initial velocity, and
+either the stopping time or stopping distance.
+
+Because of this generalization, we were able to use the model
+to calculate the position of the train while it was stopping.
+We integrated under the curve for the time period we were interested
+in to determine the distance travelled.
+(Because the model is a polynomial, there is a closed-form solution
+for the integral.)
+
+This allows for better predicting the position of the train
+while it stops.
+It also simplifies the sensor attribution code, since it allows
+us to take a calculation from the distance domain, and do it in
+the time domain instead, which turns out to be much simpler to do.
+
+We never generalized the model to work for accelerating from any
+speed to any other speed, however.
+The model that we had only worked for coming to a full stop.
+To scale it, it's necessary to know how long the acceleration takes,
+which can be approximated if the distance travelled is known.
+Therefore, by knowing the stopping distance, we can scale a curve
+to model velocity as the train stops.
+However, we didn't have enough data to scale the model in other
+situations.
+If we wanted to generalize this in the future, we would need to collect the acceleration time for these speed transitions.
+One way to collect this data would be to change the speed of
+the train just as it passes a sensor, and then record
+the distance travelled and time taken to get to the next sensor.
+Because we know that the velocity is modelled by the polynomial while
+the train is accelerating, and then by a constant after it's done,
+we can set up an expression for the distance travelled by the train.
+By setting this to be equal to the distance between the sensors, and the solving for the time taken to accelerate, we can get the necessary data.
+
+% TODO: this is not super interesting - we could cut this if the whole thing gets too long
+\subsection{Asynchronous sends and timing}
+While writing the various servers, we found that a commonly used pattern was to want to have a request sent from a task
+to itself after a delay.
+We augmented the clock server to have a \texttt{delay\_async} command.
+We wrote a simple implementation which leverages being able to destroy tasks and reuse their resources.
+Normally, the clock server keeps waiting tasks reply-blocked, and replies to tasks which need to be woken up.
+Instead, it replies immediately, then creates a one-use courier to pass the message to the task to be signalled.
+The courier simply exits after sending the message, and its resources are recycled.
+This approach doesn't scale particularly well, since each task requires a large stack, and one of a fairly limited number of task descriptors.
+If we ran out of resources, we would need to use a solution with a fixed-size pool of workers, instead of
+creating a new courier for each message.
+However, this approach was much simpler to build, and we didn't encounter any scaling issues for what we were
+using it for.
+
+
+\end{document}
