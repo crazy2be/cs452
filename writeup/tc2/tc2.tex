@@ -1,13 +1,19 @@
 \documentclass{article}
 \usepackage[utf8]{inputenc}
+\usepackage{algorithm}
+\usepackage{graphicx}
+\usepackage{algpseudocode}
 
-\title{TC2 writeup}
-\author{Justin McGirr, Peter Raboud}
+\title{Trains Control 2}
+\author{Justin McGirr (\#20413625), Peter Raboud (\#20437716)}
 \date{\today}
 
 \begin{document}
 
 \maketitle
+
+\section{Instructions}
+\input{"README.tex"}
 
 \section{Design decisions}
 % overview of stuff we might like to talk about
@@ -23,6 +29,76 @@
 % X delay_async & send_async
 
 % - our instructions should explicitly describe the parts of the system that weren't completed
+\subsection{Routefinding}
+We spent a significant amonut of time researching and experimenting with
+different possible algorithms for routefinding. For the single agent case,
+and for a map as small as our train track, routefinding is a fairly easily
+solved problem- either Djikstras or A* is very fast, and always finds the
+optimal solution. However, when multiple agents are involved, the solution
+is much less clearcut. The most common algorithm used by our informal poll
+of other students is referred to as LRA* in the literature, and looks
+something like Algorithm \ref{alg:LRA*}.
+\begin{algorithm}
+\label{alg:LRA*}
+\caption{LRA* Naive-A* Algorithm}
+\begin{algorithmic}
+\Loop
+\State Whenever a train needs a route
+\State route := single-agent-A*(train, reservation-table)
+\State follow(train, route)
+\EndLoop
+\Function{follow}{train, route}
+	\If{we cannot reserve at least stopping-distance ahead along route}
+		\State stop the train
+		\State find a new route
+	\EndIf
+	\State [...]
+\EndFunction
+\end{algorithmic}
+\end{algorithm}
+However, this psuedocode algorithm has many limitations, especially when many
+agents are involved, or complex routes are to be navigated. It has no ability,
+for example, to solve a fairly simple (although admittedly pathelogical) case
+like the one in Figure \ref{fig:LRA*-unsolveable}.
+\begin{figure}
+\caption{Naive LRA* will never find a solution to this multi-agent routing
+problem, as doing so requires some knowledge of other agents in the world,
+which LRA* does not posess.}
+\label{fig:LRA*-unsolveable}
+\includegraphics[width=\linewidth]{LRA*-unsolveable.png}
+\end{figure}
+Even in much less pathelogical cases, LRA* tends to chose suboptimal paths,
+and will not realize that a path is not going to work until it has been at
+least partially executed. For example, imagine a track like
+Figure \ref{fig:LRA*-suboptimal}. In this configuration, the most optimal
+paths for train 1 and train 2 overlap in opposing directions. Despite the
+fact that it is clearly impossible to actually follow this route for both
+trains, the LRA* algorithm will happily try, until it is too late, and one
+(or, if you're particularly unlucky, potentially both) of the trains will
+reverse and take the opposite path. Of course, at this point, is has already
+travelled most of the way to it's destination- distance which turned out to
+be in the opposite direction of the goal. A smarter algorithm would realize
+eventual collision was inevitable, and reverse one of the trains to begin with.
+\begin{figure}
+\caption{LRA* will not realize a collision is inevitable until it is imminent.
+A smarter algorithm could look ahead, and would never bother exploring an
+impossible path.}
+\label{fig:LRA*-suboptimal}
+\includegraphics[width=\linewidth]{LRA*-suboptimal.png}
+\end{figure}
+In attempting to find solutions to these problems, one of us spent something
+close to a week looking at papers and researching different possible solutions,
+anticipating that the routefinding was a significant portion of the challange
+of making a good TC2 and trains project in general. This turned out to be a
+mostly incorrect assumption, primarilly because other portions of the project
+which we thought would be simple turned out to be surprisingly complex. The
+conductor, for example, was expected to take something on the order of a few
+hours, perhaps a day, but ended up taking closer to a week. Sensor attribution,
+which we expected to take a few days at most, ended up taking a similarilly
+large amount of time. In the end, even though we had really nice routefinding
+(at least, for up to n=2 trains), our conductor didn't have the mid-route
+reversing and short move support required to actually drive on the routes, so
+we ended up just implementing simple, LRA*.
 
 \subsection{Sensor Attribution}
 The interface created for sensor attribution was an \texttt{attribute} function called when a sensor goes from low to high.
@@ -42,7 +118,7 @@ If we arrive at a sensor without a train on it, we know that if the train is fur
 would have needed to pass over the sensor without tripping it.
 We prune off branches of the search tree that would need to pass through multiple sensors, so the search eventually terminates.
 If we pass over a branch, if a train should have gone the other way of the branch, we tally an additional error.
-Because the switches change orientation over time, we keep track of the history of the switches, compute the approximate
+Because the switches change orientation over time, we keep track of the history of the switches, compute the approximate
 time that the train should have been at that switch, and find the position of the switch at that time.
 Because the state of the switch is dependant on the position and speed of the train we think passed over it, we can't know
 if the switch should have been in the other orientation at the time we traverse through the switch node.
