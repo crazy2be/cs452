@@ -36,9 +36,10 @@
 We spent a significant amount of time researching and experimenting with
 different possible algorithms for route-finding. For the single agent case,
 and for a map as small as our train track, route-finding is a fairly easily
-solved problem- either Dijkstra's or A* is very fast, and always finds the
-optimal solution. However, when multiple agents are involved, the solution
-is much less clearcut. The most common algorithm used by our informal poll
+solved problem -- either Dijkstra's Algorithm or A* is very fast,
+and always finds the optimal solution.
+However, when multiple agents are involved, the solution
+is much less clear-cut. The most common algorithm used by our informal poll
 of other students is referred to as LRA* in the literature, and looks
 something like Algorithm \ref{alg:LRA*}.
 \begin{algorithm}
@@ -85,46 +86,46 @@ trains, the LRA* algorithm will happily try, until it is too late, and one
 reverse and take the opposite path. Of course, at this point, is has already
 travelled most of the way to it's destination- distance which turned out to
 be in the opposite direction of the goal. A smarter algorithm would realize
-eventual collision was inevitable, and reverse one of the trains to begin with.
+eventual collision was inevitable, and reverse one of the trains immediately.
 \begin{figure}
 \caption{LRA* will not realize a collision is inevitable until it is imminent.
-A smarter algorithm could look ahead, and would never bother exploring an
-impossible path.}
+A smarter algorithm could look ahead, and would realize that the locally optimal
+solution for each train (travelling directly towards the destination) would
+cause the trains to collide.}
 \label{fig:LRA*-suboptimal}
 \includegraphics[width=\linewidth]{LRA*-suboptimal.png}
 \end{figure}
 
 In an attempt to avoid these pitfalls, we spent a significant amount of time
-researching and experimenting with different approaches, including the "simple"
+researching and experimenting with different approaches, including the ``simple''
 extension to A* which just searches the combined search space of all agents
-together, rather than each agent individually. It's described
+together, rather than each agent individually. This is described
 in\footnote{\url{http://rbr.cs.umass.edu/papers/SCZuai05.pdf}}, although we
 implemented it based on the fairly loose description
 in\footnote{\url{https://www.aaai.org/ocs/index.php/WS/AAAIW12/paper/viewFile/5233/5640}}
 and\footnote{\url{http://www0.cs.ucl.ac.uk/staff/D.Silver/web/Applications_files/coop-path-AIIDE.pdf}}.
 This MAA* algorithm has none of the pitfalls of LRA*, and is
 guaranteed both to find a solution if one exists, and to find the globally
-optimal solution. The trade-off, of course, is twofold.
+optimal solution. Of course, there is a trade-off, which is twofold.
 \begin{enumerate}
-\item You need a perfect model of the trains in order to have the algorithm
-	properly plan the optimal path, (or, at least, a model with a sufficiently
-	small error that you can pad out projection errors enough that you can
-	ignore them, without causing excessive track reservations due to your
-	padding).
-\item Your search space grows exponentially with the number of agents, since
+\item MAA* requires a perfect model of the trains in order to have the algorithm
+	properly plan the optimal path, (or, at least, a sufficiently accurate model model
+	such that projection errors can be padded out without causing excessive track reservations).
+    Normal A* doesn't require any information about how fast the agent moves.
+\item The search space grows exponentially with the number of agents, since
 	each additional agent increases the number of possible next states for
 	any given state by a linear amount, increasing the total search space
 	exponentially. For the single-agent case, your runtime is $O(d^b)$,
-	where d is the depth of the path, and b is the branching factor
-	(4 in our case, with options: straight,curved, reverse straight,
+	where $d$ is the depth of the path, and $b$ is the branching factor
+	($b=4$ in our case, with options: straight,curved, reverse straight,
 	reverse curved). For the multi-agent case with $n$ agents, this becomes
-	$O((d*n)^{b*n})$,
+	$O((dn)^{bn})$,
 	since at each level, you can choose any one of the agents to make any one
-	of it's possible moves. The path through the search space is also longer,
-	because each agent having a path of length d corresponds to a total search
-	space path of $d*n$. Based on some basic Fermi calculations, we figured
-	this would be computationally feasible for 2 agents, potentially possible
-	for 3 agents, would require a server farm for 4 agents, and became currently
+	of its possible moves. The path through the search space is also longer,
+	because each agent having a path of length $d$ corresponds to a total search
+	space path of $dn$. Based on some basic Fermi calculations, we estimated
+	this would be computationally feasible for two agents, potentially possible
+	for three agents, would require a server farm for four agents, and became currently
 	completely infeasible after that.
 \end{enumerate}
 
@@ -141,9 +142,9 @@ looked promising in terms of scalability and runtime, particularly in it's
 set), and very fast recomputation time (we estimated $<20ms$).
 
 However, after all of this promising exploration, we hit a wall. In attempting
-to find solutions to these problems, one of us spent something
-close to a week looking at papers and researching different possible solutions,
-anticipating that the route-finding was a significant portion of the challenge
+to find solutions to these problems, one of us spent close to a week looking
+at papers and researching different possible solutions.
+We anticipated that the route-finding was a significant portion of the challenge
 of making a good TC2 and trains project in general. This turned out to be a
 mostly incorrect assumption, primarily because other portions of the project
 which we thought would be simple turned out to be surprisingly complex. The
@@ -151,42 +152,54 @@ conductor, for example, was expected to take something on the order of a few
 hours, perhaps a day, but ended up taking closer to a week. Sensor attribution,
 which we expected to take a few days at most, ended up taking a similarly
 large amount of time. In the end, even though we had really nice route-finding
-(at least, for up to n=2 trains), our conductor didn't have the mid-route
+(at least, for up to $n=2$ trains), our conductor didn't have the mid-route
 reversing and short move support required to actually drive on the routes, so
 we ended up just implementing the very simple LRA* algorithm.
 
 \subsection{Sensor Attribution}
-The interface created for sensor attribution was an \texttt{attribute} function called when a sensor goes from low to high.
-It takes the sensor number, the time at which the sensor event happened, and a bundle of information about the track's current
-recorded state, and it attempts to attribute the event to a train, or mark it as spurious.
+The interface created for sensor attribution was an \texttt{attribute\_sensor(sensor, time, state)}
+function called when a sensor is hit.
+(Specifically, when a sensor transitions from low to high.)
+It takes the sensor number, the time at which the sensor event happened,
+and a bundle of information about the track's current recorded state.
+Based on this information, it attempts to attribute the event to a train, or mark it as spurious.
 The function attempts to find candidate trains which might have hit the sensor, based on the last
 known positions of each of the trains, and the orientation of the turnouts.
 
 We use depth-first search to traverse backwards from the sensor, in the direction that the train would have come from.
-When we arrive at a sensor node which a train was previously at, we mark it as a candidate, and stop.
-At a merge node, the train could have come from either side of the merge, so we continue down both
-paths.
+The algorithm is searching for any sensor node which is the last known position of a train.
+When we find such a node, we mark that train as a candidate, and prune the rest of that search branch.
+At a merge node, the train could have come from either side of the merge,
+so we continue down both paths.
 
-We are tolerant of at most one error from the track - either a single sensor which failed to read, or a single switch which
-was in the wrong orientation.
-If we arrive at a sensor without a train on it, we know that if the train is further down the search tree, it
-would have needed to pass over the sensor without tripping it.
-We prune off branches of the search tree that would need to pass through multiple sensors, so the search eventually terminates.
-If we pass over a branch, if a train should have gone the other way of the branch, we tally an additional error.
-Because the switches change orientation over time, we keep track of the history of the switches, compute the approximate
-time that the train should have been at that switch, and find the position of the switch at that time.
-Because the state of the switch is dependant on the position and speed of the train we think passed over it, we can't know
-if the switch should have been in the other orientation at the time we traverse through the switch node.
-We need to compute that after we have found a candidate for the train.
-Therefore, we maintain a record of the switches through on the search, and the directions we expect them to be in,
-and compute the number of errors from incorrect switches at the time we evaluate a train candidate.
+We are tolerant of at most one error from the track -- either a single sensor
+which failed to read, or a single switch which was in the wrong orientation.
+If we arrive at a sensor without a train on it, we know that if the train is
+further down the search tree, it would have needed to pass over the sensor without tripping it.
+Therefore, we add one to the count of errors assumed by this search branch.
+Since we prune branches with multiple errors, we never traverse past more than one sensor,
+so the search eventually terminates.
+
+When we traverse backwards over a branch, we want to check if the train should have taken the
+edge of the branch that we came from (i.e.: towards the sensor).
+If not, this is an error, and we need to tally it.
+Because the switches change orientation over time, we need to find the position of the branch
+at the time the train would have hit it.
+Since that time is dependant on the position and speed of the train we think passed over it,
+we can only know if travelling over that switch was in error after we have found a candidate for the train.
+Therefore, we maintain a record of the switches passed through on the search,
+and the directions we expect them to be in.
+Once we've found a candidate, we compute the number of errors from incorrect switches
+at the time we evaluate a train candidate.
+If the sum of errors from switches and errors from sensors is greater than one, we reject the
+candidate.
 
 We reject train candidates which require assuming more than one error.
 If there are multiple candidates, we prefer the one with fewer assumed errors.
-After that, we prefer the candidate which travelled the distance between their last known position and the switch hit
-in the time closest to what we expect for how fast that train was going.
+After that, we prefer the candidate which arrived at the sensor closest to the time
+we would expect for it, based on its last known position and velocity.
 
-We have to do a bit of special work to attribute sensors to trains that have just reversed.
+We have to do a bit of extra work to attribute sensors to trains that have just reversed.
 Normally, the last known position of a train is just the last sensor it hit.
 However, this doesn't work when the train reverses.
 When one or more of the trains has reversed recently, we calculate some possible positions for where
@@ -194,18 +207,21 @@ we might expect the train to stop.
 We know how far the train would have travelled after the last sensor it hit, based on its velocity and stopping
 distance.
 We can therefore generate some candidate positions which account for possible switch or sensor failures.
-When doing the depth-first search as described above, we can attribute a sensor hit to one of these
-candidate positions in the same way that we would attribute a hit to the train travelling normally.
+The depth-first search described above can then be augmented to consider both these candidate positions and
+last sensors hit, when attributing sensors.
 We do need to carry over errors assumed in calculating the candidate position to errors assumed in
 the depth first search, in order to reject attributions which assume one error in the depth first search,
 and one error when calculating the stopping position of the train.
 
 There are some limitations of the approach that we took.
-It's entirely possible for this function to attribute the same train to two sensors across multiple different calls.
-We work around this issue by having a layer on top of the main sensor attribution function which rejects multiple
-attribution, but this is not ideal.
-In particular, it allows for two trains to both be candidates for the two sensor hits, and the same one to be picked for both.
-The layer above sensor attribution rejects the second attribution, and treats the second hit as though it were spurious,
+Since each sensor is considered separately, it's entirely possible for this
+function to attribute the same train to two sensors across multiple different calls.
+We work around this issue by having a layer on top of the main sensor attribution
+function which rejects multiple attribution, but this is not ideal.
+In particular, it allows for two trains to both be candidates for the two sensor
+hits, and the same train to be the preferred candidate for both.
+The layer above sensor attribution rejects the second attribution,
+and treats the second hit as though it were spurious,
 when in fact the better solution is to attribute one hit to each train.
 
 Another issue is that the sensor attribution can be sensitive to inaccuracies in the estimated velocity of the train,
@@ -224,26 +240,33 @@ causing all of these hits.
 
 \subsection{Following routes}
 To drive a train down a route calculated by the routing server, we spawn a ``conductor'' task for each train.
-This task operates as a server, so its steady state is to be receive blocked, waiting for timeouts, or notifications from other tasks.
-The conductor's clients are the command server, which sends it destinations to route to; the train server, which
-sends it information about sensor hits attributed to the conductor's train; and time outs initiated by the conductor itself.
+This task operates as a server, so its steady state is to be receive blocked,
+waiting for notifications from other tasks or timeouts.
+The conductor's clients are:
+
+\begin{itemize}
+\item The command server, which sends it destinations to route to.
+\item The train server, which sends it information about sensor hits attributed
+to the conductor's train.
+\item Couriers delivering timeouts initiated by the conductor itself.
+\end{itemize}
 
 It is notified by the command server that it should route that train to a particular position.
 It then asks the routing server for a route, and begins to follow it.
 As the train goes over the route, there are a series of positions of interest (POI) that the conductor needs to take
 action at.
-In our current implementation, there are points at which we want to switch a turnout, and one point where we want
-to stop the train at the end of the route.
-In the future, this approach could have been generalized to support reversing at a certain point, or stopping the train
-before the end of the reserved segment of track.
+In our current implementation, there are points at which we want to switch a turnout,
+and a point near the end of the route point where we want to stop the train.
+In the future, this approach could have been generalized to support reversing at a certain point,
+or stopping the train before the end of the reserved segment of track.
 
-The conductor calculates the next POI for each type of POI, and then selects the one which comes earliest in the route.
-Note that the switch POI occur some distance before the train hits the switch, and the stopping POI occurs in advance of
-the actual end of the route.
+The conductor calculates the next POI for each type of POI, and then among those, selects the earliest one.
+Note that the switch POI occur some distance before the train hits the switch,
+and the stopping POI occurs in advance of the actual end of the route.
 The POI is represented as the last sensor hit before the train should hit that POI, plus a delay in ticks.
-As we pass that sensor, we spawn a task to wake the conductor after that delay by sending a request to the conductor.
-When the request comes in, the conductor responds to the POI by stopping, or switching the switch,
-then calculates the next POI.
+As we pass that sensor, we spawn a task to wake the conductor after a delay.
+When the wakeup request comes in, the conductor responds to the POI by stopping or switching the switch.
+It then calculates the next POI\@.
 If the next POI is offset from the same sensor as previously, the timeout begins immediately.
 Otherwise, the conductor blocks until the right sensor is hit.
 
@@ -258,7 +281,8 @@ The POI system could be augmented to implement this - a POI could be created the
 end of the track reservation, at which point the conductor either needs to reserve more track, or stop the train.
 
 We also don't handle paths which require reversing during the middle of the path.
-This is because we could not get short moves to work reliably, and almost all reversing paths also involve short moves.
+This is because we could not get short moves to work reliably,
+and almost all reversing paths also involve short moves.
 
 \subsection{Acceleration Model}
 We made some more progress on our acceleration model from the state that we wrote about in the previous report.
