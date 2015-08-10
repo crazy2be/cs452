@@ -3,6 +3,7 @@
 \usepackage{algorithm}
 \usepackage{graphicx}
 \usepackage{algpseudocode}
+\usepackage{hyperref}
 
 \title{Trains Control 2}
 \author{Justin McGirr (\#20413625), Peter Raboud (\#20437716)}
@@ -56,10 +57,13 @@ something like Algorithm \ref{alg:LRA*}.
 \EndFunction
 \end{algorithmic}
 \end{algorithm}
+
 However, this psuedocode algorithm has many limitations, especially when many
 agents are involved, or complex routes are to be navigated. It has no ability,
 for example, to solve a fairly simple (although admittedly pathelogical) case
-like the one in Figure \ref{fig:LRA*-unsolveable}.
+like the one in Figure \ref{fig:LRA*-unsolveable}. Although this exact
+configuration does not exist on the real track, analagous configurations do,
+such as near the exits.
 \begin{figure}
 \caption{Naive LRA* will never find a solution to this multi-agent routing
 problem, as doing so requires some knowledge of other agents in the world,
@@ -67,6 +71,7 @@ which LRA* does not posess.}
 \label{fig:LRA*-unsolveable}
 \includegraphics[width=\linewidth]{LRA*-unsolveable.png}
 \end{figure}
+
 Even in much less pathelogical cases, LRA* tends to chose suboptimal paths,
 and will not realize that a path is not going to work until it has been at
 least partially executed. For example, imagine a track like
@@ -86,7 +91,54 @@ impossible path.}
 \label{fig:LRA*-suboptimal}
 \includegraphics[width=\linewidth]{LRA*-suboptimal.png}
 \end{figure}
-In attempting to find solutions to these problems, one of us spent something
+
+In an attempt to avoid these pitfals, we spent a significant amount of time
+researching and experimenting with different approaches, including the "simple"
+extension to A* which just searches the combined search space of all agents
+together, rather than each agent individually. It's described
+in\footnote{\url{http://rbr.cs.umass.edu/papers/SCZuai05.pdf}}, although we
+implemented it based on the fairly loose description
+in\footnote{\url{https://www.aaai.org/ocs/index.php/WS/AAAIW12/paper/viewFile/5233/5640}}
+and\footnote{\url{http://www0.cs.ucl.ac.uk/staff/D.Silver/web/Applications_files/coop-path-AIIDE.pdf}}. This MAA* algorithm has none of the pitfals of LRA*, and is
+gaurenteed both to find a solution if one exists, and to find the globally
+optimal solution. The trade-off, of course, is twofold.
+\begin{enumerate}
+\item You need a perfect model of the trains in order to have the algorithm
+	properly plan the optimal path, (or, at least, a model with a sufficiently
+	small error that you can pad out projection errors enough that you can
+	ignore them, without causing excessive track reservations due to your
+	padding).
+\item Your search space grows exponentially with the number of agents, since
+	each additional agent increases the number of possible next states for
+	any given state by a linear amount, increasing the total search space
+	exponentially. For the single-agent case, your runtime is $O(d^b)$,
+	where d is the depth of the path, and b is the branching factor
+	(4 in our case, with options: straight,curved, reverse straight,
+	reverse curved). For the multi-agent case with $n$ agents, this becomes
+	$O((d*n)^{b*n})$,
+	since at each level, you can choose any one of the agents to make any one
+	of it's possible moves. The path through the search space is also longer,
+	because each agent having a path of length d corresponds to a total search
+	space path of $d*n$. Based on some basic Fermi calculations, we figured
+	this would be computationally feasible for 2 agents, potentially possible
+	for 3 agents, would require a server farm for 4 agents, and became currently
+	completely infeasible after that.
+\end{enumerate}
+
+Of course, there are many compromises between the approaches. HCA*, for
+example, does A* for each agent individually, but when calculating the possible
+paths each agent can take, it takes into account the time-dependant reservations
+of the other agents who ran before it. This approach is \emph{usually} able to
+find a satisfactory solution, runs much faster than MAA*, and was also more
+clearly adaptable to realtime use when conditions on the track diverged from
+what our model predicted. The results in the paper
+\footnote{\url{http://www0.cs.ucl.ac.uk/staff/D.Silver/web/Applications_files/coop-path-AIIDE.pdf}}
+looked promising in terms of scalability and runtime, particularly in it's
+(relatively) low initial computation time (we estimated $<100ms$ for our problem
+set), and very fast recomputation time (we estimated $<20ms$).
+
+However, after all of this promising exploration, we hit a wall. In attempting
+to find solutions to these problems, one of us spent something
 close to a week looking at papers and researching different possible solutions,
 anticipating that the routefinding was a significant portion of the challange
 of making a good TC2 and trains project in general. This turned out to be a
@@ -98,7 +150,7 @@ which we expected to take a few days at most, ended up taking a similarilly
 large amount of time. In the end, even though we had really nice routefinding
 (at least, for up to n=2 trains), our conductor didn't have the mid-route
 reversing and short move support required to actually drive on the routes, so
-we ended up just implementing simple, LRA*.
+we ended up just implementing the very simple LRA* algorithm.
 
 \subsection{Sensor Attribution}
 The interface created for sensor attribution was an \texttt{attribute} function called when a sensor goes from low to high.
