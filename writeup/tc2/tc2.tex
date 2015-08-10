@@ -264,28 +264,54 @@ We made some more progress on our acceleration model from the state that we wrot
 We had gathered time-series data about the position of the train, and were able to fit a 5th-order polynomial to
 the data.
 Normally, you'd fit the polynomial to minimize squared errors, but we also restricted the polynomial by clamping
-the derivatives at the extrema to zero.
-Because the train has zero acceleration at the start and end of
-the time period, a clamped curve is a more accurate model of reality.
-We noticed that this curve fits relatively well to velocity data
-when stopping from any speed, after scaling the curve in the x
-and y axes.
-This allows to generalize a single curve to any train running
-at any speed, as long as we know the initial velocity, and
-either the stopping time or stopping distance.
+the derivatives at the extrema to zero \ref{fig:deceleration}.
+In physical terms, this forces the model to have zero acceleration at the point
+when we begin stopping.
+If this were not the case, when the model is joined to a line representing
+the train travelling at constant velocity, the acceleration would change instantaenously
+at the knot between the two curves.
+Physically, this means there would be infinite jerk at this moment, which would tear the
+train in half.
+The difference between the clamped and unclamped models is fairly small, and the
+integrals under both curves are almost exactly the same, meaning that they predict
+roughly the same stopping distance.
 
-Because of this generalization, we were able to use the model
-to calculate the position of the train while it was stopping.
-We integrated under the curve for the time period we were interested
-in to determine the distance travelled.
-(Because the model is a polynomial, there is a closed-form solution
-for the integral.)
-
+It's impractical to fit a deceleration curve for each train, for each speed,
+so we needed to be able to generalize the model we fitted to other velocities.
+We noticed that by scaling the curve on the $x$ and $y$ axes, it fits
+the actual data points for other speeds relatively well.
+Therefore, we would generalize the model by stretching it in the $y$ axis
+to have a particular initial velocity, and in the $x$ axis to have a particular
+stopping distance.
+We could preform this generalization at run-time, for any measured velocity and
+stopping distance, without having to gather data for this velocity and stopping distance.
+This allowed us to be able to interpolate the velocity of the train while
+it was stopping, and therefore to interpolate the position of the train.
+To determine the distance travelled, we would integrate under this curve.
+Because the model is a polynomial, there is a closed-form solution
+for the integral which can be efficiently computed.
 This allows for better predicting the position of the train
-while it stops.
-It also simplifies the sensor attribution code, since it allows
+while it stops, instead of teleporting the train to the stopped position,
+or using linear interpolation.
+
+While we used a scaling technique in the project that we submitted, we later
+discovered that there is a better technique to generalize this model.
+% TODO: justin write about the thing you discovered on the exam
+
+Being able to interpolate the train's position
+also simplifies the sensor attribution code, since it allows
 us to take a calculation from the distance domain, and do it in
-the time domain instead, which turns out to be much simpler to do.
+the time domain instead.
+We want to find the position at which the train stopped, but allow
+for some sensor attribution failures.
+Therefore, we want to know how far we've travelled since hitting the last sensor.
+By being able to integrate under the section of the curve which represents
+the time after hitting the last sensor, we can determine the distance travelled.
+Without being able to do this, we would have needed to determine how much distance we'd
+travelled since the point where we began stopping.
+Because we need to be tolerant of sensor and switch failures, this is not a trivial computation.
+It turns out that the logic is greatly simplified by being able to integrate from time
+we last hit a sensor, using the deceleration model to calculate the distance travelled.
 
 We never generalized the model to work for accelerating from any
 speed to any other speed, however.
@@ -304,6 +330,14 @@ Because we know that the velocity is modelled by the polynomial while
 the train is accelerating, and then by a constant after it's done,
 we can set up an expression for the distance travelled by the train.
 By setting this to be equal to the distance between the sensors, and the solving for the time taken to accelerate, we can get the necessary data.
+
+\begin{figure}
+\caption{By clamping the acceleration at the extrema to be 0, we ensure that
+the acceleration is differentiable at the knot between the deceleration curve,
+and the constant-velocity model at either side.}
+\label{fig:deceleration}
+\includegraphics[width=\linewidth]{deceleration.png}
+\end{figure}
 
 % TODO: this is not super interesting - we could cut this if the whole thing gets too long
 \subsection{Asynchronous sends and timing}
