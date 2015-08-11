@@ -78,7 +78,7 @@ Commands
  - `sw <switch number> (c|s)` sets a the position of a switch to curved or straight.
  - `bsw (c|s)` bulk set all switches to the given configuration (curved or straight).
  - `rv <train number>` reverses a train.
- - `stp <train number> <node name> [<edge>] <displacement>` stops the train at
+ - `stop <train number> <node name> [<edge>] <displacement>` stops the train at
    the given node, or offset thereof. I.e. `stp 63 E8 0` would stop train 63
    right on top of sensor E8. If `<edge>` is specified, it denotes which edge
    the offset is along (i.e. for a branch node).
@@ -88,6 +88,8 @@ Commands
    Currently, the train must be fully stopped for the routing to work properly.
    It's also necessary to run the train manually until it hits a sensor, so
    that the program picks up the position of the train.
+ - `f` Freezes the terminal output until typed again. This is useful for
+   copying log data out of the terminal program without it being overwritten.
  - `q` exits the program.
 
 The positions of each switch is shown in the ASCII-art map of the train track.
