@@ -279,6 +279,10 @@ While the conductor will avoid currently reserved sections of track when plannin
 that it needs, it doesn't currently handle stopping if it can't reserve the track necessary.
 The POI system could be augmented to implement this - a POI could be created the length of the stopping distance before the
 end of the track reservation, at which point the conductor either needs to reserve more track, or stop the train.
+Therefore, reservations only work when one train is still, and the other train routes around it,
+because the route finder will avoid this section.
+If both trains are moving, a system to stop if track can't be reserved hasn't been implemented,
+so it's highly likely that the trains will crash.
 
 We also don't handle paths which require reversing during the middle of the path.
 This is because we could not get short moves to work reliably,
