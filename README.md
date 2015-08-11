@@ -88,7 +88,7 @@ Commands
    Currently, the train must be fully stopped for the routing to work properly.
    It's also necessary to run the train manually until it hits a sensor, so
    that the program picks up the position of the train.
- - `f` Freezes the terminal output until typed again. This is useful for
+ - `f` freezes the terminal output until typed again. This is useful for
    copying log data out of the terminal program without it being overwritten.
  - `q` exits the program.
 
