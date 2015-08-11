@@ -125,8 +125,8 @@ optimal solution. Of course, there is a trade-off, which is twofold.
 	because each agent having a path of length $d$ corresponds to a total search
 	space path of $dn$. Based on some basic Fermi calculations, we estimated
 	this would be computationally feasible for two agents, potentially possible
-	for three agents, would require a server farm for four agents, and became currently
-	completely infeasible after that.
+	for three agents, would require a server farm for four agents, and became
+	completely uneconomical after that.
 \end{enumerate}
 
 Of course, there are many compromises between the approaches. HCA*, for
@@ -320,8 +320,30 @@ while it stops, instead of teleporting the train to the stopped position,
 or using linear interpolation.
 
 While we used a scaling technique in the project that we submitted, we later
-discovered that there is a better technique to generalize this model.
-% TODO: justin write about the thing you discovered on the exam
+discovered that there is a better technique to generalize this model. It
+turns out that clipping is more accurate than scaling, as
+Figure \ref{fig:better-deceleration} shows. Particularly at low speeds, using
+such a model would have yielded significantly more accurate position
+estimations, and allowed us to have very accurate estimates of the train's
+position during short moves, had we found sufficient time to implement short
+moves.
+
+We also realized after the fact that if we stored a lookup table instead of a
+polynomial curve, then we could train the model live much more easily.
+However, we ran out of time to collect sufficient data for discovering if
+this would be a worthwhile endevour (It is still unknown how much the curve
+varies between different trains).
+
+\begin{figure}
+\caption{Comparison of our better model to the original model. The dashed red
+line represents an approximation of our current model, while the yellow, green,
+and blue lines represent where our better model would be for different speeds.
+As you can see, the error of our current model is clear, but not egregious at
+this speed. We suspect that as the train's starting speed decreases,
+the error increases significantly.}
+\label{fig:better-deceleration}
+\includegraphics[width=\linewidth]{better-deceleration.png}
+\end{figure}
 
 Being able to interpolate the train's position
 also simplifies the sensor attribution code, since it allows
