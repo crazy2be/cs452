@@ -296,7 +296,7 @@ We made some more progress on our acceleration model from the state that we wrot
 We had gathered time-series data about the position of the train, and were able to fit a 5th-order polynomial to
 the data.
 Normally, you'd fit the polynomial to minimize squared errors, but we also restricted the polynomial by clamping
-the derivatives at the extrema to zero \ref{fig:deceleration}.
+the derivatives at the extrema to zero, as you can see in Figure \ref{fig:deceleration}.
 In physical terms, this forces the model to have zero acceleration at the point
 when we begin stopping.
 If this were not the case, when the model is joined to a line representing
