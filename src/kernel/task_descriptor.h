@@ -49,14 +49,19 @@ struct task_descriptor {
 	int parent_tid;
 	int priority;
 
+	// Our current state (DEAD, READY, blocked on something)
 	enum task_state state;
+	// Tasks that are waiting for us to reply to their sends, FIFO queue.
 	struct task_queue waiting_for_replies;
 
 	// We don't have any use for this now, but we probably will later
 	/* void *memory_segment; */
 
+	// Effectively just the stack pointer, but in a nicer way.
 	struct user_context *context;
 
+	// For priority queue- next task to be scheduled after this one at the
+	// same priority level (round-robin scheduling)
 	struct task_descriptor *queue_next;
 
 	// amount of time in useconds spent in this task (includes time for context
